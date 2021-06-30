@@ -11,7 +11,7 @@ endif
 PROFILE = default
 # Import env variables
 include .env.shared
-include .env
+# include .env
 
 # Allow us to execute make commands from within our project's conda env
 # TODO: add over-ride based on some environment variable?
