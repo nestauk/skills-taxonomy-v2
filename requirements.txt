@@ -14,3 +14,4 @@ sklearn
 transformers
 tensorflow
 spacy
+networkx
