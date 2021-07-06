@@ -10,6 +10,21 @@
   - Configure pre-commit
   - Configure metaflow to use AWS
 
+## Running locally
+
+When you are running scripts from this repo for the first time you need to create the environment by running `make conda-create` to create the conda environment. Then everytime after this you can activate it using `conda activate skills-taxonomy-v2`. If you update the requirements then run `make conda-update`.
+
+As a one off, if needed, you will also have to run:
+```
+conda install pytorch torchvision torchaudio -c pytorch
+```
+to use pytorch, and
+```
+conda install -c conda-forge spacy
+python -m spacy download en_core_web_sm
+```
+for spaCy.
+
 ## Contributor guidelines
 
 [Technical and working style guidelines](https://github.com/nestauk/ds-cookiecutter/blob/master/GUIDELINES.md)

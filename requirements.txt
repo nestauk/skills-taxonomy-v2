@@ -9,3 +9,8 @@ tqdm
 filelock
 typer
 sh
+jupyter
+sklearn
+transformers
+tensorflow
+spacy

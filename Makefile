@@ -11,6 +11,7 @@ endif
 PROFILE = default
 # Import env variables
 include .env.shared
+$(shell touch .env)
 include .env
 
 # Allow us to execute make commands from within our project's conda env
