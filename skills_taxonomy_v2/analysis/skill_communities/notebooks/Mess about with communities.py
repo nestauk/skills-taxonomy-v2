@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # ---
 # jupyter:
 #   jupytext:
@@ -31,6 +32,7 @@ import json
 from collections import Counter
 from itertools import chain, combinations
 
+from tqdm import tqdm
 import spacy
 import pandas as pd
 import networkx as nx
@@ -48,19 +50,43 @@ with open('../../../../inputs/TextKernel_sample/jobs_new.1.jsonl', 'r') as file:
 # %%
 data[0]['full_text']
 
+
+# %%
+def remove_not_words(text, spacy_ner_types = ['DATE', 'MONEY', 'CARDINAL', 'TIME', 'ORDINAL', 'QUANTITY']):
+#     CARDINAL, DATE, EVENT, FAC, GPE, LANGUAGE, LAW, LOC, MONEY, NORP, ORDINAL, ORG, PERCENT, PERSON, PRODUCT, QUANTITY, TIME, WORK_OF_ART
+    doc = nlp(text)
+    for entity in reversed(doc.ents):
+        if entity.label_ in spacy_ner_types:
+            text = text[:entity.start_char] + ' '+ text[entity.end_char:]    
+
+    # Replace any * with comma
+    text = text.replace('*', ' ')
+    text = text.replace('•', ' ')
+    text = text.replace('-', ' ')
+    
+    return text
+
+
+# %%
+len(data)
+
 # %%
 # Separate out words in whole JD
 # Future: n-grams, lemmatize, clean out punctuation/spaces
+# remove money and dates, lemmatize, postcode/addressa
 job_d_words = []
-for job_id in range(0,1000):
+for job_id in tqdm(range(0,1000)):
     text = data[job_id]['full_text']
     text = text.replace('\n',' ')
-    text = ' '.join(text.split())
+    text = text.replace('\\',' ')
+    text = remove_not_words(text)
+    text = ' '.join(text.split()) # get rid of whitespaces
+    
     doc = nlp(text)
     doc_words = []
     for sent in doc:
         doc_words.append(sent.text)
-    doc_words = [word for word in doc_words if (len(word)>1 and not word.isnumeric())] # removes '.' etc
+    doc_words = [word.lower() for word in doc_words if (len(word)>1 and not word.isnumeric())] # removes '.' etc
     job_d_words.append(doc_words)
 
 
@@ -201,7 +227,7 @@ communities_merged = [' '.join(c) for c in communities]
 tfidf_vectorizer = TfidfVectorizer(stop_words="english")
 tfidf_vects = tfidf_vectorizer.fit_transform(communities_merged)
 
-num_top_words=2
+num_top_words=5
 # Top n words for each cluster + other info
 feature_names = np.array(tfidf_vectorizer.get_feature_names())
 cluster_info = {
@@ -210,6 +236,9 @@ cluster_info = {
         )
     for i, document in enumerate(tfidf_vects)
 }
+
+# %%
+# remove money and dates, lemmatize, postcode/address
 
 # %%
 cluster_info
