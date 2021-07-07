@@ -1,8 +1,7 @@
 """
 Usage
 ----------
-python skills_taxonomy_v2/pipeline/sentence_classifier/sentence_classifier.py
-	--config_path config/sentence_classifier/2021.07.06.yaml
+python skills_taxonomy_v2/pipeline/sentence_classifier/sentence_classifier.py --yaml_file_name 2021.07.06
 """
 
 from sklearn.model_selection import train_test_split
@@ -27,7 +26,6 @@ from collections import Counter
 import re
 from argparse import ArgumentParser
 import pickle
-import configparser
 import pickle
 import os
 import yaml
@@ -186,8 +184,18 @@ if __name__ == '__main__':
 
 	# Later this can all go in a run.py and sentence_classifier_flow.py file
 
+	parser = ArgumentParser()
+
+	parser.add_argument(
+		"--yaml_file_name",
+		help="Name of config file from skills_taxonomy_v2/config/sentence_classifier to be used",
+		default="2021.07.06",
+	)
+
+	args = parser.parse_args()
+
 	# Load specific config file
-	yaml_file_name = "2021.07.06"
+	yaml_file_name = args.yaml_file_name
 	fname = os.path.join(
 		"skills_taxonomy_v2", "config", "sentence_classifier", yaml_file_name + ".yaml"
 	)
