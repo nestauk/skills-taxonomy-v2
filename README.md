@@ -14,16 +14,23 @@
 
 When you are running scripts from this repo for the first time you need to create the environment by running `make conda-create` to create the conda environment. Then everytime after this you can activate it using `conda activate skills-taxonomy-v2`. If you update the requirements then run `make conda-update`.
 
-As a one off, if needed, you will also have to run:
+<!-- As a one off, if needed, you will also have to run:
 ```
 conda install pytorch torchvision torchaudio -c pytorch
 ```
-to use pytorch, and
+to use pytorch, and -->
 ```
 conda install -c conda-forge spacy
 python -m spacy download en_core_web_sm
 ```
 for spaCy.
+
+Then
+```
+conda install cdlib=0.2.3
+```
+(this doesn't work when added to the environment.yaml).
+
 
 ## Contributor guidelines
 

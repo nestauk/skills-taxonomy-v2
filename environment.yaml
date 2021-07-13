@@ -5,6 +5,5 @@ channels:
 dependencies:
   - pip
   - python=3.8
-  - cdlib=0.2.3
   # Only put dependencies that are NOT available with pip here (e.g. graph-tool)
   # or that enable extra functionality such as GPU/MKL support

@@ -12,6 +12,8 @@ sh
 jupyter
 sklearn
 transformers
-tensorflow
-spacy
+sentence-transformers==1.2.0
 networkx
+gensim
+bokeh
+umap-learn
