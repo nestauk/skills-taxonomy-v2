@@ -25,6 +25,8 @@ def mask_text(
     spacy_ner_types=["DATE", "MONEY", "CARDINAL", "TIME", "ORDINAL", "QUANTITY"],
 ):
     # Cleaning where you need to keep indices the same
+    # things import for the pre-sentence splitting
+    
     doc = nlp(text)
     # '6 months' -> '######'
     # Go through detected entities backwards and replace in the sentence
@@ -38,19 +40,26 @@ def mask_text(
                 + text[entity.end_char :]
             )
 
-    # Replace any * with comma
-    text = text.replace("*", ",")
-    text = text.replace("•", ",")
-    text = text.replace("-", ",")
+    # Replace any * with fullstops
+    text = text.replace("*", ".")
+    text = text.replace("•", ".")
+    text = text.replace("-", ".")
+    text = text.replace("!", ".")
+    text = text.replace("?", ".")
+    
     return text
 
 
 def text_cleaning(text):
     # Cleaning where it doesnt matter if you mess up the indices
-    text = re.sub(r"[#]+", "NUMBER", text)
+    text = re.sub(r"[#]+", " NUMBER ", text)
     text = re.sub(
-        "CNUMBER", "C#", text
+        "C NUMBER", "C#", text
     )  # Some situations you shouldn't have removed the numbers
+    text = text.replace('\n',' ') # This could be mid sentences
+    # Clean out punctuation - some of this should be cleaned out anyway
+    text = re.sub(r'[^\w\s]', '', text)
+    text = ' '.join(text.split()) # get rid of multiple whitespaces
     return text
 
 
@@ -77,15 +86,22 @@ def split_labelled_sentences(nlp, text, skills_annotations, skill_label_ids=[1, 
     doc = nlp(text)
     sentences = []
     sentences_label = []
+    
     for sent in doc.sents:
-        sentences.append(text_cleaning(sent.text))
         sentence_set = set(range(sent.start_char, sent.end_char))
-        if any([entity_set.issubset(sentence_set) for entity_set in skill_span_sets]):
-            sentences_label.append(1)
-        else:
-            sentences_label.append(0)
+        split_i = [0] + [m.start(0)+1 for m in re.finditer(r'[a-z][A-Z][a-z]', sent.text)]
+        for i, j in zip(split_i, split_i[1:]+[len(sent.text)]):
+            sentences.append(text_cleaning(sent.text[i:j]))
+            # Shift i and j by startchar
+            sentence_set = set(range(i + sent.start_char, j + sent.start_char))
+            # Is there overlap between the sentence range and any of the entity ranges?
+            if any([entity_set.issubset(sentence_set) for entity_set in skill_span_sets]):
+                sentences_label.append(1)     
+            else:
+                sentences_label.append(0)
 
     return sentences, sentences_label
+
 
 
 def create_training_data(
@@ -135,5 +151,5 @@ if __name__ == "__main__":
     training_data = create_training_data(nlp, jobs_data, sentence_train_threshold=15)
 
     save_training_data(
-        training_data, "outputs/sentence_classifier/data/training_data_April2021.json"
+        training_data, "outputs/sentence_classifier/data/training_data_April2021_08_06_21.json"
     )

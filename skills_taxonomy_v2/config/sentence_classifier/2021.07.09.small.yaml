@@ -1,0 +1,11 @@
+flows:
+  sentence_classifier_flow:
+    params:
+      training_data_file: 'outputs/sentence_classifier/data/training_data_April2021_08_06_21.json'
+      output_dir: 'outputs/sentence_classifier/models/'
+      split_random_seed: 1
+      test_size: 0.25
+      log_reg_max_iter: 1000
+      bert_model_name: 'sentence-transformers/paraphrase-MiniLM-L6-v2'
+      multi_process: True
+    run_id: 0

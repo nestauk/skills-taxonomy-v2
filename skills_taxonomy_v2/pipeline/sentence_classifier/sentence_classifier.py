@@ -16,9 +16,10 @@ from sklearn.metrics import (
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.linear_model import LogisticRegression
-from transformers import BertTokenizer, BertModel
+from sentence_transformers import SentenceTransformer
 import tqdm as tqdm
 import spacy
+import numpy as np
 
 import json
 import random
@@ -26,47 +27,47 @@ from collections import Counter
 import re
 from argparse import ArgumentParser
 import pickle
-import pickle
 import os
 import yaml
+import time
 
 from skills_taxonomy_v2.pipeline.sentence_classifier.create_training_data import (
     load_training_data,
 )
 
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
-class BertVectorizer:
+class BertVectorizer():
     """
     Use a pretrained transformers model to embed sentences.
     In this form so it can be used as a step in the pipeline.
-    layer_type: which layer to output, 'last_hidden_state' or 'pooler_output'
     """
 
     def __init__(
-        self, bert_model_name="bert-base-uncased", layer_type="last_hidden_state"
+        self,
+        bert_model_name='sentence-transformers/paraphrase-MiniLM-L6-v2',
+        multi_process=True
     ):
         self.bert_model_name = bert_model_name
-        self.layer_type = layer_type
+        self.multi_process = multi_process
 
     def fit(self, *_):
-        self.bert_tokenizer = BertTokenizer.from_pretrained(self.bert_model_name)
-        self.bert_model = BertModel.from_pretrained(self.bert_model_name)
+        self.bert_model = SentenceTransformer(self.bert_model_name)
+        self.bert_model.max_seq_length = 512
         return self
 
-    def get_embedding(self, text):
-        encoded_input = self.bert_tokenizer.encode(text, return_tensors="pt")
-        encoded_input = encoded_input[:, :510]  # could do something better?
-        output = self.bert_model(encoded_input)
-        embedded_x = output[self.layer_type]
-        if self.layer_type == "last_hidden_state":
-            embedded_x = embedded_x.mean(dim=1)
-
-        return embedded_x.detach().numpy().flatten()
-
     def transform(self, texts):
-
-        self.transformed_texts = [self.get_embedding(x) for x in tqdm.tqdm(texts)]
-        return self.transformed_texts
+        print(f"Getting embeddings for {len(texts)} texts ...")
+        t0 = time.time()
+        if self.multi_process:
+            print(".. with multiprocessing")
+            pool = self.bert_model.start_multi_process_pool()
+            self.embedded_x = self.bert_model.encode_multi_process(texts, pool)
+            self.bert_model.stop_multi_process_pool(pool) 
+        else:
+            self.embedded_x = self.bert_model.encode(texts, show_progress_bar=True)
+        print(f"Took {time.time() - t0} seconds")
+        return self.embedded_x
 
 
 class SentenceClassifier:
@@ -104,15 +105,15 @@ class SentenceClassifier:
         split_random_seed=1,
         test_size=0.25,
         log_reg_max_iter=1000,
-        bert_model_name="bert-base-uncased",
-        layer_type="last_hidden_state",
+        bert_model_name="sentence-transformers/paraphrase-MiniLM-L6-v2",
+        multi_process=True,
     ):
 
         self.split_random_seed = split_random_seed
         self.test_size = test_size
         self.log_reg_max_iter = log_reg_max_iter
         self.bert_model_name = bert_model_name
-        self.layer_type = layer_type
+        self.multi_process = multi_process
 
     def split_data(self, training_data, verbose=False):
 
@@ -130,12 +131,13 @@ class SentenceClassifier:
             print(f"Size of training data: {len(y_train)}")
             print(f"Size of test data: {len(y_test)}")
             print(f"Counter of training data classes: {Counter(y_train)}")
-            print(f"Counter of training data classes: {Counter(y_test)}")
+            print(f"Counter of test data classes: {Counter(y_test)}")
         return X_train, X_test, y_train, y_test
 
     def load_bert(self):
         self.bert_vectorizer = BertVectorizer(
-            bert_model_name=self.bert_model_name, layer_type=self.layer_type
+            bert_model_name=self.bert_model_name,
+            multi_process=self.multi_process
         )
         self.bert_vectorizer.fit()
 
@@ -232,7 +234,7 @@ if __name__ == "__main__":
     test_size = params["test_size"]
     log_reg_max_iter = params["log_reg_max_iter"]
     bert_model_name = params["bert_model_name"]
-    layer_type = params["layer_type"]
+    multi_process = params["multi_process"]
 
     # Output file name
     output_dir = params["output_dir"]
@@ -240,13 +242,13 @@ if __name__ == "__main__":
 
     # Run flow
     training_data = load_training_data(training_data_file)
-
+        
     sent_class = SentenceClassifier(
         split_random_seed=split_random_seed,
         test_size=test_size,
         log_reg_max_iter=log_reg_max_iter,
         bert_model_name=bert_model_name,
-        layer_type=layer_type,
+        multi_process=multi_process,
     )
     X_train, X_test, y_train, y_test = sent_class.split_data(
         training_data, verbose=True

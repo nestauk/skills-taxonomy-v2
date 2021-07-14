@@ -1,6 +1,7 @@
 channels:
   - defaults
   - conda-forge
+  - giuliorossetti
 dependencies:
   - pip
   - python=3.8
