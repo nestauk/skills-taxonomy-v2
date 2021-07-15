@@ -1,5 +1,14 @@
 """
-Input sentences output word embeddings for each of them
+Input sentences output word embeddings for each of them.
+
+The indices need special attention because the output tokens of doc._.trf_data are
+different from the tokens in doc. You can use doc._.trf_data.align[i].data to find
+how they relate.
+https://stackoverflow.com/questions/66150469/spacy-3-transformer-vector-token-alignment
+
+
+TO DO: since you are iteratively writing to the output file, you should make sure to delete
+it/ give a warning in case the file already exists and you end up writing to it more than once
 """
 
 import pickle
@@ -81,13 +90,13 @@ if __name__ == "__main__":
         tokvecs_i = []
         for i, token in enumerate(doc):
             # Don't include very long words
-            # or proper nouns/numbers
+            # or proper nouns/numbers/quite a few other word types
             # or words with numbers in (these are always garbage)
             # You generally take out a lot of the urls by having a token_len_threshold but not always
             if (
                 ("www" not in token.text)
                 and (len(token) < token_len_threshold)
-                and (token.pos_ not in ["PROPN", "NUM", "SPACE"])
+                and (token.pos_ not in ["PROPN", "NUM", "SPACE", "X", "PUNCT", "ADP", "AUX", "CONJ", "DET", "PART", "PRON", "SCONJ"])
                 and (not re.search("\d", token.text))
                 and (not token.text in stopwords.words())
             ):
@@ -103,7 +112,7 @@ if __name__ == "__main__":
                 "job_id": job_id,
                 "cleaned sentence": clean_sentence,
                 "lemmatized sentence": lemma_sentence,
-                "word embeddings": tokvecs[tokvecs_i].tolist(),
+                "word embeddings": tokvecs[[tokvecs_i]].tolist(),
             }
             with open(
                 os.path.join(
