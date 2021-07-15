@@ -75,8 +75,7 @@ if __name__ == "__main__":
     for job_id, sentence in tqdm(zip(job_ids, sentences)):
         sentence = separate_camel_case(sentence)
         doc = nlp(sentence)
-        # Ignore start and end padding vectors of sentence words
-        tokvecs = doc._.trf_data.tensors[0][0][1:-1]
+        tokvecs = doc._.trf_data.tensors[0][0]
         lemma_sentence = []
         clean_sentence = []
         tokvecs_i = []
@@ -94,7 +93,11 @@ if __name__ == "__main__":
             ):
                 lemma_sentence.append(token.lemma_.lower())
                 clean_sentence.append(token.text.lower())
-                tokvecs_i.append(i)
+                # The spacy tokens don't always align to the trf data tokens
+                # These are the indices of tokvecs that match to this token
+                # (it is in the form array([[18],[19]], dtype=int32)) so needs to be flattened)
+                trf_alignment_indices = [index for sublist in doc._.trf_data.align[i].data for index in sublist]
+                tokvecs_i += trf_alignment_indices
         if clean_sentence:
             output_line = {
                 "job_id": job_id,
