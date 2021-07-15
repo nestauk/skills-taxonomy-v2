@@ -14,13 +14,13 @@
 
 When you are running scripts from this repo for the first time you need to create the environment by running `make conda-create` to create the conda environment. Then everytime after this you can activate it using `conda activate skills-taxonomy-v2`. If you update the requirements then run `make conda-update`.
 
-<!-- As a one off, if needed, you will also have to run:
+As a one off, if needed, you will also have to run:
 ```
 conda install pytorch torchvision torchaudio -c pytorch
 ```
-to use pytorch, and -->
+to use pytorch, and
 ```
-conda install -c conda-forge spacy
+conda install -c conda-forge spacy==3.0.0
 python -m spacy download en_core_web_sm
 ```
 for spaCy.
@@ -32,6 +32,17 @@ conda install cdlib=0.2.3
 (this doesn't work when added to the environment.yaml).
 
 
+### Running on EC2
+
+EC2 will have the cuda GPU neccessary to get the spacy transformers word embeddings. To get this to work on an EC2 instance:
+```
+export CUDA_PATH="/opt/nvidia/cuda"
+pip install -U spacy[cuda102,transformers]
+pip install transformers[sentencepiece]
+python -m spacy download en_core_web_trf
+```
+
+
 ## Contributor guidelines
 
 [Technical and working style guidelines](https://github.com/nestauk/ds-cookiecutter/blob/master/GUIDELINES.md)
@@ -41,3 +52,6 @@ conda install cdlib=0.2.3
 <small><p>Project based on <a target="_blank" href="https://github.com/nestauk/ds-cookiecutter">Nesta's data science project template</a>
 (<a href="http://nestauk.github.io/ds-cookiecutter">Read the docs here</a>).
 </small>
+
+
+
