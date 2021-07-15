@@ -71,10 +71,12 @@ if __name__ == "__main__":
     if not os.path.exists(output_directory):
         os.makedirs(output_directory)
 
+    print(f"Finding word embeddings for {len(sentences)} sentences ...")
     for job_id, sentence in tqdm(zip(job_ids, sentences)):
         sentence = separate_camel_case(sentence)
         doc = nlp(sentence)
-        tokvecs = doc._.trf_data.tensors[0][0]
+        # Ignore start and end padding vectors of sentence words
+        tokvecs = doc._.trf_data.tensors[0][0][1:-1]
         lemma_sentence = []
         clean_sentence = []
         tokvecs_i = []
