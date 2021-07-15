@@ -7,6 +7,7 @@ import re
 import json
 import os
 
+from tqdm import tqdm
 # from transformers import BertTokenizer, BertModel
 
 from skills_taxonomy_v2.pipeline.skills_extraction.cleaning_sentences import separate_camel_case, deduplicate_sentences
@@ -61,7 +62,7 @@ if __name__ == '__main__':
 	if not os.path.exists(output_directory):
 		os.makedirs(output_directory)
 
-	for job_id, sentence in zip(job_ids, sentences):
+	for job_id, sentence in tqdm(zip(job_ids, sentences)):
 		sentence = separate_camel_case(sentence)
 		doc = nlp(sentence)
 		tokvecs = doc._.trf_data.tensors[0][0]
@@ -90,11 +91,6 @@ if __name__ == '__main__':
 				'lemmatized sentence': lemma_sentence,
 				'word embeddings': tokvecs[tokvecs_i].tolist()
 				}
-			with open(os.path.join(output_directory, '{config_name}_jobsnew1_transformers_word_embeddings.jsonl'), "a") as file:
+			with open(os.path.join(output_directory, f'{config_name}_jobsnew1_transformers_word_embeddings.jsonl'), "a") as file:
 				file.write(json.dumps(output_line))
 				file.write("\n")
-
-		
-
-
-
