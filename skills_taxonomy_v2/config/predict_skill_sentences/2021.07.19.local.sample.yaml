@@ -1,0 +1,9 @@
+flows:
+  predict_skill_sentences_flow:
+    params:
+      input_dir: 'inputs/'
+      data_dir: 'TextKernel_sample/jobs_new.1.jsonl'
+      model_config_name: '2021.07.09.small'
+      output_dir: 'outputs/sentence_classifier/data/skill_sentences'
+      data_local: True
+    run_id: 0

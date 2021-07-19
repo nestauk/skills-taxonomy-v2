@@ -13,6 +13,7 @@ import os
 from fnmatch import fnmatch
 import gzip
 import logging
+from argparse import ArgumentParser
 
 from tqdm import tqdm
 import spacy
@@ -241,21 +242,34 @@ def run_predict_sentence_class(input_dir, data_dir, model_config_name, output_di
 		except ValueError:
 			logger.info('Skipping this data file since there is no full text field in it')
 
+def parse_arguments(parser):
+
+	parser.add_argument(
+		'--config_path',
+		help='Path to config file',
+		default='skills_taxonomy_v2/config/predict_skill_sentences/2021.07.19.local.sample.yaml'
+	)
+
+	return parser.parse_args()
+
 if __name__ == '__main__':
 
-	# input_dir = 'inputs/'
-	# # data_dir = 'TextKernel_sample/jobs_new.1.jsonl' # This can be a dir or a specific file, it will be copied for the output locations
-	# data_dir = 'TextKernel_sample/'
-	# model_config_name = '2021.07.09.small' # The model config name was also used to name the model
-	# output_dir = 'outputs/sentence_classifier/data/skill_sentences'
-	# data_local = True
+	parser = ArgumentParser()
+	args = parse_arguments(parser)
 
-	input_dir = 'inputs/data/'
-	data_dir = 'textkernel-files/'
-	model_config_name = '2021.07.09.small' # The model config name was also used to name the model
-	output_dir = 'outputs/sentence_classifier/data/skill_sentences'
-	data_local = False
+	with open(args.config_path, "r") as f:
+		config = yaml.load(f, Loader=yaml.FullLoader)
 
-	run_predict_sentence_class(input_dir, data_dir, model_config_name, output_dir, data_local=data_local)
+	FLOW_ID = "predict_skill_sentences_flow"
+
+	flow_config = config["flows"][FLOW_ID]
+	params = flow_config["params"]
+
+	run_predict_sentence_class(
+		params['input_dir'],
+		params['data_dir'],
+		params['model_config_name'],
+		params['output_dir'],
+		data_local=params['data_local'])
 
 	
