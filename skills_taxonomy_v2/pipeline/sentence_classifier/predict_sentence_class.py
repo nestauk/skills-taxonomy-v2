@@ -14,6 +14,10 @@ from fnmatch import fnmatch
 import gzip
 import logging
 from argparse import ArgumentParser
+from multiprocessing import Pool
+from functools import partial
+import itertools
+import random
 
 from tqdm import tqdm
 import spacy
@@ -21,6 +25,7 @@ import boto3
 
 from skills_taxonomy_v2.pipeline.sentence_classifier.sentence_classifier import SentenceClassifier
 from skills_taxonomy_v2.pipeline.sentence_classifier.create_training_data import mask_text, text_cleaning
+from skills_taxonomy_v2.pipeline.sentence_classifier.utils  import split_sentence
 
 BUCKET_NAME = 'skills-taxonomy-v2'
 
@@ -38,18 +43,13 @@ def load_local_data(file_name):
 	Just load what's needed (job id and full text)
 	"""
 	if fnmatch(file_name, "*.jsonl.gz"):
-		data = []
-		with gzip.open(file_name) as f:
-			for line in f:
-				data.append(load_neccessary(line))
+		with gzip.open(file_name) as file:
+			data = [load_neccessary(line) for line in file]
 	elif fnmatch(file_name, "*.jsonl"):
 		with open(file_name, 'r') as file:
 			data = [load_neccessary(line) for line in file]
 	else:
-		raise TypeError('Input file type not recognised')
-
-	if not data[0].get('full_text'):
-		raise ValueError('The loaded data has no full text field')
+		data = None
 
 	return data
 
@@ -60,15 +60,10 @@ def load_s3_data(file_name, s3):
 	"""
 	if fnmatch(file_name, "*.jsonl.gz"):
 		obj = s3.Object(BUCKET_NAME, file_name)
-		data = []
-		with gzip.GzipFile(fileobj=obj.get()["Body"]) as f:
-			for line in f:
-				data.append(load_neccessary(line))
+		with gzip.GzipFile(fileobj=obj.get()["Body"]) as file:
+			data = [load_neccessary(line) for line in file]
 	else:
-		raise TypeError('Input file type not recognised')
-
-	if not data[0].get('full_text'):
-		raise ValueError('The loaded data has no full text field')
+		data = None
 
 	return data
 
@@ -90,29 +85,6 @@ def load_model(config_name):
 	sent_classifier.load_model(model_dir)
 
 	return sent_classifier, config
-
-def split_sentences(nlp, data, min_length=15, max_length=100):
-	"""
-	Split the sentences. Only include in output if sentence length
-	is in a range.
-	Output is two lists, a list of each sentence and a list of the job_ids they are from.
-	"""
-	sentences = []
-	job_ids = []
-	for job_info in tqdm(data):
-		job_id = job_info['job_id']
-		text = job_info['full_text']
-		text = mask_text(nlp, text)
-		# Split up sentences
-		doc = nlp(text)
-		for sent in doc.sents:
-			sentence = text_cleaning(sent.text) 
-			if len(sentence) in range(min_length, max_length):
-				sentences.append(sentence)
-				job_ids.append(job_id)
-
-	return sentences, job_ids
-
 
 def predict_sentences(sent_classifier, sentences):
 
@@ -206,7 +178,7 @@ def get_s3_data_paths(bucket, root):
 	return s3_keys
 
 
-def run_predict_sentence_class(input_dir, data_dir, model_config_name, output_dir, data_local=True):
+def run_predict_sentence_class(input_dir, data_dir, model_config_name, output_dir, data_local=True, sample_data_paths=True, random_seed=42, sample_size=100):
 	"""
 	Given the input dir, get predictions and save out for every relevant file in the dir.
 	data_local : True if the data is stored localle, False if you are reading from S3
@@ -224,29 +196,40 @@ def run_predict_sentence_class(input_dir, data_dir, model_config_name, output_di
 		bucket = s3.Bucket(BUCKET_NAME)
 		data_paths = get_s3_data_paths(bucket, root)
 
+	if sample_data_paths:
+		random.seed(random_seed)
+		data_paths = random.sample(data_paths, sample_size)
+
 	# Make predictions and save output for data path(s)
 	logger.info(f"Running predictions on {len(data_paths)} data files ...")
 	for data_path in data_paths:
 		# Run predictions and save outputs iteratively
-		try:
-			logger.info(f"Loading data from {data_path} ...")
-			if data_local:
-				data = load_local_data(data_path)
-			else:
-				data = load_s3_data(data_path, s3)
+		logger.info(f"Loading data from {data_path} ...")
+		if data_local:
+			data = load_local_data(data_path)
+		else:
+			data = load_s3_data(data_path, s3)
+
+		if data:
 			output_file_dir = get_output_name(data_path, input_dir, output_dir, model_config_name)
-			sentences, job_ids = split_sentences(nlp, data, min_length=15, max_length=100)
-			sentences_pred, _ = predict_sentences(sent_classifier, sentences)
-			skill_sentences_dict = combine_output(job_ids, sentences, sentences_pred, sentences_vec=None)
 
-			logger.info(f"Saving data to {output_file_dir} ...")
-			if data_local:
-				save_outputs(skill_sentences_dict, output_file_dir)
-			else:
-				save_outputs_to_s3(s3, skill_sentences_dict, output_file_dir)
+			start_time = time.time()
+			with Pool(4) as pool: # 4 cpus
+				partial_split_sentence = partial(split_sentence, nlp=nlp, min_length=15, max_length=100)
+				split_sentence_pool_output = pool.map(partial_split_sentence, data)
+				sentences = list(itertools.chain(*[m[0] for m in split_sentence_pool_output]))
+				job_ids = list(itertools.chain(*[m[1] for m in split_sentence_pool_output]))
+			logger.info(f'Splitting sentences took {time.time() - start_time} seconds')
 
-		except ValueError:
-			logger.info('Skipping this data file since there is no full text field in it')
+			if sentences:
+				sentences_pred, _ = predict_sentences(sent_classifier, sentences)
+				skill_sentences_dict = combine_output(job_ids, sentences, sentences_pred, sentences_vec=None)
+
+				logger.info(f"Saving data to {output_file_dir} ...")
+				if data_local:
+					save_outputs(skill_sentences_dict, output_file_dir)
+				else:
+					save_outputs_to_s3(s3, skill_sentences_dict, output_file_dir)
 
 def parse_arguments(parser):
 
@@ -271,11 +254,18 @@ if __name__ == '__main__':
 	flow_config = config["flows"][FLOW_ID]
 	params = flow_config["params"]
 
+	if not params['sample_data_paths']:
+		# If you don't want to sample the data you can set these to None
+		params['random_seed'] = None
+		params['sample_size'] = None
+
 	run_predict_sentence_class(
 		params['input_dir'],
 		params['data_dir'],
 		params['model_config_name'],
 		params['output_dir'],
-		data_local=params['data_local'])
+		data_local=params['data_local'],
+		sample_data_paths=params['sample_data_paths'],
+		random_seed=params['random_seed'],
+		sample_size=params['sample_size'])
 
-	
