@@ -124,12 +124,12 @@ def get_common_tuples(sentence_words, top_n=20):
     return common_word_tuples_set
 
 
-def remove_common_tuples(sentence_words, common_word_tuples_set):
+def remove_common_tuples(sentences_words, common_word_tuples_set):
     """
     Remove the common tuples for sentences.
     """
     sentence_words_clean = []
-    for sentence_words in sentence_words:
+    for sentence_words in sentences_words:
         sentence_words_set = set(sentence_words)
         pop_words = set()
         for common_word_tuple in common_word_tuples_set:
