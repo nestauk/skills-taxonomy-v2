@@ -171,3 +171,10 @@ with a relevant config file will take in job adverts, split them into sentences,
 ```
 {'job_id_1': [('sentence1'), ('sentence2')], 'job_id_2': [('sentence1'), ('sentence2'}
 ```
+
+To predict on all job adverts in the TextKernel data on S3, on the EC2 instance I ran
+```
+python skills_taxonomy_v2/pipeline/sentence_classifier/predict_sentence_class.py --config_path 'skills_taxonomy_v2/config/predict_skill_sentences/2021.07.19.yaml'
+```
+This will run predictions on a random sample of 10 of the 686 data files.
+
