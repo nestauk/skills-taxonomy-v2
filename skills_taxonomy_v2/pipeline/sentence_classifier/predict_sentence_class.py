@@ -217,12 +217,16 @@ def run_predict_sentence_class(input_dir, data_dir, model_config_name, output_di
 			with Pool(4) as pool: # 4 cpus
 				partial_split_sentence = partial(split_sentence, nlp=nlp, min_length=15, max_length=100)
 				split_sentence_pool_output = pool.map(partial_split_sentence, data)
-				sentences = list(itertools.chain(*[m[0] for m in split_sentence_pool_output]))
-				job_ids = list(itertools.chain(*[m[1] for m in split_sentence_pool_output]))
 			logger.info(f'Splitting sentences took {time.time() - start_time} seconds')
 
-			if sentences:
+			if split_sentence_pool_output:
+				sentences = list(itertools.chain(*[m[0] for m in split_sentence_pool_output]))
+				job_ids = list(itertools.chain(*[m[1] for m in split_sentence_pool_output]))
+		
+				start_time = time.time()
 				sentences_pred, _ = predict_sentences(sent_classifier, sentences)
+				logger.info(f'Predicting on {len(sentences)} sentences took {time.time() - start_time} seconds')
+				
 				skill_sentences_dict = combine_output(job_ids, sentences, sentences_pred, sentences_vec=None)
 
 				logger.info(f"Saving data to {output_file_dir} ...")
