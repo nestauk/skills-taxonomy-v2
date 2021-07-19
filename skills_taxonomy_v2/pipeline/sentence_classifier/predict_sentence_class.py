@@ -151,6 +151,14 @@ def save_outputs(skill_sentences_dict, output_file_dir):
 	with open(output_file_dir, 'w') as file:
 		json.dump(skill_sentences_dict, file)
 
+def save_outputs_to_s3(s3, skill_sentences_dict, output_file_dir):
+  
+	obj = s3.Object(BUCKET_NAME, output_file_dir)
+
+	obj.put(
+		Body=json.dumps(skill_sentences_dict)
+	)
+
 def load_outputs(file_name):
 
 	with open(file_name, "r") as file:
@@ -169,17 +177,6 @@ def get_output_name(data_path, input_dir, output_dir, model_config_name):
 	output_file_dir = output_file_dir.replace('.', '_') + '.json'
 
 	return output_file_dir
-
-def run_predictions(data, nlp, sent_classifier, output_file_dir):
-
-	sentences, job_ids = split_sentences(nlp, data[0:10], min_length=15, max_length=100)
-
-	sentences_pred, _ = predict_sentences(sent_classifier, sentences)
-
-	skill_sentences_dict = combine_output(job_ids, sentences, sentences_pred, sentences_vec=None)
-
-	logger.info(f"Saving data to {output_file_dir} ...")
-	save_outputs(skill_sentences_dict, output_file_dir)
 
 def get_local_data_paths(root):
 
@@ -238,7 +235,16 @@ def run_predict_sentence_class(input_dir, data_dir, model_config_name, output_di
 			else:
 				data = load_s3_data(data_path, s3)
 			output_file_dir = get_output_name(data_path, input_dir, output_dir, model_config_name)
-			run_predictions(data, nlp, sent_classifier, output_file_dir)
+			sentences, job_ids = split_sentences(nlp, data[0:10], min_length=15, max_length=100)
+			sentences_pred, _ = predict_sentences(sent_classifier, sentences)
+			skill_sentences_dict = combine_output(job_ids, sentences, sentences_pred, sentences_vec=None)
+
+			logger.info(f"Saving data to {output_file_dir} ...")
+			if data_local:
+				save_outputs(skill_sentences_dict, output_file_dir)
+			else:
+				save_outputs_to_s3(s3, skill_sentences_dict, output_file_dir)
+
 		except ValueError:
 			logger.info('Skipping this data file since there is no full text field in it')
 
