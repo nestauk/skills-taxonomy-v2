@@ -6,4 +6,5 @@ flows:
       model_config_name: '2021.07.09.small'
       output_dir: 'outputs/sentence_classifier/data/skill_sentences'
       data_local: True
+      sample_data_paths: False
     run_id: 0
