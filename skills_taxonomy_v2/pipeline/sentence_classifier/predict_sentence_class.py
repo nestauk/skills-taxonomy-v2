@@ -226,7 +226,7 @@ def run_predict_sentence_class(input_dir, data_dir, model_config_name, output_di
 
 	# Make predictions and save output for data path(s)
 	logger.info(f"Running predictions on {len(data_paths)} data files ...")
-	for data_path in data_paths[0:2]:
+	for data_path in data_paths:
 		# Run predictions and save outputs iteratively
 		try:
 			logger.info(f"Loading data from {data_path} ...")
@@ -235,7 +235,7 @@ def run_predict_sentence_class(input_dir, data_dir, model_config_name, output_di
 			else:
 				data = load_s3_data(data_path, s3)
 			output_file_dir = get_output_name(data_path, input_dir, output_dir, model_config_name)
-			sentences, job_ids = split_sentences(nlp, data[0:10], min_length=15, max_length=100)
+			sentences, job_ids = split_sentences(nlp, data, min_length=15, max_length=100)
 			sentences_pred, _ = predict_sentences(sent_classifier, sentences)
 			skill_sentences_dict = combine_output(job_ids, sentences, sentences_pred, sentences_vec=None)
 
