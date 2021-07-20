@@ -20,7 +20,6 @@ def split_sentence(data, nlp, min_length=15, max_length=100):
 			sentence = text_cleaning(sent.text) 
 			if len(sentence) in range(min_length, max_length):
 				sentences.append(sentence)
-		job_ids = [job_id]*len(sentences)
-
-		if len(sentences) != 0:
-			return sentences, job_ids
+		return job_id, sentences
+	else:
+		return None, None

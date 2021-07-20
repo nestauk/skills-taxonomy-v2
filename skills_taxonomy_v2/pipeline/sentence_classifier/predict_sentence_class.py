@@ -3,6 +3,11 @@ Predict whether sentences are skill sentences or not using all the sentences for
 
 If you are running this on a whole directory of files it will try to read any jsonl or jsonl.gz in the location,
 it will also skip over a file if a 'full_text' key isn't found in the first element of it.
+
+Output will be a dict of the form: {'job_id_1': [('sentence1', [1.5, 1.4 ...]), ('sentence1', [1.5, 1.4 ...])],
+                                    'job_id_2': [('sentence1', [1.5, 1.4 ...]), ('sentence1', [1.5, 1.4 ...]}
+Where any sentences that were predicted as not-skills are filtered out.
+
 """
 
 import json
@@ -18,6 +23,7 @@ from multiprocessing import Pool
 from functools import partial
 import itertools
 import random
+from collections import defaultdict
 
 from tqdm import tqdm
 import spacy
@@ -108,33 +114,6 @@ def predict_sentences(sent_classifier, sentences):
     sentences_pred = sent_classifier.predict(sentences_vec)
 
     return sentences_pred, sentences_vec
-
-
-def combine_output(job_ids, sentences, sentences_pred, sentences_vec=None):
-    """
-    Combine the job_ids, sentences, sentences_pred and sentences_vec (optional since it is so large and possibly unneeded)
-    in a dict, filtering out any sentences that were predicted as not-skills.
-    Output (dict): {'job_id_1': [('sentence1', [1.5, 1.4 ...]), ('sentence1', [1.5, 1.4 ...])],
-                                    'job_id_2': [('sentence1', [1.5, 1.4 ...]), ('sentence1', [1.5, 1.4 ...]}
-    """
-    skill_sentences_dict = {}
-    for job_id in set(job_ids):
-        # Which values correspond to this job id
-        if sentences_vec is None:
-            sentence_list = [
-                sentences[i]
-                for i, e in enumerate(job_ids)
-                if e == job_id and sentences_pred[i] == 1
-            ]
-        else:
-            sentence_list = [
-                (sentences[i], sentences_vec[i].tolist())
-                for i, e in enumerate(job_ids)
-                if e == job_id and sentences_pred[i] == 1
-            ]
-        if len(sentence_list) != 0:
-            skill_sentences_dict[job_id] = sentence_list
-    return skill_sentences_dict
 
 
 def save_outputs(skill_sentences_dict, output_file_dir):
@@ -252,7 +231,8 @@ def run_predict_sentence_class(
             output_file_dir = get_output_name(
                 data_path, input_dir, output_dir, model_config_name
             )
-
+            
+            logger.info(f"Splitting sentences ...")
             start_time = time.time()
             with Pool(4) as pool:  # 4 cpus
                 partial_split_sentence = partial(
@@ -260,31 +240,36 @@ def run_predict_sentence_class(
                 )
                 split_sentence_pool_output = pool.map(partial_split_sentence, data)
             logger.info(f"Splitting sentences took {time.time() - start_time} seconds")
-
-            sentences = list(
-                itertools.chain(*[m[0] for m in split_sentence_pool_output if m])
-            )
-            job_ids = list(
-                itertools.chain(*[m[1] for m in split_sentence_pool_output if m])
-            )
+            
+            # Process output into one list of sentences for all documents
+            sentences = []
+            job_ids = []
+            for i, (job_id, s) in enumerate(split_sentence_pool_output):
+                if s:
+                    sentences += s
+                    job_ids += [job_id]*len(s)
 
             if sentences:
+                logger.info(f"Predicting skill sentences ...")
                 start_time = time.time()
                 sentences_pred, _ = predict_sentences(sent_classifier, sentences)
                 logger.info(
                     f"Predicting on {len(sentences)} sentences took {time.time() - start_time} seconds"
                 )
 
-                skill_sentences_dict = combine_output(
-                    job_ids, sentences, sentences_pred, sentences_vec=None
-                )
+                logger.info(f"Combining data for output ...")
+                start_time = time.time()
+                skill_sentences_dict = defaultdict(list)
+                for job_id, sentence, pred in list(zip(job_ids, sentences, sentences_pred)):
+                    if pred == 1:
+                        skill_sentences_dict[job_id].append(sentence)
+                logger.info(f"Combining output took {time.time() - start_time} seconds")
 
                 logger.info(f"Saving data to {output_file_dir} ...")
                 if data_local:
                     save_outputs(skill_sentences_dict, output_file_dir)
                 else:
                     save_outputs_to_s3(s3, skill_sentences_dict, output_file_dir)
-
 
 def parse_arguments(parser):
 
