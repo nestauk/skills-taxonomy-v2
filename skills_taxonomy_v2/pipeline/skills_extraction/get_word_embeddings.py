@@ -54,6 +54,40 @@ from skills_taxonomy_v2.getters.s3_data import (
 logger = logging.getLogger(__name__)
 
 
+def is_token_word(token, token_len_threshold, stopwords):
+    """
+        Returns true if the token:
+        - Doesn't contain 'www'
+        - Isn't too long (if it is it is usually garbage)
+    - Isn't a proper noun/number/quite a few other word types
+    - Isn't a word with numbers in (these are always garbage)
+    """
+
+    return (
+        ("www" not in token.text)
+        and (len(token) < token_len_threshold)
+        and (
+            token.pos_
+            not in [
+                "PROPN",
+                "NUM",
+                "SPACE",
+                "X",
+                "PUNCT",
+                "ADP",
+                "AUX",
+                "CONJ",
+                "DET",
+                "PART",
+                "PRON",
+                "SCONJ",
+            ]
+        )
+        and (not re.search("\d", token.text))
+        and (not token.text in stopwords)
+    )
+
+
 def parse_arguments(parser):
     parser.add_argument(
         "--config_path",
@@ -121,33 +155,7 @@ if __name__ == "__main__":
                     tokvecs = doc._.trf_data.tensors[0][0]
 
                     for i, token in enumerate(doc):
-                        # Don't include very long words
-                        # or proper nouns/numbers/quite a few other word types
-                        # or words with numbers in (these are always garbage)
-                        # You generally take out a lot of the urls by having a token_len_threshold but not always
-                        if (
-                            ("www" not in token.text)
-                            and (len(token) < token_len_threshold)
-                            and (
-                                token.pos_
-                                not in [
-                                    "PROPN",
-                                    "NUM",
-                                    "SPACE",
-                                    "X",
-                                    "PUNCT",
-                                    "ADP",
-                                    "AUX",
-                                    "CONJ",
-                                    "DET",
-                                    "PART",
-                                    "PRON",
-                                    "SCONJ",
-                                ]
-                            )
-                            and (not re.search("\d", token.text))
-                            and (not token.text in stopwords.words())
-                        ):
+                        if is_token_word(token, token_len_threshold, stopwords.words()):
                             lemma_sentence_words.append(token.lemma_.lower())
                             # The spacy tokens don't always align to the trf data tokens
                             # These are the indices of tokvecs that match to this token
@@ -158,11 +166,10 @@ if __name__ == "__main__":
                                 for index in sublist
                             ]
                             tokvecs_i += trf_alignment_indices
-
-                    word_embeddings_sentence = tokvecs[[tokvecs_i]].tolist()
-            output_tuple_list.append((lemma_sentence_words, word_embeddings_sentence))
-        # Save
-        # Put the output in a folder with a similar naming structure to the input
+                    output_tuple_list += [
+                        (lemma_sentence_words, tokvecs[[tokvecs_i]].tolist())
+                    ]
+        # Save the output in a folder with a similar naming structure to the input
         data_dir = os.path.relpath(data_path, skill_sentences_dir)
         output_file_dir = os.path.join(
             output_dir, data_dir.split(".json")[0] + "_embeddings.json"
