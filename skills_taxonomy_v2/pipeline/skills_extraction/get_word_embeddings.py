@@ -15,9 +15,8 @@ different from the tokens in doc. You can use doc._.trf_data.align[i].data to fi
 how they relate.
 https://stackoverflow.com/questions/66150469/spacy-3-transformer-vector-token-alignment
 
+python -i skills_taxonomy_v2/pipeline/skills_extraction/get_word_embeddings.py --config_path 'skills_taxonomy_v2/config/skills_extraction/word_embeddings/2021.07.21.yaml'
 
-TO DO: since you are iteratively writing to the output file, you should make sure to delete
-it/ give a warning in case the file already exists and you end up writing to it more than once
 """
 
 import pickle
@@ -27,6 +26,8 @@ import os
 from argparse import ArgumentParser
 import yaml
 import logging
+from multiprocessing import Pool
+from functools import partial
 
 from tqdm import tqdm
 import boto3
@@ -38,10 +39,6 @@ from thinc.api import set_gpu_allocator, require_gpu
 import nltk
 from nltk.corpus import stopwords
 
-from skills_taxonomy_v2.pipeline.skills_extraction.cleaning_sentences import (
-    separate_camel_case,
-    deduplicate_sentences,
-)
 from skills_taxonomy_v2.getters.s3_data import (
     get_s3_resource,
     get_s3_data_paths,
@@ -49,16 +46,20 @@ from skills_taxonomy_v2.getters.s3_data import (
     load_s3_data,
 )
 
-# nltk.download("stopwords")
+from skills_taxonomy_v2.pipeline.skills_extraction.get_word_embeddings_utils.py import (
+    process_sentence,
+)
+
+nltk.download("stopwords")
 
 logger = logging.getLogger(__name__)
 
 
 def is_token_word(token, token_len_threshold, stopwords):
     """
-        Returns true if the token:
-        - Doesn't contain 'www'
-        - Isn't too long (if it is it is usually garbage)
+            Returns true if the token:
+            - Doesn't contain 'www'
+            - Isn't too long (if it is it is usually garbage)
     - Isn't a proper noun/number/quite a few other word types
     - Isn't a word with numbers in (these are always garbage)
     """
@@ -134,41 +135,20 @@ if __name__ == "__main__":
     # For loop through each data path
     logger.info(f"Running predictions on {len(data_paths)} data files ...")
 
-    sentence_hash_set = set()  # Keep a set of sentence hashes so as not process repeats
     for data_path in data_paths:
         logger.info(f"Loading data for {data_path} ...")
         data = load_s3_data(s3, bucket_name, data_path)
         output_tuple_list = []
         for job_id, sentences in data.items():
-            for sentence in sentences:
-                sentence_hash = hash(sentence)
-                if sentence_hash not in sentence_hash_set:
-                    sentence_hash_set.add(sentence_hash)
+            with Pool(4) as pool:  # 4 cpus
+                partial_process_sentence = partial(
+                    process_sentence, nlp=nlp, stopwords=stopwords.words()
+                )
+                process_sentence_pool_output = pool.map(
+                    partial_process_sentence, sentences
+                )
+            output_tuple_list += process_sentence_pool_output
 
-                    lemma_sentence_words = []
-                    tokvecs_i = []
-
-                    sentence = separate_camel_case(sentence)
-
-                    # Get word embeddings for all words
-                    doc = nlp(sentence)
-                    tokvecs = doc._.trf_data.tensors[0][0]
-
-                    for i, token in enumerate(doc):
-                        if is_token_word(token, token_len_threshold, stopwords.words()):
-                            lemma_sentence_words.append(token.lemma_.lower())
-                            # The spacy tokens don't always align to the trf data tokens
-                            # These are the indices of tokvecs that match to this token
-                            # (it is in the form array([[18],[19]], dtype=int32)) so needs to be flattened)
-                            trf_alignment_indices = [
-                                index
-                                for sublist in doc._.trf_data.align[i].data
-                                for index in sublist
-                            ]
-                            tokvecs_i += trf_alignment_indices
-                    output_tuple_list += [
-                        (lemma_sentence_words, tokvecs[[tokvecs_i]].tolist())
-                    ]
         # Save the output in a folder with a similar naming structure to the input
         data_dir = os.path.relpath(data_path, skill_sentences_dir)
         output_file_dir = os.path.join(
