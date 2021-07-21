@@ -1,5 +1,14 @@
 """
-Input sentences output word embeddings for each of them.
+For a particular S3 location of skill sentences found, load the sentences, and for each sentence
+find its words embeddings and output these.
+- Don't include very long words
+- Don't include proper nouns/numbers/quite a few other word types
+- Don't include words with numbers in (these are always garbage)
+- You generally take out a lot of the urls by having a token_len_threshold but not always
+
+From this point we don't really care which job adverts the sentences come from,
+there will also be repeated sentences to remove. Although we will process in batches
+of the original data files, so repeats won't be removed cross files.
 
 The indices need special attention because the output tokens of doc._.trf_data are
 different from the tokens in doc. You can use doc._.trf_data.align[i].data to find
@@ -15,16 +24,12 @@ import pickle
 import re
 import json
 import os
+from argparse import ArgumentParser
+import yaml
+import logging
 
 from tqdm import tqdm
-
-# from transformers import BertTokenizer, BertModel
-
-from skills_taxonomy_v2.pipeline.skills_extraction.cleaning_sentences import (
-    separate_camel_case,
-    deduplicate_sentences,
-)
-
+import boto3
 import cupy
 import spacy
 import torch
@@ -33,9 +38,48 @@ from thinc.api import set_gpu_allocator, require_gpu
 import nltk
 from nltk.corpus import stopwords
 
-nltk.download("stopwords")
+from skills_taxonomy_v2.pipeline.skills_extraction.cleaning_sentences import (
+    separate_camel_case,
+    deduplicate_sentences,
+)
+from skills_taxonomy_v2.getters.s3_data import (
+    get_s3_resource,
+    get_s3_data_paths,
+    save_to_s3,
+    load_s3_data,
+)
+
+# nltk.download("stopwords")
+
+logger = logging.getLogger(__name__)
+
+
+def parse_arguments(parser):
+    parser.add_argument(
+        "--config_path",
+        help="Path to config file",
+        default="skills_taxonomy_v2/config/skills_extraction/word_embeddings/2021.07.21.yaml",
+    )
+    return parser.parse_args()
+
 
 if __name__ == "__main__":
+
+    # Load config variables
+
+    parser = ArgumentParser()
+    args = parse_arguments(parser)
+
+    with open(args.config_path, "r") as f:
+        config = yaml.load(f, Loader=yaml.FullLoader)
+
+    FLOW_ID = "word_embeddings_flow"
+    flow_config = config["flows"][FLOW_ID]
+    params = flow_config["params"]
+
+    skill_sentences_dir = params["skill_sentences_dir"]
+    token_len_threshold = params["token_len_threshold"]
+    output_dir = params["output_dir"]
 
     # Use the GPU, with memory allocations directed via PyTorch.
     # This prevents out-of-memory errors that would otherwise occur from competing
@@ -43,83 +87,85 @@ if __name__ == "__main__":
     set_gpu_allocator("pytorch")
     require_gpu(0)
 
-    config_name = "2021.07.09.small"
-
-    with open(
-        f"outputs/sentence_classifier/data/skill_sentences/{config_name}_jobsnew1_predictions.pkl",
-        "rb",
-    ) as file:
-        sentences_pred = pickle.load(file)
-
-    with open(
-        f"outputs/sentence_classifier/data/skill_sentences/{config_name}_jobsnew1_sentences.pkl",
-        "rb",
-    ) as file:
-        sentences = pickle.load(file)
-
-    with open(
-        f"outputs/sentence_classifier/data/skill_sentences/{config_name}_jobsnew1_job_ids.pkl",
-        "rb",
-    ) as file:
-        job_ids = pickle.load(file)
-
-    token_len_threshold = 20  # To adjust. I had a look and > this number seems to all be not words (urls etc)
-
-    # Filter out the non-skill sentences
-    sentences = [
-        sentences[i] for i, p in enumerate(sentences_pred.astype(bool)) if p == 1
-    ]
-
-    # Deduplicate sentences
-    sentences = deduplicate_sentences(sentences)
-
     # Get embeddings for each token in the sentence
     nlp = spacy.load("en_core_web_trf")
 
-    output_directory = "outputs/skills_extraction/data/"
-    if not os.path.exists(output_directory):
-        os.makedirs(output_directory)
+    # Get data paths in the location
+    bucket_name = "skills-taxonomy-v2"
+    s3 = boto3.resource("s3")
+    data_paths = get_s3_data_paths(
+        s3, bucket_name, skill_sentences_dir, file_types=["*.json"]
+    )
 
-    print(f"Finding word embeddings for {len(sentences)} sentences ...")
-    for job_id, sentence in tqdm(zip(job_ids, sentences)):
-        sentence = separate_camel_case(sentence)
-        doc = nlp(sentence)
-        tokvecs = doc._.trf_data.tensors[0][0]
-        lemma_sentence = []
-        clean_sentence = []
-        tokvecs_i = []
-        for i, token in enumerate(doc):
-            # Don't include very long words
-            # or proper nouns/numbers/quite a few other word types
-            # or words with numbers in (these are always garbage)
-            # You generally take out a lot of the urls by having a token_len_threshold but not always
-            if (
-                ("www" not in token.text)
-                and (len(token) < token_len_threshold)
-                and (token.pos_ not in ["PROPN", "NUM", "SPACE", "X", "PUNCT", "ADP", "AUX", "CONJ", "DET", "PART", "PRON", "SCONJ"])
-                and (not re.search("\d", token.text))
-                and (not token.text in stopwords.words())
-            ):
-                lemma_sentence.append(token.lemma_.lower())
-                clean_sentence.append(token.text.lower())
-                # The spacy tokens don't always align to the trf data tokens
-                # These are the indices of tokvecs that match to this token
-                # (it is in the form array([[18],[19]], dtype=int32)) so needs to be flattened)
-                trf_alignment_indices = [index for sublist in doc._.trf_data.align[i].data for index in sublist]
-                tokvecs_i += trf_alignment_indices
-        if clean_sentence:
-            output_line = {
-                "job_id": job_id,
-                "cleaned sentence": clean_sentence,
-                "lemmatized sentence": lemma_sentence,
-                "word embeddings": tokvecs[[tokvecs_i]].tolist(),
-            }
-            with open(
-                os.path.join(
-                    output_directory,
-                    f"{config_name}_jobsnew1_transformers_word_embeddings.jsonl",
-                ),
-                "a",
-            ) as file:
-                file.write(json.dumps(output_line))
-                file.write("\n")
+    # For loop through each data path
+    logger.info(f"Running predictions on {len(data_paths)} data files ...")
+
+    sentence_hash_set = set()  # Keep a set of sentence hashes so as not process repeats
+    for data_path in data_paths:
+        logger.info(f"Loading data for {data_path} ...")
+        data = load_s3_data(s3, bucket_name, data_path)
+        output_tuple_list = []
+        for job_id, sentences in data.items():
+            for sentence in sentences:
+                sentence_hash = hash(sentence)
+                if sentence_hash not in sentence_hash_set:
+                    sentence_hash_set.add(sentence_hash)
+
+                    lemma_sentence_words = []
+                    tokvecs_i = []
+
+                    sentence = separate_camel_case(sentence)
+
+                    # Get word embeddings for all words
+                    doc = nlp(sentence)
+                    tokvecs = doc._.trf_data.tensors[0][0]
+
+                    for i, token in enumerate(doc):
+                        # Don't include very long words
+                        # or proper nouns/numbers/quite a few other word types
+                        # or words with numbers in (these are always garbage)
+                        # You generally take out a lot of the urls by having a token_len_threshold but not always
+                        if (
+                            ("www" not in token.text)
+                            and (len(token) < token_len_threshold)
+                            and (
+                                token.pos_
+                                not in [
+                                    "PROPN",
+                                    "NUM",
+                                    "SPACE",
+                                    "X",
+                                    "PUNCT",
+                                    "ADP",
+                                    "AUX",
+                                    "CONJ",
+                                    "DET",
+                                    "PART",
+                                    "PRON",
+                                    "SCONJ",
+                                ]
+                            )
+                            and (not re.search("\d", token.text))
+                            and (not token.text in stopwords.words())
+                        ):
+                            lemma_sentence_words.append(token.lemma_.lower())
+                            # The spacy tokens don't always align to the trf data tokens
+                            # These are the indices of tokvecs that match to this token
+                            # (it is in the form array([[18],[19]], dtype=int32)) so needs to be flattened)
+                            trf_alignment_indices = [
+                                index
+                                for sublist in doc._.trf_data.align[i].data
+                                for index in sublist
+                            ]
+                            tokvecs_i += trf_alignment_indices
+
+                    word_embeddings_sentence = tokvecs[[tokvecs_i]].tolist()
+            output_tuple_list.append((lemma_sentence_words, word_embeddings_sentence))
+        # Save
+        # Put the output in a folder with a similar naming structure to the input
+        data_dir = os.path.relpath(data_path, skill_sentences_dir)
+        output_file_dir = os.path.join(
+            output_dir, data_dir.split(".json")[0] + "_embeddings.json"
+        )
+        save_to_s3(s3, bucket_name, output_tuple_list, output_file_dir)
+        print(f"Saved output to {output_file_dir}")

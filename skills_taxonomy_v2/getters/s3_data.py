@@ -38,11 +38,11 @@ def get_s3_data_paths(s3, bucket_name, root, file_types=["*.jsonl"]):
     return s3_keys
 
 
-def save_dict_to_s3(s3, bucket_name, output_dict, output_file_dir):
+def save_to_s3(s3, bucket_name, output_var, output_file_dir):
 
     obj = s3.Object(bucket_name, output_file_dir)
 
-    obj.put(Body=json.dumps(output_dict))
+    obj.put(Body=json.dumps(output_var))
 
 
 def load_s3_data(s3, bucket_name, file_name):
@@ -56,13 +56,13 @@ def load_s3_data(s3, bucket_name, file_name):
     obj = s3.Object(bucket_name, file_name)
     if fnmatch(file_name, "*.jsonl.gz"):
         with gzip.GzipFile(fileobj=obj.get()["Body"]) as file:
-            data = [json.loads(line) for line in file]
+            return [json.loads(line) for line in file]
     elif fnmatch(file_name, "*.jsonl"):
         file = obj.get()["Body"].read().decode()
-        data = [json.loads(line) for line in file]
+        return [json.loads(line) for line in file]
     elif fnmatch(file_name, "*.json"):
         file = obj.get()["Body"].read().decode()
-        data = json.loads(file)
+        return json.loads(file)
     else:
         print(
             'Function not supported for file type other than "*.jsonl.gz", "*.jsonl", or "*.json"'
