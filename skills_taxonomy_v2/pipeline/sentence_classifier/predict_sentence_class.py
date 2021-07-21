@@ -157,12 +157,11 @@ def get_output_name(data_path, input_dir, output_dir, model_config_name):
     return output_file_dir
 
 
-def get_local_data_paths(root):
+def get_local_data_paths(root, pattern="*.jsonl*"):
 
     if os.path.isdir(root):
         # If data_dir to predict on is a directory
-        # get all the names of jsonl or jsonl.gz files in this location
-        pattern = "*.jsonl*"
+        # get all the names of jsonl or jsonl.gz files in this location    
         data_paths = []
         for path, subdirs, files in os.walk(root):
             for name in files:
@@ -174,8 +173,7 @@ def get_local_data_paths(root):
     return data_paths
 
 
-def get_s3_data_paths(bucket, root):
-    pattern = "*.jsonl*"
+def get_s3_data_paths(bucket, root, pattern="*.jsonl*"):
     s3_keys = []
     for obj in bucket.objects.all():
         key = obj.key
