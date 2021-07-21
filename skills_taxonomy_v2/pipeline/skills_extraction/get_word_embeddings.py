@@ -26,7 +26,6 @@ import os
 from argparse import ArgumentParser
 import yaml
 import logging
-from multiprocessing import Pool
 from functools import partial
 
 from tqdm import tqdm
@@ -46,47 +45,13 @@ from skills_taxonomy_v2.getters.s3_data import (
     load_s3_data,
 )
 
-from skills_taxonomy_v2.pipeline.skills_extraction.get_word_embeddings_utils.py import (
+from skills_taxonomy_v2.pipeline.skills_extraction.get_word_embeddings_utils import (
     process_sentence,
 )
 
 nltk.download("stopwords")
 
 logger = logging.getLogger(__name__)
-
-
-def is_token_word(token, token_len_threshold, stopwords):
-    """
-            Returns true if the token:
-            - Doesn't contain 'www'
-            - Isn't too long (if it is it is usually garbage)
-    - Isn't a proper noun/number/quite a few other word types
-    - Isn't a word with numbers in (these are always garbage)
-    """
-
-    return (
-        ("www" not in token.text)
-        and (len(token) < token_len_threshold)
-        and (
-            token.pos_
-            not in [
-                "PROPN",
-                "NUM",
-                "SPACE",
-                "X",
-                "PUNCT",
-                "ADP",
-                "AUX",
-                "CONJ",
-                "DET",
-                "PART",
-                "PRON",
-                "SCONJ",
-            ]
-        )
-        and (not re.search("\d", token.text))
-        and (not token.text in stopwords)
-    )
 
 
 def parse_arguments(parser):
@@ -140,14 +105,10 @@ if __name__ == "__main__":
         data = load_s3_data(s3, bucket_name, data_path)
         output_tuple_list = []
         for job_id, sentences in data.items():
-            with Pool(4) as pool:  # 4 cpus
-                partial_process_sentence = partial(
-                    process_sentence, nlp=nlp, stopwords=stopwords.words()
+            for sentence in sentences:
+                output_tuple_list += process_sentence(
+                    sentence, nlp=nlp, stopwords=stopwords.words()
                 )
-                process_sentence_pool_output = pool.map(
-                    partial_process_sentence, sentences
-                )
-            output_tuple_list += process_sentence_pool_output
 
         # Save the output in a folder with a similar naming structure to the input
         data_dir = os.path.relpath(data_path, skill_sentences_dir)

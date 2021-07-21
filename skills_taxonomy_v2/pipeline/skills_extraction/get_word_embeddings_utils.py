@@ -1,3 +1,5 @@
+import re
+
 from skills_taxonomy_v2.pipeline.skills_extraction.cleaning_sentences import (
     separate_camel_case,
 )
@@ -5,9 +7,9 @@ from skills_taxonomy_v2.pipeline.skills_extraction.cleaning_sentences import (
 
 def is_token_word(token, token_len_threshold, stopwords):
     """
-            Returns true if the token:
-            - Doesn't contain 'www'
-            - Isn't too long (if it is it is usually garbage)
+                    Returns true if the token:
+                    - Doesn't contain 'www'
+                    - Isn't too long (if it is it is usually garbage)
     - Isn't a proper noun/number/quite a few other word types
     - Isn't a word with numbers in (these are always garbage)
     """
