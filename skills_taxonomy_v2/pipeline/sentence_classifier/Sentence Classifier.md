@@ -176,5 +176,5 @@ To predict on all job adverts in the TextKernel data on S3, on the EC2 instance 
 ```
 python skills_taxonomy_v2/pipeline/sentence_classifier/predict_sentence_class.py --config_path 'skills_taxonomy_v2/config/predict_skill_sentences/2021.07.19.yaml'
 ```
-This will run predictions on a random sample of 10 of the 686 data files.
+This will run predictions on a random sample of 10 of the 686 data files. The outputs of this yielded 5,823,903 skill sentences from the 1,000,000 job adverts.
 
