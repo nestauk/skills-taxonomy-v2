@@ -64,7 +64,8 @@ def is_token_word(token, token_len_threshold, stopwords):
             ]
         )
         and (not re.search("\d", token.text))
-        and (not token.text in stopwords + not_skills_words)
+        and (not token.text.lower() in stopwords + not_skills_words)
+        and (not token.lemma_.lower() in stopwords + not_skills_words)
     )
 
 

@@ -129,7 +129,7 @@ if __name__ == "__main__":
         data = load_s3_data(s3, bucket_name, data_path)
         logger.info(f"Predicting embeddings for {len(data)} sentences...")
         output_tuple_list = []
-        for job_id, sentences in tqdm(data.items()):
+        for sentences in tqdm(list(data.values())[0:1000]):
             for sentence in sentences:
                 clean_sentences, sentence_embeddings = process_sentence(
                     sentence,
