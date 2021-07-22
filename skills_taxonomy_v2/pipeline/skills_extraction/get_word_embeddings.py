@@ -39,14 +39,14 @@ import nltk
 from nltk.corpus import stopwords
 
 from skills_taxonomy_v2.getters.s3_data import (
-	get_s3_resource,
-	get_s3_data_paths,
-	save_to_s3,
-	load_s3_data,
+    get_s3_resource,
+    get_s3_data_paths,
+    save_to_s3,
+    load_s3_data,
 )
 
 from skills_taxonomy_v2.pipeline.skills_extraction.get_word_embeddings_utils import (
-	process_sentence,
+    process_sentence,
 )
 
 nltk.download("stopwords")
@@ -55,67 +55,70 @@ logger = logging.getLogger(__name__)
 
 
 def parse_arguments(parser):
-	parser.add_argument(
-		"--config_path",
-		help="Path to config file",
-		default="skills_taxonomy_v2/config/skills_extraction/word_embeddings/2021.07.21.yaml",
-	)
-	return parser.parse_args()
+    parser.add_argument(
+        "--config_path",
+        help="Path to config file",
+        default="skills_taxonomy_v2/config/skills_extraction/word_embeddings/2021.07.21.yaml",
+    )
+    return parser.parse_args()
 
 
 if __name__ == "__main__":
 
-	# Load config variables
+    # Load config variables
 
-	parser = ArgumentParser()
-	args = parse_arguments(parser)
+    parser = ArgumentParser()
+    args = parse_arguments(parser)
 
-	with open(args.config_path, "r") as f:
-		config = yaml.load(f, Loader=yaml.FullLoader)
+    with open(args.config_path, "r") as f:
+        config = yaml.load(f, Loader=yaml.FullLoader)
 
-	FLOW_ID = "word_embeddings_flow"
-	flow_config = config["flows"][FLOW_ID]
-	params = flow_config["params"]
+    FLOW_ID = "word_embeddings_flow"
+    flow_config = config["flows"][FLOW_ID]
+    params = flow_config["params"]
 
-	skill_sentences_dir = params["skill_sentences_dir"]
-	token_len_threshold = params["token_len_threshold"]
-	output_dir = params["output_dir"]
+    skill_sentences_dir = params["skill_sentences_dir"]
+    token_len_threshold = params["token_len_threshold"]
+    output_dir = params["output_dir"]
 
-	# Use the GPU, with memory allocations directed via PyTorch.
-	# This prevents out-of-memory errors that would otherwise occur from competing
-	# memory pools.
-	set_gpu_allocator("pytorch")
-	require_gpu(0)
+    # Use the GPU, with memory allocations directed via PyTorch.
+    # This prevents out-of-memory errors that would otherwise occur from competing
+    # memory pools.
+    set_gpu_allocator("pytorch")
+    require_gpu(0)
 
-	# Get embeddings for each token in the sentence
-	nlp = spacy.load("en_core_web_trf")
+    # Get embeddings for each token in the sentence
+    nlp = spacy.load("en_core_web_trf")
 
-	# Get data paths in the location
-	bucket_name = "skills-taxonomy-v2"
-	s3 = boto3.resource("s3")
-	data_paths = get_s3_data_paths(
-		s3, bucket_name, skill_sentences_dir, file_types=["*.json"]
-	)
+    # Get data paths in the location
+    bucket_name = "skills-taxonomy-v2"
+    s3 = boto3.resource("s3")
+    data_paths = get_s3_data_paths(
+        s3, bucket_name, skill_sentences_dir, file_types=["*.json"]
+    )
 
-	# For loop through each data path
-	logger.info(f"Running predictions on {len(data_paths)} data files ...")
+    # For loop through each data path
+    logger.info(f"Running predictions on {len(data_paths)} data files ...")
 
-	for data_path in data_paths:
-		logger.info(f"Loading data for {data_path} ...")
-		data = load_s3_data(s3, bucket_name, data_path)
-		output_tuple_list = []
-		for job_id, sentences in tqdm(data.items()):
-			for sentence in sentences:
-				clean_sentences, sentence_embeddings = process_sentence(
-					sentence, nlp=nlp, token_len_threshold=token_len_threshold, stopwords=stopwords.words()
-				)
-				if clean_sentences:
-					output_tuple_list.append((clean_sentences, sentence_embeddings))
+    for data_path in data_paths:
+        logger.info(f"Loading data for {data_path} ...")
+        data = load_s3_data(s3, bucket_name, data_path)
+        output_tuple_list = []
+        for job_id, sentences in tqdm(data.items()):
+            for sentence in sentences:
+                clean_sentences, sentence_embeddings = process_sentence(
+                    sentence,
+                    nlp=nlp,
+                    token_len_threshold=token_len_threshold,
+                    stopwords=stopwords.words(),
+                )
+                if clean_sentences:
+                    output_tuple_list.append((clean_sentences, sentence_embeddings))
 
-		# Save the output in a folder with a similar naming structure to the input
-		data_dir = os.path.relpath(data_path, skill_sentences_dir)
-		output_file_dir = os.path.join(
-			output_dir, data_dir.split(".json")[0] + "_embeddings.json"
-		)
-		save_to_s3(s3, bucket_name, output_tuple_list, output_file_dir)
-		print(f"Saved output to {output_file_dir}")
+        # Save the output in a folder with a similar naming structure to the input
+        data_dir = os.path.relpath(data_path, skill_sentences_dir)
+        output_file_dir = os.path.join(
+            output_dir, data_dir.split(".json")[0] + "_embeddings.json"
+        )
+        save_to_s3(s3, bucket_name, output_tuple_list, output_file_dir)
+        print(f"Saved output to {output_file_dir}")
