@@ -137,7 +137,12 @@ if __name__ == "__main__":
                     stopwords=stopwords.words(),
                 )
                 if clean_sentences:
-                    output_tuple_list.append((clean_sentences, sentence_embeddings))
+                    mean_sentence_embeddings = np.mean(
+                        np.array(sentence_embeddings), axis=0
+                    )
+                    output_tuple_list.append(
+                        (clean_sentences, mean_sentence_embeddings)
+                    )
 
         # Save the output in a folder with a similar naming structure to the input
         data_dir = os.path.relpath(data_path, skill_sentences_dir)

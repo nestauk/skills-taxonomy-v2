@@ -13,6 +13,35 @@ def is_token_word(token, token_len_threshold, stopwords):
     - Isn't a proper noun/number/quite a few other word types
     - Isn't a word with numbers in (these are always garbage)
     """
+    not_skills_words = [
+        "job",
+        "number",
+        "apply",
+        "experience",
+        "work",
+        "detail",
+        "full",
+        "skill",
+        "_",
+        "click",
+        "hour",
+        "contact",
+        "about",
+        "permalink",
+        "excellent",
+        "good",
+        "strong",
+        "title",
+        "description",
+        "login",
+        "register",
+        "cv",
+        "upload",
+        "knowledge",
+        "ensure",
+        "possible",
+        "ability",
+    ]
 
     return (
         ("www" not in token.text)
@@ -35,7 +64,7 @@ def is_token_word(token, token_len_threshold, stopwords):
             ]
         )
         and (not re.search("\d", token.text))
-        and (not token.text in stopwords)
+        and (not token.text in stopwords + not_skills_words)
     )
 
 
