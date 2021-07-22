@@ -140,7 +140,7 @@ if __name__ == "__main__":
                 if clean_sentences:
                     mean_sentence_embeddings = np.mean(
                         np.array(sentence_embeddings), axis=0
-                    )
+                    ).tolist()
                     output_tuple_list.append(
                         (clean_sentences, mean_sentence_embeddings)
                     )
