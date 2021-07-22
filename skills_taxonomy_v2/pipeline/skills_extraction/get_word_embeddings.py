@@ -63,6 +63,29 @@ def parse_arguments(parser):
     return parser.parse_args()
 
 
+def try_less_data(s3, bucket_name, data, output_file_dir, stop_recursion=False):
+    """
+    Not an elegant solution - but if the data is too large (i think >5GB) you get
+    an error:
+    botocore.exceptions.ClientError: An error occurred (EntityTooLarge) when
+    calling the PutObject operation: Your proposed upload exceeds the maximum allowed size
+
+    So this function will cut down your data if this happens.
+    50000 data points of the type in this function should be ok, and if not
+    it will try with 10000 too (which should definitely work).
+    """
+
+    data = data[0:50000]
+    try:
+        save_to_s3(s3, bucket_name, data, output_file_dir)
+    except ClientError:
+        data = data[0:10000]
+        if not stop_recursion:
+            try_less_data(s3, bucket_name, data, output_file_dir, stop_recursion=True)
+        else:
+            logger.info(f"Wasn't able to save {output_file_dir}")
+
+
 if __name__ == "__main__":
 
     # Load config variables
@@ -103,6 +126,7 @@ if __name__ == "__main__":
     for data_path in data_paths:
         logger.info(f"Loading data for {data_path} ...")
         data = load_s3_data(s3, bucket_name, data_path)
+        logger.info(f"Predicting embeddings for {len(data)} sentences...")
         output_tuple_list = []
         for job_id, sentences in tqdm(data.items()):
             for sentence in sentences:
@@ -120,5 +144,8 @@ if __name__ == "__main__":
         output_file_dir = os.path.join(
             output_dir, data_dir.split(".json")[0] + "_embeddings.json"
         )
-        save_to_s3(s3, bucket_name, output_tuple_list, output_file_dir)
+        try:
+            save_to_s3(s3, bucket_name, output_tuple_list, output_file_dir)
+        except ClientError:
+            try_less_data(s3, bucket_name, output_tuple_list, output_file_dir)
         print(f"Saved output to {output_file_dir}")
