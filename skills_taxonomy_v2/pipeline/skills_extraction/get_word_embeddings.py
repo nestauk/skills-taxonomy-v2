@@ -37,6 +37,7 @@ import numpy
 from thinc.api import set_gpu_allocator, require_gpu
 import nltk
 from nltk.corpus import stopwords
+import numpy as np
 
 from skills_taxonomy_v2.getters.s3_data import (
     get_s3_resource,
@@ -78,7 +79,7 @@ def try_less_data(s3, bucket_name, data, output_file_dir, stop_recursion=False):
     data = data[0:50000]
     try:
         save_to_s3(s3, bucket_name, data, output_file_dir)
-    except ClientError:
+    except:
         data = data[0:10000]
         if not stop_recursion:
             try_less_data(s3, bucket_name, data, output_file_dir, stop_recursion=True)
@@ -151,6 +152,6 @@ if __name__ == "__main__":
         )
         try:
             save_to_s3(s3, bucket_name, output_tuple_list, output_file_dir)
-        except ClientError:
+        except:
             try_less_data(s3, bucket_name, output_tuple_list, output_file_dir)
         print(f"Saved output to {output_file_dir}")
