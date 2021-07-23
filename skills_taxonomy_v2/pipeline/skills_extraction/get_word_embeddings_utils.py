@@ -110,3 +110,23 @@ def process_sentence(sentence, nlp, token_len_threshold, stopwords):
         return lemma_sentence_words, tokvecs[[list(tokvecs_i)]].tolist()
     else:
         return None, None
+
+
+def process_sentence_mask(
+    sentence, nlp, bert_vectorizer, token_len_threshold, stopwords
+):
+    """
+    Mask sentence of stopwords etc, then get sentence embedding
+    """
+
+    sentence = separate_camel_case(sentence)
+
+    doc = nlp(sentence)
+    masked_sentence = ""
+    for i, token in enumerate(doc):
+        if is_token_word(token, token_len_threshold, stopwords):
+            masked_sentence += " " + token.text
+        else:
+            masked_sentence += " [MASK]"
+
+    return masked_sentence

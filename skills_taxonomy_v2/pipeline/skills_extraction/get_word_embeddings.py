@@ -30,11 +30,9 @@ from functools import partial
 
 from tqdm import tqdm
 import boto3
-import cupy
 import spacy
 import torch
 import numpy
-from thinc.api import set_gpu_allocator, require_gpu
 import nltk
 from nltk.corpus import stopwords
 import numpy as np
@@ -47,7 +45,10 @@ from skills_taxonomy_v2.getters.s3_data import (
 )
 
 from skills_taxonomy_v2.pipeline.skills_extraction.get_word_embeddings_utils import (
-    process_sentence,
+    process_sentence_mask,
+)
+from skills_taxonomy_v2.pipeline.sentence_classifier.sentence_classifier import (
+    BertVectorizer,
 )
 
 nltk.download("stopwords")
@@ -105,14 +106,12 @@ if __name__ == "__main__":
     token_len_threshold = params["token_len_threshold"]
     output_dir = params["output_dir"]
 
-    # Use the GPU, with memory allocations directed via PyTorch.
-    # This prevents out-of-memory errors that would otherwise occur from competing
-    # memory pools.
-    set_gpu_allocator("pytorch")
-    require_gpu(0)
-
-    # Get embeddings for each token in the sentence
-    nlp = spacy.load("en_core_web_trf")
+    nlp = spacy.load("en_core_web_sm")
+    bert_vectorizer = BertVectorizer(
+        bert_model_name="sentence-transformers/paraphrase-MiniLM-L6-v2",
+        multi_process=True,
+    )
+    bert_vectorizer.fit()
 
     # Get data paths in the location
     bucket_name = "skills-taxonomy-v2"
@@ -128,22 +127,28 @@ if __name__ == "__main__":
         logger.info(f"Loading data for {data_path} ...")
         data = load_s3_data(s3, bucket_name, data_path)
         logger.info(f"Predicting embeddings for {len(data)} sentences...")
-        output_tuple_list = []
+
+        # For each sentence mask out stop words, proper nouns etc.
+        masked_sentences = []
         for sentences in tqdm(list(data.values())[0:1000]):
             for sentence in sentences:
-                clean_sentences, sentence_embeddings = process_sentence(
+                masked_sentence = process_sentence_mask(
                     sentence,
-                    nlp=nlp,
-                    token_len_threshold=token_len_threshold,
+                    nlp,
+                    bert_vectorizer,
+                    token_len_threshold,
                     stopwords=stopwords.words(),
                 )
-                if clean_sentences:
-                    mean_sentence_embeddings = np.mean(
-                        np.array(sentence_embeddings), axis=0
-                    ).tolist()
-                    output_tuple_list.append(
-                        (clean_sentences, mean_sentence_embeddings)
-                    )
+                if masked_sentence.replace("[MASK]", "").replace(" ", ""):
+                    # Don't include sentence if it only consists of masked words
+                    masked_sentences.append(masked_sentence)
+
+        # Find sentence embeddings in bulk for all masked sentences
+        masked_sentence_embeddings = bert_vectorizer.transform(masked_sentences)
+        output_tuple_list = [
+            (sent, emb.tolist())
+            for sent, emb in zip(masked_sentences, masked_sentence_embeddings)
+        ]
 
         # Save the output in a folder with a similar naming structure to the input
         data_dir = os.path.relpath(data_path, skill_sentences_dir)
