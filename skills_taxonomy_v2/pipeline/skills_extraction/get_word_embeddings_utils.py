@@ -79,18 +79,34 @@ def process_sentence(sentence, nlp, token_len_threshold, stopwords):
     # Get word embeddings for all words
     doc = nlp(sentence)
     tokvecs = doc._.trf_data.tensors[0][0]
+    # See https://github.com/explosion/spaCy/issues/7032 for possible situation
+    # where sentence is really long. We have filtered out to not include
+    # really long sentences anyway.
+    if doc._.trf_data.tensors[0].shape[0] != 1:
+        print(
+            "Long sentence alert! Tensor has been split so your embedding for this sentence isn't correct"
+        )
 
     for i, token in enumerate(doc):
         if is_token_word(token, token_len_threshold, stopwords):
-            lemma_sentence_words.append(token.lemma_.lower())
             # The spacy tokens don't always align to the trf data tokens
             # These are the indices of tokvecs that match to this token
             # (it is in the form array([[18],[19]], dtype=int32)) so needs to be flattened)
             trf_alignment_indices = [
                 index for sublist in doc._.trf_data.align[i].data for index in sublist
             ]
-            tokvecs_i += trf_alignment_indices
+            if len(trf_alignment_indices) == 1:
+                # I make an assumption that if this is more than 1 it signifies
+                # that the word doesnt exist in the vocab, so including
+                # the pieces may introduce noise
+                # See https://huggingface.co/transformers/glossary.html#input-ids
+                lemma_sentence_words.append(token.lemma_.lower())
+                tokvecs_i += trf_alignment_indices
+    # Sometimes the same index is repeated, e.g. the token 'understanding'
+    # maps to the 'understanding' and 'of' trf data, and then 'of' just
+    # maps to the 'of' trf data. Hence tokvecs_i may contain repeats.
+    tokvecs_i = list(set(tokvecs_i))
     if lemma_sentence_words:
-        return lemma_sentence_words, tokvecs[[tokvecs_i]].tolist()
+        return lemma_sentence_words, tokvecs[[list(tokvecs_i)]].tolist()
     else:
         return None, None
