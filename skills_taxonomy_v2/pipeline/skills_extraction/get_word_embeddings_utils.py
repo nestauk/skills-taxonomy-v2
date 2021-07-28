@@ -41,6 +41,18 @@ def is_token_word(token, token_len_threshold, stopwords):
         "ensure",
         "possible",
         "ability",
+        "salary",
+        "recruiter",
+        "assist",
+        "need",
+        "prefer",
+        "desirable",
+        "relevant",
+        "able",
+        "looking",
+        "required",
+        "seeking",
+        "candidate",
     ]
 
     return (

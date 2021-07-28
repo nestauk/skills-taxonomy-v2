@@ -128,9 +128,14 @@ if __name__ == "__main__":
         data = load_s3_data(s3, bucket_name, data_path)
         logger.info(f"Predicting embeddings for {len(data)} sentences...")
 
+        first_job_ids = list(data.keys())[0:1000]
         # For each sentence mask out stop words, proper nouns etc.
         masked_sentences = []
-        for sentences in tqdm(list(data.values())[0:1000]):
+        sentence_job_ids = []
+        sentence_hashes = []
+        original_sentences = {}
+        for job_id in tqdm(first_job_ids):
+            sentences = data[job_id]
             for sentence in sentences:
                 masked_sentence = process_sentence_mask(
                     sentence,
@@ -142,12 +147,22 @@ if __name__ == "__main__":
                 if masked_sentence.replace("[MASK]", "").replace(" ", ""):
                     # Don't include sentence if it only consists of masked words
                     masked_sentences.append(masked_sentence)
+                    sentence_job_ids.append(job_id)
+                    # Keep a record of the original sentence via a hashed id
+                    original_sentence_id = hash(sentence)
+                    sentence_hashes.append(original_sentence_id)
+                    original_sentences[original_sentence_id] = sentence
 
         # Find sentence embeddings in bulk for all masked sentences
         masked_sentence_embeddings = bert_vectorizer.transform(masked_sentences)
         output_tuple_list = [
-            (sent, emb.tolist())
-            for sent, emb in zip(masked_sentences, masked_sentence_embeddings)
+            (job_id, sent_id, sent, emb.tolist())
+            for job_id, sent_id, sent, emb in zip(
+                sentence_job_ids,
+                sentence_hashes,
+                masked_sentences,
+                masked_sentence_embeddings,
+            )
         ]
 
         # Save the output in a folder with a similar naming structure to the input
@@ -159,4 +174,10 @@ if __name__ == "__main__":
             save_to_s3(s3, bucket_name, output_tuple_list, output_file_dir)
         except:
             try_less_data(s3, bucket_name, output_tuple_list, output_file_dir)
+
+        sent_id_dir = os.path.join(
+            output_dir, data_dir.split(".json")[0] + "_original_sentences.json"
+        )
+        save_to_s3(s3, bucket_name, original_sentences, sent_id_dir)
+
         print(f"Saved output to {output_file_dir}")
