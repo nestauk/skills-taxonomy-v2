@@ -165,13 +165,16 @@ weighted avg       0.85      0.85      0.85       267
 
 Running
 ```
-python skills_taxonomy_v2/pipeline/sentence_classifier/predict_sentence_class.py
+python skills_taxonomy_v2/pipeline/sentence_classifier/predict_sentence_class.py --config_path 'skills_taxonomy_v2/config/predict_skill_sentences/2021.07.19.local.sample.yaml'
 ```
-will take in job adverts, split them into sentences, and make predictions using the `2021.07.09.small` trained model. This outputs 4 files:
-1. `outputs/sentence_classifier/data/skill_sentences/2021.07.09.small_jobsnew1_embeddings.pkl` - the BERT embeddings for each sentence.
-2. `outputs/sentence_classifier/data/skill_sentences/2021.07.09.small_jobsnew1_predictions.pkl` - the model predictions for each sentence.
-3. `outputs/sentence_classifier/data/skill_sentences/2021.07.09.small_jobsnew1_sentences.pkl` - each sentence text.
-4. `outputs/sentence_classifier/data/skill_sentences/2021.07.09.small_jobsnew1_job_ids.pkl` - the job advert ID for each sentence.
+with a relevant config file will take in job adverts, split them into sentences, and make predictions using a trained skill sentence classifier model (`model_config_name`). The output will be filtered to only include skill sentences. The config file can specify that the data to be predicted on comes from S3 or locally (`data_local`), and it can be a directory of files to predict on or just one file (`input_dir+data_dir`). The outputted file(s) will be in the same folder structure as the inputs and contain one json in the form of:
+```
+{'job_id_1': [('sentence1'), ('sentence2')], 'job_id_2': [('sentence1'), ('sentence2'}
+```
 
-
+To predict on all job adverts in the TextKernel data on S3, on the EC2 instance I ran
+```
+python skills_taxonomy_v2/pipeline/sentence_classifier/predict_sentence_class.py --config_path 'skills_taxonomy_v2/config/predict_skill_sentences/2021.07.19.yaml'
+```
+This will run predictions on a random sample of 10 of the 686 data files. The outputs of this yielded 5,823,903 skill sentences from the 1,000,000 job adverts.
 
