@@ -38,7 +38,8 @@ from skills_taxonomy_v2.pipeline.sentence_classifier.create_training_data import
 )
 from skills_taxonomy_v2.pipeline.sentence_classifier.utils import split_sentence
 
-BUCKET_NAME = "skills-taxonomy-v2"
+from skills_taxonomy_v2 import PROJECT_DIR, BUCKET_NAME
+
 
 logger = logging.getLogger(__name__)
 
@@ -161,7 +162,7 @@ def get_local_data_paths(root, pattern="*.jsonl*"):
 
     if os.path.isdir(root):
         # If data_dir to predict on is a directory
-        # get all the names of jsonl or jsonl.gz files in this location    
+        # get all the names of jsonl or jsonl.gz files in this location
         data_paths = []
         for path, subdirs, files in os.walk(root):
             for name in files:
@@ -229,7 +230,7 @@ def run_predict_sentence_class(
             output_file_dir = get_output_name(
                 data_path, input_dir, output_dir, model_config_name
             )
-            
+
             logger.info(f"Splitting sentences ...")
             start_time = time.time()
             with Pool(4) as pool:  # 4 cpus
@@ -238,14 +239,14 @@ def run_predict_sentence_class(
                 )
                 split_sentence_pool_output = pool.map(partial_split_sentence, data)
             logger.info(f"Splitting sentences took {time.time() - start_time} seconds")
-            
+
             # Process output into one list of sentences for all documents
             sentences = []
             job_ids = []
             for i, (job_id, s) in enumerate(split_sentence_pool_output):
                 if s:
                     sentences += s
-                    job_ids += [job_id]*len(s)
+                    job_ids += [job_id] * len(s)
 
             if sentences:
                 logger.info(f"Predicting skill sentences ...")
@@ -258,7 +259,9 @@ def run_predict_sentence_class(
                 logger.info(f"Combining data for output ...")
                 start_time = time.time()
                 skill_sentences_dict = defaultdict(list)
-                for job_id, sentence, pred in list(zip(job_ids, sentences, sentences_pred)):
+                for job_id, sentence, pred in list(
+                    zip(job_ids, sentences, sentences_pred)
+                ):
                     if pred == 1:
                         skill_sentences_dict[job_id].append(sentence)
                 logger.info(f"Combining output took {time.time() - start_time} seconds")
@@ -268,6 +271,7 @@ def run_predict_sentence_class(
                     save_outputs(skill_sentences_dict, output_file_dir)
                 else:
                     save_outputs_to_s3(s3, skill_sentences_dict, output_file_dir)
+
 
 def parse_arguments(parser):
 
@@ -298,11 +302,19 @@ if __name__ == "__main__":
         params["random_seed"] = None
         params["sample_size"] = None
 
+    if params["data_local"]:
+        input_dir = os.path.join(PROJECT_DIR, params["input_dir"])
+        output_dir = os.path.join(PROJECT_DIR, params["output_dir"])
+    else:
+        # If we are pulling the data from S3 we don't want the paths to join with our local project_dir
+        input_dir = params["input_dir"]
+        output_dir = params["output_dir"]
+
     run_predict_sentence_class(
-        params["input_dir"],
+        input_dir,
         params["data_dir"],
         params["model_config_name"],
-        params["output_dir"],
+        output_dir,
         data_local=params["data_local"],
         sample_data_paths=params["sample_data_paths"],
         random_seed=params["random_seed"],
