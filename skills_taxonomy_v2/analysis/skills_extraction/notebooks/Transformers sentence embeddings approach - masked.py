@@ -15,7 +15,7 @@
 # ---
 
 # %% [markdown]
-# ## Word embeddings from transformers
+# ## Sentence embeddings from transformers
 #
 # New approach: mask out sentence of unclean words, then find sentence embedding.
 #
@@ -158,7 +158,7 @@ for words in sentence_words:
 
 
 # %%
-plt.hist(prop_not_masked, 100, density=True, facecolor="g", alpha=0.75)
+plt.hist(prop_not_masked, 100, density=True, facecolor="g", alpha=0.75);
 
 # %%
 prop_threshold = 0.2
@@ -371,7 +371,7 @@ plt.hist(
     100,
     facecolor="g",
     alpha=0.75,
-)
+);
 
 # %%
 skills_data_cluster.to_csv("outputs/skills_extraction/data/clustered_data.csv")
