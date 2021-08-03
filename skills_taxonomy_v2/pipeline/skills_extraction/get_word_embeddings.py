@@ -15,7 +15,7 @@ different from the tokens in doc. You can use doc._.trf_data.align[i].data to fi
 how they relate.
 https://stackoverflow.com/questions/66150469/spacy-3-transformer-vector-token-alignment
 
-python -i skills_taxonomy_v2/pipeline/skills_extraction/get_word_embeddings.py --config_path 'skills_taxonomy_v2/config/skills_extraction/word_embeddings/2021.07.21.yaml'
+python -i skills_taxonomy_v2/pipeline/skills_extraction/get_word_embeddings.py --config_path 'skills_taxonomy_v2/config/skills_extraction/2021.08.02.yaml'
 
 """
 
@@ -62,7 +62,7 @@ def parse_arguments(parser):
     parser.add_argument(
         "--config_path",
         help="Path to config file",
-        default="skills_taxonomy_v2/config/skills_extraction/word_embeddings/2021.07.21.yaml",
+        default="skills_taxonomy_v2/config/skills_extraction/2021.08.02.yaml",
     )
     return parser.parse_args()
 
