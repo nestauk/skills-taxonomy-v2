@@ -1,0 +1,20 @@
+flows:
+  word_embeddings_flow:
+    params:
+      skill_sentences_dir: 'outputs/sentence_classifier/data/skill_sentences/textkernel-files/'
+      token_len_threshold: 20
+      output_dir: 'outputs/skills_extraction/word_embeddings/data/'
+  extract_skills:
+    params:
+      sentence_embeddings_dir: 'outputs/skills_extraction/word_embeddings/data/'
+      prop_not_masked_threshold: 0.2
+      mask_seq: '[MASK]'
+      umap_n_neighbors: 3
+      umap_min_dist: 0.001
+      umap_random_state: 42
+      dbscan_eps: 0.05
+      dbscan_min_samples: 3
+      desc_num_top_sent: 5
+      name_num_top_words: 5
+      output_dir: 'outputs/skills_extraction/data'
+    run_id: 0
