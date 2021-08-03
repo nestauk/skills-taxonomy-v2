@@ -4,7 +4,11 @@ The results of experiments to train a classifier performed in `improve_classifie
 
 ### Goals
 
-We want to improve the initial sentence classifier that predicts whether a sentence is a skill or not-skill sentence. The **best current baseline has a recall score of 0.83 for the positive class (skill sentence) and 0.93 for the negative class (non-skill sentence)**. The goal is to **achieve a recall score of 0.90 for the positive class (skill sentence)**.  
+We want to improve the initial sentence classifier that predicts whether a sentence is a skill or not-skill sentence. The **best current baseline has a recall score of 0.83 for the positive class (skill sentence) and 0.93 for the negative class (non-skill sentence)**. 
+
+The first step of improving the classifier was to collect more training data ([see issue #24](https://github.com/nestauk/skills-taxonomy-v2/issues/24)). By hosting a sample of the sentence data on AWS and crowdsourcing labels, we were able to generate an additional *8212* labelled sentences.
+
+We are now trying to increase performance of the initial classifier with the additional training data to **achieve a recall score of 0.90 for the positive class (skill sentence)**.  
 
 ### Experiments:
 
