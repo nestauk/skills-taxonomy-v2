@@ -44,6 +44,7 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.cluster import KMeans, DBSCAN
+from sklearn import metrics
 import umap.umap_ as umap
 import boto3
 
@@ -158,7 +159,7 @@ for words in sentence_words:
 
 
 # %%
-plt.hist(prop_not_masked, 100, density=True, facecolor="g", alpha=0.75);
+plt.hist(prop_not_masked, 100, density=True, facecolor="g", alpha=0.75)
 
 # %%
 prop_threshold = 0.2
@@ -186,7 +187,16 @@ sentence_ids_filt = [sentence_ids[i] for i in keep_index]
 # adding some noise or jitter to your data.
 
 # %%
-reducer_class = umap.UMAP(n_neighbors=3, min_dist=0.001, random_state=42)
+n_neighbors = 4
+min_dist = 0
+n_components = 4
+
+reducer_class = umap.UMAP(
+    n_neighbors=n_neighbors,
+    min_dist=min_dist,
+    n_components=n_components,
+    random_state=42,
+)
 reduced_points_umap = reducer_class.fit_transform(sentence_mean_embeddings_filt)
 
 reduced_points = reduced_points_umap
@@ -233,10 +243,10 @@ p = figure(
     plot_width=500,
     plot_height=500,
     tools=[hover, WheelZoomTool(), BoxZoomTool(), SaveTool()],
-    title=f"Skills",
+    title=f"Skills with n_neighbours={n_neighbors} and min_dist={min_dist} and n_components={n_components}",
     toolbar_location="below",
 )
-p.circle(x="x", y="y", radius=0.05, alpha=0.5, source=source, color=mapper)
+p.circle(x="x", y="y", radius=0.01, alpha=0.1, source=source)  # ,color=mapper)
 show(p)
 
 
@@ -278,13 +288,23 @@ def cluster_data(
             clustering_number = [0] * len(skills_data)
             cluster_centers = [np.array([0, 0])] * len(skills_data)
     elif clust_type == "dbscan":
-        clustering = DBSCAN(eps=0.05, min_samples=3)
+        clustering = DBSCAN(eps=0.1, min_samples=3)
         clustering_number = clustering.fit_predict(reduced_points_umap).tolist()
         print(f"{len(set(clustering_number))} unique clusters")
     else:
         print("Use another clust_type")
 
     skills_data["Cluster number"] = clustering_number
+
+    #     print(f"Siloutte score: {metrics.silhouette_score(reduced_points_umap, clustering_number)}")
+
+    score = metrics.silhouette_score(
+        reduced_points_umap[[i for i, c in enumerate(clustering_number) if c != -1], :],
+        [c for c in clustering_number if c != -1],
+        sample_size=10000,
+        random_state=42,
+    )
+    print(f"Siloutte score: {score}")
 
     # Get information for each cluster
     cluster_sizes = skills_data["Cluster number"].value_counts().to_dict()
@@ -298,20 +318,18 @@ def cluster_data(
     )
     cluster_texts = cluster_texts.set_index("Cluster number").T.to_dict("records")[0]
 
-    cluster_vectorizer = TfidfVectorizer(stop_words="english")
-    clusters_vects = cluster_vectorizer.fit_transform(cluster_texts.values())
-
-    # Top n words for each cluster + other info
-    feature_names = np.array(cluster_vectorizer.get_feature_names())
     cluster_info = {
         cluster_num: {
             "Number skills": int(cluster_sizes[cluster_num]),
         }
-        for cluster_num, clusters_vect in zip(cluster_texts.keys(), clusters_vects)
+        for cluster_num in cluster_texts.keys()
     }
 
     return skills_data, cluster_info
 
+
+# %%
+len(reduced_points_umap)
 
 # %%
 skills_data_cluster, cluster_info = cluster_data(
@@ -321,6 +339,14 @@ skills_data_cluster, cluster_info = cluster_data(
     random_state=0,
     num_top_words=5,
     clust_type="dbscan",
+)
+
+# %% [markdown]
+# The best value is 1 and the worst value is -1. Values near 0 indicate overlapping clusters. Negative values generally indicate that a sample has been assigned to the wrong cluster, as a different cluster is more similar.
+
+# %%
+print(
+    f"Proportion not clustered = {cluster_info[-1]['Number skills']/len(reduced_points_umap)}"
 )
 
 # %%
@@ -357,10 +383,63 @@ p = figure(
 p.circle(
     x="x",
     y="y",
-    radius=0.05,
+    radius=0.01,
     alpha=0.5,
     source=source,
     color={"field": "label", "transform": color_mapper},
+)
+show(p)
+
+# %%
+colors_by_labels = skills_data_cluster["Cluster number"].astype(str).tolist()
+ds_dict_1 = dict(
+    x=reduced_x,
+    y=reduced_y,
+    texts=skills_data_cluster["description"].tolist(),
+    label=colors_by_labels,
+)
+source1 = ColumnDataSource(ds_dict_1)
+
+not_clust_ix = skills_data_cluster[
+    skills_data_cluster["Cluster number"] == -1
+].index.tolist()
+ds_dict_2 = dict(
+    x=reduced_x[not_clust_ix],
+    y=reduced_y[not_clust_ix],
+    texts=skills_data_cluster.iloc[not_clust_ix]["description"].tolist(),
+    label=[colors_by_labels[i] for i in not_clust_ix],
+)
+source2 = ColumnDataSource(ds_dict_2)
+
+# %%
+hover = HoverTool(
+    tooltips=[
+        ("node", "@texts"),
+    ]
+)
+
+p = figure(
+    plot_width=500,
+    plot_height=500,
+    tools=[hover, WheelZoomTool(), BoxZoomTool(), SaveTool()],
+    title=f"Sentences not clustered into skills",
+    toolbar_location="below",
+)
+p.circle(
+    x="x",
+    y="y",
+    radius=0.01,
+    alpha=0.5,
+    source=source1,
+    color="grey",
+)
+p.circle(
+    x="x",
+    y="y",
+    radius=0.01,
+    alpha=0.5,
+    source=source2,
+    color="red",
 )
 show(p)
 
@@ -371,7 +450,7 @@ plt.hist(
     100,
     facecolor="g",
     alpha=0.75,
-);
+)
 
 # %%
 skills_data_cluster.to_csv("outputs/skills_extraction/data/clustered_data.csv")

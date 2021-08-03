@@ -98,9 +98,6 @@ for sentence_id_dir in sentence_id_dirs:
 # %%
 len(original_sentences)
 
-# %%
-original_sentences["2664663441956474979"]
-
 # %% [markdown]
 # ## Plot
 
@@ -129,7 +126,7 @@ p = figure(
     title=f"Skills",
     toolbar_location="below",
 )
-p.circle(x="x", y="y", radius=0.05, alpha=0.5, source=source, color=mapper)
+p.circle(x="x", y="y", radius=0.01, alpha=0.5, source=source, color=mapper)
 show(p)
 
 # %% [markdown]
@@ -271,7 +268,7 @@ for (cluster_num, text), clusters_vect in zip(cluster_texts.items(), clusters_ve
     }
 
 # %%
-cluster_info[100]
+cluster_info[6]
 
 # %%
 # Save skills

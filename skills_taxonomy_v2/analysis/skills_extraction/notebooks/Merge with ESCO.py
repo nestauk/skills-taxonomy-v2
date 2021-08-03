@@ -15,9 +15,9 @@
 # ---
 
 # %% [markdown]
-# ## Bottom up skills extraction merged with ESCO
+# ## ESCO skills mapper
 #
-# We will combine and deduplicate the topic modelling extracted skills with the ESCO skills.
+# Which TK skills and ESCO skills map to one another?
 #
 # Note: going to get rid of -1 skill ID completely for now - it isn't useful for this bit.
 #
