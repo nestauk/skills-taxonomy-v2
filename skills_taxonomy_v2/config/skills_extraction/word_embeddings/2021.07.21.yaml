@@ -1,7 +1,0 @@
-flows:
-  word_embeddings_flow:
-    params:
-      skill_sentences_dir: 'outputs/sentence_classifier/data/skill_sentences/textkernel-files/'
-      token_len_threshold: 20
-      output_dir: 'outputs/skills_extraction/word_embeddings/data/'
-    run_id: 0
