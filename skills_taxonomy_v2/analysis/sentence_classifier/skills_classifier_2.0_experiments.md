@@ -1,6 +1,6 @@
 # Experiments
 
-The results of experiments to train a classifier performed in `improve_classifier.ipynb`
+The results of experiments to train a classifier performed in `improve_classifier.ipynb`.
 
 ### Goals
 
