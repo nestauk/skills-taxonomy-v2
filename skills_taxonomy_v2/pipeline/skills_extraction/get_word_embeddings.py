@@ -51,6 +51,8 @@ from skills_taxonomy_v2.pipeline.sentence_classifier.sentence_classifier import 
     BertVectorizer,
 )
 
+from skills_taxonomy_v2 import BUCKET_NAME
+
 nltk.download("stopwords")
 
 logger = logging.getLogger(__name__)
@@ -114,10 +116,9 @@ if __name__ == "__main__":
     bert_vectorizer.fit()
 
     # Get data paths in the location
-    bucket_name = "skills-taxonomy-v2"
     s3 = boto3.resource("s3")
     data_paths = get_s3_data_paths(
-        s3, bucket_name, skill_sentences_dir, file_types=["*.json"]
+        s3, BUCKET_NAME, skill_sentences_dir, file_types=["*.json"]
     )
 
     # For loop through each data path
@@ -125,10 +126,10 @@ if __name__ == "__main__":
 
     for data_path in data_paths:
         logger.info(f"Loading data for {data_path} ...")
-        data = load_s3_data(s3, bucket_name, data_path)
+        data = load_s3_data(s3, BUCKET_NAME, data_path)
         logger.info(f"Predicting embeddings for {len(data)} sentences...")
 
-        first_job_ids = list(data.keys())[0:1000]
+        first_job_ids = list(data.keys())[0:5000]
         # For each sentence mask out stop words, proper nouns etc.
         masked_sentences = []
         sentence_job_ids = []
@@ -171,13 +172,13 @@ if __name__ == "__main__":
             output_dir, data_dir.split(".json")[0] + "_embeddings.json"
         )
         try:
-            save_to_s3(s3, bucket_name, output_tuple_list, output_file_dir)
+            save_to_s3(s3, BUCKET_NAME, output_tuple_list, output_file_dir)
         except:
-            try_less_data(s3, bucket_name, output_tuple_list, output_file_dir)
+            try_less_data(s3, BUCKET_NAME, output_tuple_list, output_file_dir)
 
         sent_id_dir = os.path.join(
             output_dir, data_dir.split(".json")[0] + "_original_sentences.json"
         )
-        save_to_s3(s3, bucket_name, original_sentences, sent_id_dir)
+        save_to_s3(s3, BUCKET_NAME, original_sentences, sent_id_dir)
 
         print(f"Saved output to {output_file_dir}")
