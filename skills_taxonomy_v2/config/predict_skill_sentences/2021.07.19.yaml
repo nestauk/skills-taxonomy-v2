@@ -1,0 +1,12 @@
+flows:
+  predict_skill_sentences_flow:
+    params:
+      input_dir: 'inputs/data/'
+      data_dir: 'textkernel-files/'
+      model_config_name: '2021.07.09.small'
+      output_dir: 'outputs/sentence_classifier/data/skill_sentences'
+      data_local: False
+      sample_data_paths: True
+      random_seed: 42
+      sample_size: 10
+    run_id: 0
