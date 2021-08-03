@@ -12,7 +12,7 @@ To see how the previous iteration of experiments with a smaller set of training 
 
 | Experiment number |Change | Vectorizer | Classifier | Cleaning | Training source | Training size | Recall of the positive class | Precision of the positive class | Recall of the negative class | Precision of the positive class 
 |---|---|---|---|---|---|---|---|---|---|---|
-|1|Baseline|BERT|BERT last layer+scaler|LogisticRegression|Mask numbers and remove hashes, split sentences using spacy, remove bullet points|Karlis + Label Studio|9237|**0.82**|0.54|**0.82**|0.94|
+|1|Baseline|BERT last layer+scaler|LogisticRegression|Mask numbers and remove hashes, split sentences using spacy, remove bullet points|Karlis + Label Studio|9237|**0.82**|0.54|**0.82**|0.94|
 |2|just label studio training data|BERT last layer|LogisticRegression|Mask numbers and remove hashes, split sentences using spacy, remove bullet points|Label Studio|8212|**0.86**|0.52|**0.83**|0.97| 
 |3|Karlis + label studio, sentence preprocessing|BERT last layer|LogisticRegression|Mask + remove numbers and remove hashes, split sentences using spacy, remove bullet points, lowercase|Karlis + Label Studio|9237|**0.82**|0.55|**0.82**|0.95|
 |4|use XGboost|BERT last layer|XGboost|Mask + remove numbers and remove hashes, split sentences using spacy, remove bullet points, lowercase|Karlis + Label Studio|9237|**0.52**|0.75|**0.95**|0.87|
@@ -21,7 +21,7 @@ To see how the previous iteration of experiments with a smaller set of training 
 |7|Balance training data - use contextual word embeddings to oversample 1 class|BERT last layer|XGboost|Mask + remove numbers and remove hashes, split sentences using spacy, remove bullet points, lowercase|Karlis + Label Studio|10053|**0.80**|0.89|**0.80**|0.89|
 |8|Balance training data - oversample 1 class (word synonyms) + under sample 0 class|BERT last layer|XGboost|Mask + remove numbers and remove hashes, split sentences using spacy, remove bullet points, lowercase|Karlis + Label Studio|7538|**0.87**|0.73|**0.91**|0.96|
 |9|Balance training data - oversample 1 class (word embeds) + under sample 0 class|BERT last layer|XGboost|Mask + remove numbers and remove hashes, split sentences using spacy, remove bullet points, lowercase|Karlis + Label Studio|7666|**0.84**|0.79|**0.94**|0.96|
-|10|use one hot encoding of verb positionality||BERT last layer+verb one hot encoding|XGboost|Mask + remove numbers and remove hashes, split sentences using spacy, remove bullet points, lowercase|Karlis + Label Studio|7732|**0.94**|0.73|**0.91**|0.98|
+|10|use one hot encoding of verb positionality|BERT last layer+verb one hot encoding|XGboost|Mask + remove numbers and remove hashes, split sentences using spacy, remove bullet points, lowercase|Karlis + Label Studio|7732|**0.94**|0.73|**0.91**|0.98|
 |11|adjust probability threshold to 0.4|BERT last layer+verb one hot encoding|XGboost|Mask + remove numbers and remove hashes, split sentences using spacy, remove bullet points, lowercase|Karlis + Label Studio|7732|**0.94**|0.66|**0.87**|0.98|
 
 ### Skills Classifier 2.0 Summary
