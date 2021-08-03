@@ -6,7 +6,9 @@ A phrase or term that falls with any of the aforementioned categories should be 
 
 ## Labelling Examples
 
-### Examples of skills that fall within _knowledge_:
+For more examples of skills, please visit this [link](https://ec.europa.eu/esco/portal/skill).
+
+### Examples of skills that fall within _knowledge_: 
 
 - knowledge of agriculture
 - knowledge of particular policies
