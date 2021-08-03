@@ -239,12 +239,16 @@ def get_output_config_stamped(config_path, output_dir, filename_suffix):
     outputs:
         'outputs/skills_extraction/data/2021.08.02_cluster_data.json'
     """
-    config_name = os.path.splitext(os.path.basename(args.config_path))[0]
+    config_name = os.path.splitext(os.path.basename(config_path))[0]
     return os.path.join(output_dir, "_".join([config_name, filename_suffix]))
 
 
 def reduce_embeddings(
-    embedding_list, umap_n_neighbors, umap_min_dist, umap_random_state, n_components=2
+    embedding_list,
+    umap_n_neighbors,
+    umap_min_dist,
+    umap_random_state,
+    umap_n_components=2,
 ):
 
     # Reduce to 2d
@@ -253,7 +257,7 @@ def reduce_embeddings(
         n_neighbors=umap_n_neighbors,
         min_dist=umap_min_dist,
         random_state=umap_random_state,
-        n_components=n_components,
+        n_components=umap_n_components,
     )
     reduced_points_umap = reducer_class.fit_transform(embedding_list)
 

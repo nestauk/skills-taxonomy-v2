@@ -64,6 +64,7 @@ if __name__ == "__main__":
     mask_seq = params["mask_seq"]
     umap_n_neighbors = params["umap_n_neighbors"]
     umap_min_dist = params["umap_min_dist"]
+    umap_n_components = params["umap_n_components"]
     umap_random_state = params["umap_random_state"]
     dbscan_eps = params["dbscan_eps"]
     dbscan_min_samples = params["dbscan_min_samples"]
@@ -77,7 +78,7 @@ if __name__ == "__main__":
         s3, BUCKET_NAME, sentence_embeddings_dir, file_types=["*.json"]
     )
 
-    sentences_data = load_sentences_embeddings(s3, sentence_embeddings_dirs[0:2])
+    sentences_data = load_sentences_embeddings(s3, sentence_embeddings_dirs)
 
     # It's easier to manipulate this dataset as a dataframe
     sentences_data = pd.DataFrame(sentences_data)
@@ -88,6 +89,7 @@ if __name__ == "__main__":
         umap_n_neighbors,
         umap_min_dist,
         umap_random_state,
+        umap_n_components=umap_n_components,
     )
     sentences_data["reduced_points x"] = list(reduced_points_umap[:, 0])
     sentences_data["reduced_points y"] = list(reduced_points_umap[:, 1])
@@ -104,13 +106,13 @@ if __name__ == "__main__":
     # Save
     # The skills data
     skills_data_output_path = get_output_config_stamped(
-        args.config_path, output_dir, "skills_data2.json"
+        args.config_path, output_dir, "skills_data.json"
     )
     save_to_s3(s3, BUCKET_NAME, skills_data, skills_data_output_path)
     # The sentences data inc the embedding reduction and which cluster/skill the sentence was in
     # You may not need to save this out, but will do for now:
     sentences_data_output_path = get_output_config_stamped(
-        args.config_path, output_dir, "sentences_data2.json"
+        args.config_path, output_dir, "sentences_data.json"
     )
     save_to_s3(
         s3,
