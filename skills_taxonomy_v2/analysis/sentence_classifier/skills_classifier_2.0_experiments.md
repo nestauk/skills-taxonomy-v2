@@ -25,7 +25,7 @@ To see how the previous iteration of experiments with a smaller set of training 
 |7|Balance training data - use contextual word embeddings to oversample 1 class|BERT last layer|XGboost|Mask + remove numbers and remove hashes, split sentences using spacy, remove bullet points, lowercase|Karlis + Label Studio|10053|**0.80**|0.89|**0.80**|0.89|
 |8|Balance training data - oversample 1 class (word synonyms) + under sample 0 class|BERT last layer|XGboost|Mask + remove numbers and remove hashes, split sentences using spacy, remove bullet points, lowercase|Karlis + Label Studio|7538|**0.87**|0.73|**0.91**|0.96|
 |9|Balance training data - oversample 1 class (word embeds) + under sample 0 class|BERT last layer|XGboost|Mask + remove numbers and remove hashes, split sentences using spacy, remove bullet points, lowercase|Karlis + Label Studio|7666|**0.84**|0.79|**0.94**|0.96|
-|10|use one hot encoding of verb positionality|BERT last layer+verb one hot encoding|XGboost|Mask + remove numbers and remove hashes, split sentences using spacy, remove bullet points, lowercase|Karlis + Label Studio|7732|**0.94**|0.73|**0.91**|0.98|
+|**10|use one hot encoding of verb positionality|BERT last layer+verb one hot encoding|XGboost|Mask + remove numbers and remove hashes, split sentences using spacy, remove bullet points, lowercase|Karlis + Label Studio|7732|0.94|0.73|0.91|0.98|**
 |11|adjust probability threshold to 0.4|BERT last layer+verb one hot encoding|XGboost|Mask + remove numbers and remove hashes, split sentences using spacy, remove bullet points, lowercase|Karlis + Label Studio|7732|**0.94**|0.66|**0.87**|0.98|
 
 ### Skills Classifier 2.0 Summary
