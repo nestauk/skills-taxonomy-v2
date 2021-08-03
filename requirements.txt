@@ -17,3 +17,5 @@ networkx
 gensim
 bokeh
 umap-learn
+fsspec
+s3fs

@@ -5,8 +5,15 @@ Loading and saving to S3
 import json
 import gzip
 from fnmatch import fnmatch
+import os
+import logging
 
+import pandas as pd
 import boto3
+import fsspec
+import s3fs
+
+logger = logging.getLogger(__name__)
 
 
 def get_s3_resource():
@@ -44,6 +51,8 @@ def save_to_s3(s3, bucket_name, output_var, output_file_dir):
 
     obj.put(Body=json.dumps(output_var))
 
+    logger.info(f"Saved to s3://{bucket_name} + {output_file_dir} ...")
+
 
 def load_s3_data(s3, bucket_name, file_name):
     """
@@ -63,6 +72,8 @@ def load_s3_data(s3, bucket_name, file_name):
     elif fnmatch(file_name, "*.json"):
         file = obj.get()["Body"].read().decode()
         return json.loads(file)
+    elif fnmatch(file_name, "*.csv"):
+        return pd.read_csv(os.path.join("s3://" + bucket_name, file_name))
     else:
         print(
             'Function not supported for file type other than "*.jsonl.gz", "*.jsonl", or "*.json"'
