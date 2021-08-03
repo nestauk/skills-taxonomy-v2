@@ -1,17 +1,14 @@
 # Experiments
 
-The results of experiments to train a classifier performed in `improve_classifier.ipynb`.
+The results of experiments to train a classifier performed in `improve_classifier.ipynb`. 
 
 ### Goals
 
-We want to improve the initial sentence classifier that predicts whether a sentence is a skill or not-skill sentence. The **best current baseline has a recall score of 0.83 for the positive class (skill sentence) and 0.93 for the negative class (non-skill sentence)**. 
-
-Since objective 1 is slightly more important than 2 we record both these recalls in the summary, rather than taking the average. The goal therefore is to **achieve a recall score of 0.90 for the positive class (skill sentence)**.  
+We want to improve the initial sentence classifier that predicts whether a sentence is a skill or not-skill sentence. The **best current baseline has a recall score of 0.83 for the positive class (skill sentence) and 0.93 for the negative class (non-skill sentence)**. The goal is to **achieve a recall score of 0.90 for the positive class (skill sentence)**.  
 
 ### Experiments:
 
 To see how the previous iteration of experiments with a smaller set of training data performed, please see [this markdown file](https://github.com/nestauk/skills-taxonomy-v2/blob/dev/skills_taxonomy_v2/analysis/sentence_classifier/Sentence%20Splitter%20Experiments.md). Liz's best baseline is run on the new training data as the new baseline.  
-
 
 | Experiment number |Change | Vectorizer | Classifier | Cleaning | Training source | Training size | Recall of the positive class | Precision of the positive class | Recall of the negative class | Precision of the positive class 
 |---|---|---|---|---|---|---|---|---|---|---|
