@@ -8,13 +8,13 @@ We want to improve the initial sentence classifier that predicts whether a sente
 
 The first step of improving the classifier was to collect more training data ([see issue #24](https://github.com/nestauk/skills-taxonomy-v2/issues/24)). By hosting a sample of the job ad data on AWS and crowdsourcing labels, we were able to generate an additional *8212* labelled sentences.
 
-We are now trying to increase performance of the initial classifier with the additional training data to **achieve a recall score of 0.90 for the positive class (skill sentence)**.  
+We are now trying to increase performance of the initial classifier with the additional training data to **achieve a precision score of 0.90 for the positive class (skill sentence)**.  
 
 ### Experiments:
 
 To see how the previous iteration of experiments with a smaller set of training data performed, please see [this markdown file](https://github.com/nestauk/skills-taxonomy-v2/blob/dev/skills_taxonomy_v2/analysis/sentence_classifier/Sentence%20Splitter%20Experiments.md). Liz's best baseline is run on the new training data as the new baseline.  
 
-| Experiment number |Change | Vectorizer | Classifier | Cleaning | Training source | Training size | Recall of the positive class | Precision of the positive class | Recall of the negative class | Precision of the positive class 
+| Experiment number |Change | Vectorizer | Classifier | Cleaning | Training source | Training size | Recall of the positive class | Precision of the positive class | Recall of the negative class | Precision of the negative class 
 |---|---|---|---|---|---|---|---|---|---|---|
 |1|Baseline|BERT last layer+scaler|LogisticRegression|Mask numbers and remove hashes, split sentences using spacy, remove bullet points|Karlis + Label Studio|9237|**0.82**|0.54|**0.82**|0.94|
 |2|just label studio training data|BERT last layer|LogisticRegression|Mask numbers and remove hashes, split sentences using spacy, remove bullet points|Label Studio|8212|**0.86**|0.52|**0.83**|0.97| 
