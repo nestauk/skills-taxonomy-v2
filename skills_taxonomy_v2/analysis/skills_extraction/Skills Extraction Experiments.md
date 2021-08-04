@@ -76,7 +76,13 @@ In `Transformers sentence embeddings approach - masked.ipynb` I experiment with 
 
 The clustering looked a lot more reasonable. There is probably a lot more scope at this point to play with the data reduction and clustering parameters, but at this point in the experimentation I opted to not spend too long on this.
 
+- 4573 unique clusters
+- Siloutte score: 0.13
+- Proportion not clustered = 0.036
+
 <img src="figures/masked_sentence_embeddings_experiment.png" alt="drawing" width="600"/>
+
+<img src="figures/masked_sentence_embeddings_experiment_notclust.png" alt="drawing" width="600"/>
 
 <!-- #endregion -->
 
