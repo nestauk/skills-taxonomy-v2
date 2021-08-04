@@ -15,7 +15,7 @@ different from the tokens in doc. You can use doc._.trf_data.align[i].data to fi
 how they relate.
 https://stackoverflow.com/questions/66150469/spacy-3-transformer-vector-token-alignment
 
-python -i skills_taxonomy_v2/pipeline/skills_extraction/get_word_embeddings.py --config_path 'skills_taxonomy_v2/config/skills_extraction/2021.08.02.yaml'
+python -i skills_taxonomy_v2/pipeline/skills_extraction/get_sentence_embeddings.py --config_path 'skills_taxonomy_v2/config/skills_extraction/2021.08.02.yaml'
 
 """
 
@@ -44,7 +44,7 @@ from skills_taxonomy_v2.getters.s3_data import (
     load_s3_data,
 )
 
-from skills_taxonomy_v2.pipeline.skills_extraction.get_word_embeddings_utils import (
+from skills_taxonomy_v2.pipeline.skills_extraction.get_sentence_embeddings_utils import (
     process_sentence_mask,
 )
 from skills_taxonomy_v2.pipeline.sentence_classifier.sentence_classifier import (

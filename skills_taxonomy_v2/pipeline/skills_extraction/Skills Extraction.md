@@ -32,7 +32,7 @@ In the previous step in the pipeline (Sentence Classifier) we extracted skill se
 This is done by running:
 
 ```
-python -i skills_taxonomy_v2/pipeline/skills_extraction/get_word_embeddings.py --config_path 'skills_taxonomy_v2/config/skills_extraction/2021.08.02.yaml'
+python -i skills_taxonomy_v2/pipeline/skills_extraction/get_sentence_embeddings.py --config_path 'skills_taxonomy_v2/config/skills_extraction/2021.08.02.yaml'
 ```
 
 ## Step 2: Extract skills using clustering
