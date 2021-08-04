@@ -1,6 +1,6 @@
 # Skills Extraction
 
-The aim of this pipeline is to extract skills from job adverts. There are 2 steps:
+The aim of this pipeline is to extract skills from job adverts. There are 3 steps:
 
 1. Get embeddings from skill sentences.
 2. Reduce, cluster and find names for each cluster - these are the skills.
@@ -13,11 +13,9 @@ The parameters for all these steps can be found in the config path `skills_taxon
 - Step 0: Predict skill sentences. 10 random files of 10,000 job adverts. Found 5,823,903 skill sentences.
 - Step 1: Get embeddings for each skill sentence. Get embeddings for sentences in the first 5000 job adverts from each of the 10 files, remove sentences with only masking. 208,087 sentences with embeddings.
 - Step 2: Get skills from clustering. Removed sentences with too much masking and remove repeated sentences - 207,303 sentences. Clustered into 4573 skills which gave a siloutte score of 0.13, the proportion of data points not put into a cluster was 0.035.
-- This experimentation yields skills found in 41,508 job adverts - ready for the taxonomy step.
-- 3275 out of 4594 TK skills were linked with ESCO skills
-- 0 of these were linked to multiple ESCO skills
-- 1731 out of 13958 ESCO skills were linked with TK skills
-- 642 of these were linked to multiple TK skills
+- Step 3: 3275 out of 4594 TK skills were linked with ESCO skills, 0 of these were linked to multiple ESCO skills. 1731 out of 13958 ESCO skills were linked with TK skills, 642 of these were linked to multiple TK skills.
+
+This experimentation yields skills found in 41,508 job adverts - ready for the taxonomy step.
 
 ## Step 1: Get embeddings for each skill sentence
 

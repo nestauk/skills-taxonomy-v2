@@ -10,12 +10,8 @@ From this point we don't really care which job adverts the sentences come from,
 there will also be repeated sentences to remove. Although we will process in batches
 of the original data files, so repeats won't be removed cross files.
 
-The indices need special attention because the output tokens of doc._.trf_data are
-different from the tokens in doc. You can use doc._.trf_data.align[i].data to find
-how they relate.
-https://stackoverflow.com/questions/66150469/spacy-3-transformer-vector-token-alignment
-
-python -i skills_taxonomy_v2/pipeline/skills_extraction/get_sentence_embeddings.py --config_path 'skills_taxonomy_v2/config/skills_extraction/2021.08.02.yaml'
+python -i skills_taxonomy_v2/pipeline/skills_extraction/get_sentence_embeddings.py 
+--config_path 'skills_taxonomy_v2/config/skills_extraction/2021.08.02.yaml'
 
 """
 
