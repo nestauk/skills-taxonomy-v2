@@ -17,3 +17,6 @@ networkx
 gensim
 bokeh
 umap-learn
+nlpaug
+nltk
+Sklearn
