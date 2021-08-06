@@ -261,7 +261,7 @@ def reduce_embeddings(
     )
     reduced_points_umap = reducer_class.fit_transform(embedding_list)
 
-    return reduced_points_umap
+    return reduced_points_umap, reducer_class
 
 
 def get_clusters(reduced_points_umap, dbscan_eps, dbscan_min_samples):
@@ -272,4 +272,4 @@ def get_clusters(reduced_points_umap, dbscan_eps, dbscan_min_samples):
     clustering_number = clustering.fit_predict(reduced_points_umap).tolist()
     logger.info(f"{len(set(clustering_number))} unique clusters")
 
-    return clustering_number
+    return clustering_number, clustering

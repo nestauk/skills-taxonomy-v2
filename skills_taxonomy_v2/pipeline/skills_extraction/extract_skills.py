@@ -84,7 +84,7 @@ if __name__ == "__main__":
     sentences_data = pd.DataFrame(sentences_data)
 
     # Reduce to 2d
-    reduced_points_umap = reduce_embeddings(
+    reduced_points_umap, reducer_class = reduce_embeddings(
         sentences_data["embedding"].tolist(),
         umap_n_neighbors,
         umap_min_dist,
@@ -96,7 +96,7 @@ if __name__ == "__main__":
     sentences_data.drop(["embedding"], axis=1, inplace=True)
 
     # Get clusters
-    sentences_data["Cluster number"] = get_clusters(
+    sentences_data["Cluster number"], dbscan_clustering = get_clusters(
         reduced_points_umap, dbscan_eps, dbscan_min_samples
     )
 
@@ -120,3 +120,16 @@ if __name__ == "__main__":
         sentences_data.to_dict(orient="list"),
         sentences_data_output_path,
     )
+
+    # Save reducer class and clustering class so you can classify new
+    # sentences into clusters
+    reducer_obj_path = get_output_config_stamped(
+        args.config_path, output_dir, "reducer_class.pkl"
+    )
+    save_to_s3(s3, BUCKET_NAME, reducer_class, reducer_obj_path)
+    
+    clustering_obj_path = get_output_config_stamped(
+        args.config_path, output_dir, "dbscan_clustering.pkl"
+    )
+    save_to_s3(s3, BUCKET_NAME, dbscan_clustering, clustering_obj_path)
+

@@ -12,9 +12,9 @@ flows:
       umap_n_neighbors: 4
       umap_min_dist: 0.0
       umap_random_state: 42
-      umap_n_components: 4
-      dbscan_eps: 0.1
-      dbscan_min_samples: 3
+      umap_n_components: 5
+      dbscan_eps: 0.05
+      dbscan_min_samples: 2
       desc_num_top_sent: 5
       name_num_top_words: 5
       output_dir: "outputs/skills_extraction/data"

@@ -125,7 +125,7 @@ if __name__ == "__main__":
         data = load_s3_data(s3, BUCKET_NAME, data_path)
         logger.info(f"Predicting embeddings for {len(data)} sentences...")
 
-        first_job_ids = list(data.keys())[0:5000]
+        first_job_ids = list(data.keys())[0:10000]
         # For each sentence mask out stop words, proper nouns etc.
         masked_sentences = []
         sentence_job_ids = []
