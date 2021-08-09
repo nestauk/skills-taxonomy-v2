@@ -11,11 +11,13 @@ The parameters for all these steps can be found in the config path `skills_taxon
 ## Experimentation summary (pre-scaling up to process all job adverts)
 
 - Step 0: Predict skill sentences. 10 random files of 10,000 job adverts. Found 5,823,903 skill sentences.
-- Step 1: Get embeddings for each skill sentence. Get embeddings for sentences in the first 5000 job adverts from each of the 10 files, remove sentences with only masking. 208,087 sentences with embeddings.
-- Step 2: Get skills from clustering. Removed sentences with too much masking and remove repeated sentences - 207,303 sentences. Clustered into 4573 skills which gave a siloutte score of 0.13, the proportion of data points not put into a cluster was 0.035.
-- Step 3: 3275 out of 4594 TK skills were linked with ESCO skills, 0 of these were linked to multiple ESCO skills. 1731 out of 13958 ESCO skills were linked with TK skills, 642 of these were linked to multiple TK skills.
+- Step 1: Get embeddings for each skill sentence. Get embeddings for sentences in the first 10,000 job adverts from each of the 10 files, remove sentences with only masking. About 400,000 sentences with embeddings.
+- Step 2: Get skills from clustering. Removed sentences with too much masking and remove repeated sentences - 392,625 sentences. Clustered into 24,912 skills, the proportion of data points not put into a cluster was 0.108.
+- Step 3: 19796 out of 24912 (79%) TK skills were linked with ESCO skills, 0 of these were linked to multiple ESCO skills. 4301 out of 13958 (31%) ESCO skills were linked with TK skills, 2450 of these were linked to multiple TK skills.
 
-This experimentation yields skills found in 41,508 job adverts - ready for the taxonomy step.
+This experimentation yields skills found in 78,674 job adverts - ready for the taxonomy step.
+
+Some preliminary analysis of the skills extraction steps (e.g. how many skills per job advert, common skills) can be found in `analysis/skills_extraction/notebooks/Skills Extraction Figures.ipynb`.
 
 ## Step 1: Get embeddings for each skill sentence
 
