@@ -10,6 +10,8 @@ The first step of improving the classifier was to collect more training data ([s
 
 We are now trying to increase performance of the initial classifier with the additional training data to **achieve a precision score of 0.90 for the positive class (skill sentence)**.
 
+After having addressed issues with bad labels, we have ended up with a dataset of 2484 positive class sentences and 6635 negative class sentences. After adjusting the probability threshold to 0.7 in order to optimise for precision, the final improved model (experiment no.X) results in a precision score of X for the positive class (skill sentence). 
+
 ### Experiments:
 
 To see how the previous iteration of experiments with a smaller set of training data performed, please see [this markdown file](https://github.com/nestauk/skills-taxonomy-v2/blob/dev/skills_taxonomy_v2/analysis/sentence_classifier/Sentence%20Splitter%20Experiments.md). Liz's best baseline is run on the new training data as the new baseline.
@@ -29,6 +31,12 @@ To see how the previous iteration of experiments with a smaller set of training 
 | 11                | adjust probability threshold to 0.4                                               | BERT last layer+verb one hot encoding | XGboost            | Mask + remove numbers and remove hashes, split sentences using spacy, remove bullet points, lowercase | Karlis + Label Studio | 8313          | 0.61                         | **0.71**                        | 0.93                         | **0.90**                        |
 | 12                | adjust probability threshold to 0.6                                               | BERT last layer+verb one hot encoding | XGboost            | Mask + remove numbers and remove hashes, split sentences using spacy, remove bullet points, lowercase | Karlis + Label Studio | 8313          | 0.52                         | **0.77**                        | 0.96                         | **0.88**                        |
 
+------ FINAL RUN HERE INDY! 
+| 13                | adjust probability to 0.7, voting ensemble of xgboost + logreg, text cleaning pipeline, verb positionality + normalised frequency | 13                |
+
+ adjust probability threshold to 0.7                                               | BERT last layer+verb one hot encoding | XGboost            | Mask + remove numbers and remove hashes, split sentences using spacy, remove bullet points, lowercase | new label data - Karlis + Label Studio | 6920          | 0.77                         | **0.93**                        | 0.94                         | **0.89**                        |
+
+
 ### Stochasticity
 
 Using parameters from experiment 10, I also retrained the model with different random seeds.
@@ -43,4 +51,4 @@ Using parameters from experiment 10, I also retrained the model with different r
 
 ### bad labelling/sentence splitting
 
-A qualitative analysis of false positives (where the model predicted a skill sentence but the 'ground truth' predicts it a non skill sentence) from experiment 10 w/ random seed 22 suggests that there are issues with the training 'ground truth'. Of the 28 false positives, 24 sentences appear to be indeed skill sentences. There needs to be an additional manual review of labelling + review of sentence splitting.
+A qualitative analysis of false positives (where the model predicted a skill sentence but the 'ground truth' predicts it a non skill sentence) from experiment 10 w/ random seed 22 suggests that there are issues with the training 'ground truth'. Of the 28 false positives, 24 sentences appear to be indeed skill sentences. A manual review of labelling was conducted, which resulted in an additional 350 sentences labelled as skill sentences from the negative class. The training set therefore contains 2484 positive class sentences and 6635 negative class sentences. 
