@@ -10,7 +10,7 @@ The first step of improving the classifier was to collect more training data ([s
 
 We are now trying to increase performance of the initial classifier with the additional training data to **achieve a precision score of 0.90 for the positive class (skill sentence)**.
 
-After having addressed issues with bad labels, we have ended up with a dataset of 2484 positive class sentences and 6635 negative class sentences. After adjusting the probability threshold to 0.7 in order to optimise for precision, the final improved model (experiment no.X) results in a precision score of X for the positive class (skill sentence).
+After having addressed issues with bad labels, we have ended up with a dataset of 2484 positive class sentences and 6635 negative class sentences. After adjusting the probability threshold to 0.7 in order to optimise for precision, the final improved model (experiment no.13) results in a precision score of **92%** for the positive class (skill sentence).
 
 ### Experiments:
 
@@ -30,7 +30,7 @@ To see how the previous iteration of experiments with a smaller set of training 
 | 10                | use one hot encoding of verb positionality w/o balancing                          | BERT last layer+verb one hot encoding | XGboost            | Mask + remove numbers and remove hashes, split sentences using spacy, remove bullet points, lowercase | Karlis + Label Studio | 8313          | 0.55                         | **0.74**                        | 0.95                         | 0.89                            |
 | 11                | adjust probability threshold to 0.4                                               | BERT last layer+verb one hot encoding | XGboost            | Mask + remove numbers and remove hashes, split sentences using spacy, remove bullet points, lowercase | Karlis + Label Studio | 8313          | 0.61                         | **0.71**                        | 0.93                         | **0.90**                        |
 | 12                | adjust probability threshold to 0.6                                               | BERT last layer+verb one hot encoding | XGboost            | Mask + remove numbers and remove hashes, split sentences using spacy, remove bullet points, lowercase | Karlis + Label Studio | 8313          | 0.52                         | **0.77**                        | 0.96                         | **0.88**                        |
-| 13 | adjust probability to 0.7, voting ensemble of xgboost + logreg, text cleaning pipeline, verb positionality + normalised frequency | XGboost + logreg | Mask + remove numbers and remove hashes, split sentences using spacy, remove bullet points, lowercase | new label data - Karlis + Label Studio | 6920 | 0.77 | **0.93** | 0.94 | **0.89** |
+| 13 | adjust probability to 0.7, voting ensemble of xgboost + logreg, text cleaning pipeline, verb positionality + normalised frequency | XGboost + logreg | Mask + remove numbers and remove hashes, split sentences using spacy, remove bullet points, lowercase | new label data - Karlis + Label Studio | 6920 | 0.77 | **0.92** | 0.94 | **0.89** |
 
 ### Stochasticity
 
