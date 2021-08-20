@@ -1,9 +1,12 @@
-"""
-Usage
-----------
-python skills_taxonomy_v2/pipeline/sentence_classifier/sentence_classifier.py --yaml_file_name 2021.07.06
-"""
+# File: pipeline/sentence_classifier.py
 
+"""Module for BertVectorizer and SentenceClassifier class.
+
+Usage:
+python skills_taxonomy_v2/pipeline/sentence_classifier/sentence_classifier.py --yaml_file_name 2021.08.16
+
+"""
+# ---------------------------------------------------------------------------------
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import (
     accuracy_score,
@@ -16,11 +19,14 @@ from sklearn.metrics import (
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.linear_model import LogisticRegression
+from xgboost import XGBClassifier
+from sklearn.ensemble import VotingClassifier
 from sentence_transformers import SentenceTransformer
 import tqdm as tqdm
 import spacy
 import numpy as np
 
+# %%
 import json
 import random
 from collections import Counter
@@ -31,12 +37,16 @@ import os
 import yaml
 import time
 
-from skills_taxonomy_v2.pipeline.sentence_classifier.create_training_data import (
-    load_training_data,
+from skills_taxonomy_v2.pipeline.sentence_classifier.utils import (
+    clean_text, 
+    load_training_data, 
+    verb_features
 )
-
+# ---------------------------------------------------------------------------------
+# %%
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
+# %%
 class BertVectorizer():
     """
     Use a pretrained transformers model to embed sentences.
@@ -70,6 +80,7 @@ class BertVectorizer():
         return self.embedded_x
 
 
+# %%
 class SentenceClassifier:
     """
     A class the train/save/load/predict a classifier to predict whether
@@ -82,15 +93,17 @@ class SentenceClassifier:
     log_reg_max_iter: int (default 1000)
     Methods
     -------
-
+    preprocess_text(training_data)
+            Clean sentences to mask numbers, remove punctuation, ignore small sentences,
+            lower
     split_data(training_data)
             Split the training data (list of pairs of text-label) into test/train sets
     fit_transform(X)
-            Load the pretrained BERT models and transform X
+            Load the pretrained BERT model and transform X. Stack verb features. 
     transform(X)
-            Transform X uses already loaded BERT model
+            Transform X uses already loaded BERT model. Stack verb features. 
     fit(X_vec, y)
-            Fit the scaler and classifier to vectorized X
+            Fit the classifier to vectorized X
     predict(X_vec)
             Predict classes from already vectorized text
     predict_transform(X)
@@ -115,8 +128,20 @@ class SentenceClassifier:
         self.bert_model_name = bert_model_name
         self.multi_process = multi_process
 
+    def preprocess_text(self, training_data):
+
+        clean_training_data = []
+        for sent in training_data:
+            clean_sent = clean_text(sent[1], training = True)
+            if clean_sent is not None:
+                clean_training_data.append((clean_sent, sent[2]))
+ 
+        return clean_training_data
+
+
     def split_data(self, training_data, verbose=False):
 
+        training_data = self.preprocess_text(training_data) #preprocess sentences
         X = [t[0] for t in training_data]
         y = [t[1] for t in training_data]
         X_train, X_test, y_train, y_test = train_test_split(
@@ -134,6 +159,7 @@ class SentenceClassifier:
             print(f"Counter of test data classes: {Counter(y_test)}")
         return X_train, X_test, y_train, y_test
 
+
     def load_bert(self):
         self.bert_vectorizer = BertVectorizer(
             bert_model_name=self.bert_model_name,
@@ -146,34 +172,56 @@ class SentenceClassifier:
         # Load BERT models and transform X
         self.load_bert()
         X_vec = self.bert_vectorizer.transform(X)
-
-        return X_vec
+        # add verb features 
+        X_stack = np.hstack((X_vec, verb_features(X)))
+        print('stacked!')
+        
+        return X_stack
 
     def transform(self, X):
-        return self.bert_vectorizer.transform(X)
+        X_vec = self.bert_vectorizer.transform(X)
+        return np.hstack((X_vec, verb_features(X)))
+        
+    def fit(self, X_stack, y): 
+        xgb = XGBClassifier(
+                        eval_metric='mlogloss',
+                        max_depth = params['max_depth'],
+                        min_child_weight = params['min_child_weight'],
+                        gamma = params['gamma'],
+                        colsample_bytree = params['colsample_bytree'],
+                        subsample = params['subsample'],
+                        reg_alpha = params['reg_alpha'],
+                        use_label_encoder=False
+                    )
+        xgb.fit(X_stack, y)
+        lr = LogisticRegression(max_iter=params["max_iter"], 
+                            class_weight=params["class_weight"], 
+                            C = params["C"], 
+                            penalty = params["penalty"], 
+                            solver = params["solver"])
+        lr.fit(X_stack, y)
 
-    def fit(self, X_vec, y):
-        # Fit classifier
-        # Including the BertVectorizer in this means the outputted model is very big, so we won't include
         self.classifier = Pipeline(
             [
                 ("scaler", MinMaxScaler()),
                 (
                     "classifier",
-                    LogisticRegression(
-                        max_iter=self.log_reg_max_iter, class_weight="balanced"
+                    VotingClassifier(
+                        estimators=[('xgb', xgb), ('lr', lr)],
+                        voting = 'soft'
+                        ),
                     ),
-                ),
             ]
         )
-        self.classifier.fit(X_vec, y)
+        self.classifier.fit(X_stack, y)
 
-    def predict(self, X_vec):
-        return self.classifier.predict(X_vec)
+    def predict(self, X_stack):
+        probs = self.classifier.predict_proba(X_stack)
+        return [int(np.where(prob[1] >= params['probability_threshold'], 1, 0)) for prob in probs]  
 
     def predict_transform(self, X):
-        X_vec = self.transform(X)
-        return self.predict(X_vec)
+        X_stack = self.transform(X)
+        return self.predict(X_stack)
 
     def evaluate(self, y, y_pred, verbose=True):
         class_rep = classification_report(y, y_pred, output_dict=True)
@@ -182,7 +230,7 @@ class SentenceClassifier:
             print(confusion_matrix(y, y_pred))
         return class_rep
 
-    def save_model(self, file_name):
+    def save_model(self, file_name): 
         directory = os.path.dirname(file_name)
 
         if not os.path.exists(directory):
@@ -201,20 +249,16 @@ class SentenceClassifier:
 
         return self.classifier
 
-
-if __name__ == "__main__":
-
-    # Later this can all go in a run.py and sentence_classifier_flow.py file
-
+if __name__ ==  '__main__':
     parser = ArgumentParser()
 
     parser.add_argument(
         "--yaml_file_name",
         help="Name of config file from skills_taxonomy_v2/config/sentence_classifier to be used",
-        default="2021.07.06",
+        default="2021.08.16",
     )
 
-    args = parser.parse_args()
+    args, unknown = parser.parse_known_args()
 
     # Load specific config file
     yaml_file_name = args.yaml_file_name
@@ -229,27 +273,28 @@ if __name__ == "__main__":
     flow_config = config["flows"][FLOW_ID]
     params = flow_config["params"]
 
-    training_data_file = params["training_data_file"]
     split_random_seed = params["split_random_seed"]
     test_size = params["test_size"]
-    log_reg_max_iter = params["log_reg_max_iter"]
     bert_model_name = params["bert_model_name"]
     multi_process = params["multi_process"]
+    log_reg_max_iter = params["max_iter"]
 
     # Output file name
     output_dir = params["output_dir"]
     file_name = os.path.join(output_dir, yaml_file_name.replace(".", "_"))
 
-    # Run flow
-    training_data = load_training_data(training_data_file)
+    # Run flow 
+    training_data = load_training_data('final_training_data')
         
     sent_class = SentenceClassifier(
         split_random_seed=split_random_seed,
         test_size=test_size,
         log_reg_max_iter=log_reg_max_iter,
         bert_model_name=bert_model_name,
-        multi_process=multi_process,
+        multi_process=multi_process,    
+
     )
+
     X_train, X_test, y_train, y_test = sent_class.split_data(
         training_data, verbose=True
     )
