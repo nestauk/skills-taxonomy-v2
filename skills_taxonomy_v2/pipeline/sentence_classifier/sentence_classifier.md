@@ -6,11 +6,14 @@ After some experimentation, I modified Liz's scaled up code to reflect the new p
 2. `predict_sentence_class.py` - make predictions using the sentence classifier on an input file of data
 3. `utils.py` - preprocessing steps for sentences, splitting sentences, verb features
 
-As the training data labels aren't perfect, I would take the classification report with a slight pinch of salt. Qualitatively, it appears that the most recent classifier pipeline does a worse job of picking up sentences that are labelled 'skill' sentences that are i.e.:
+As the training data labels aren't perfect, I would take the classification report with a slight pinch of salt. Qualitatively, after looking at sentences that the model labelled 0 but was manually labelled 1, it appears that the most recent classifier pipeline does a worse job of picking up sentences that are labelled 'skill' sentences that appear to contain a 'characteristic' as opposed to a skill i.e.:
 
 - 'we are looking for an ethusiastic, talented individual to join the team'
+- 'if you can offer us some flexibility to help us cover peak times such as back to school all the better'
+- 'there are many reasons why people become care assistants but the main motivation is the chance to make a difference'
+- 'number about the role are you a paediatric healthcare assistant looking to join an exceptional team of people'
 
-where (presumably) someone labelled this as a skill sentence for 'enthusiastic' etc.
+where (presumably) someone labelled this as a skill sentence for 'enthusiastic', 'fexibility', '(wanting to)make a difference' etc.
 
 ### Sentence classifier - `2021.08.16.yaml`
 
