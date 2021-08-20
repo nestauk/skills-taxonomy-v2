@@ -8,6 +8,14 @@ Output will be a dict of the form: {'job_id_1': [('sentence1', [1.5, 1.4 ...]), 
                                     'job_id_2': [('sentence1', [1.5, 1.4 ...]), ('sentence1', [1.5, 1.4 ...]}
 Where any sentences that were predicted as not-skills are filtered out.
 
+Usage:
+
+python skills_taxonomy_v2/pipeline/sentence_classifier/predict_sentence_class.py --config_path 'skills_taxonomy_v2/config/predict_skill_sentences/2021.08.16.local.sample.yaml'
+
+or, not locally:
+python skills_taxonomy_v2/pipeline/sentence_classifier/predict_sentence_class.py --config_path 'skills_taxonomy_v2/config/predict_skill_sentences/2021.08.16.yaml'
+
+
 """
 
 import json
@@ -32,11 +40,11 @@ import boto3
 from skills_taxonomy_v2.pipeline.sentence_classifier.sentence_classifier import (
     SentenceClassifier,
 )
-from skills_taxonomy_v2.pipeline.sentence_classifier.create_training_data import (
-    mask_text,
-    text_cleaning,
+
+from skills_taxonomy_v2.pipeline.sentence_classifier.utils import (
+    split_sentence,
+    clean_text,
 )
-from skills_taxonomy_v2.pipeline.sentence_classifier.utils import split_sentence
 
 from skills_taxonomy_v2 import PROJECT_DIR, BUCKET_NAME
 
@@ -94,7 +102,7 @@ def load_model(config_name):
     with open(config_dir, "r") as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
 
-    # Loading the model
+    # Loading the model 
     sent_classifier = SentenceClassifier(
         bert_model_name=config["flows"]["sentence_classifier_flow"]["params"][
             "bert_model_name"
@@ -235,7 +243,7 @@ def run_predict_sentence_class(
             start_time = time.time()
             with Pool(4) as pool:  # 4 cpus
                 partial_split_sentence = partial(
-                    split_sentence, nlp=nlp, min_length=15, max_length=100
+                    split_sentence, nlp=nlp, min_length=30, max_length=100
                 )
                 split_sentence_pool_output = pool.map(partial_split_sentence, data)
             logger.info(f"Splitting sentences took {time.time() - start_time} seconds")
@@ -278,7 +286,7 @@ def parse_arguments(parser):
     parser.add_argument(
         "--config_path",
         help="Path to config file",
-        default="skills_taxonomy_v2/config/predict_skill_sentences/2021.07.19.local.sample.yaml",
+        default="skills_taxonomy_v2/config/predict_skill_sentences/2021.08.16.local.sample.yaml",
     )
 
     return parser.parse_args()
