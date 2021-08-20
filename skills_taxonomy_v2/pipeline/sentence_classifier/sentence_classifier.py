@@ -38,16 +38,17 @@ import yaml
 import time
 
 from skills_taxonomy_v2.pipeline.sentence_classifier.utils import (
-    clean_text, 
-    load_training_data, 
-    verb_features
+    clean_text,
+    load_training_data,
+    verb_features,
 )
+
 # ---------------------------------------------------------------------------------
 # %%
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 # %%
-class BertVectorizer():
+class BertVectorizer:
     """
     Use a pretrained transformers model to embed sentences.
     In this form so it can be used as a step in the pipeline.
@@ -55,8 +56,8 @@ class BertVectorizer():
 
     def __init__(
         self,
-        bert_model_name='sentence-transformers/paraphrase-MiniLM-L6-v2',
-        multi_process=True
+        bert_model_name="sentence-transformers/paraphrase-MiniLM-L6-v2",
+        multi_process=True,
     ):
         self.bert_model_name = bert_model_name
         self.multi_process = multi_process
@@ -73,7 +74,7 @@ class BertVectorizer():
             print(".. with multiprocessing")
             pool = self.bert_model.start_multi_process_pool()
             self.embedded_x = self.bert_model.encode_multi_process(texts, pool)
-            self.bert_model.stop_multi_process_pool(pool) 
+            self.bert_model.stop_multi_process_pool(pool)
         else:
             self.embedded_x = self.bert_model.encode(texts, show_progress_bar=True)
         print(f"Took {time.time() - t0} seconds")
@@ -132,16 +133,15 @@ class SentenceClassifier:
 
         clean_training_data = []
         for sent in training_data:
-            clean_sent = clean_text(sent[1], training = True)
+            clean_sent = clean_text(sent[1], training=True)
             if clean_sent is not None:
                 clean_training_data.append((clean_sent, sent[2]))
- 
-        return clean_training_data
 
+        return clean_training_data
 
     def split_data(self, training_data, verbose=False):
 
-        training_data = self.preprocess_text(training_data) #preprocess sentences
+        training_data = self.preprocess_text(training_data)  # preprocess sentences
         X = [t[0] for t in training_data]
         y = [t[1] for t in training_data]
         X_train, X_test, y_train, y_test = train_test_split(
@@ -159,11 +159,9 @@ class SentenceClassifier:
             print(f"Counter of test data classes: {Counter(y_test)}")
         return X_train, X_test, y_train, y_test
 
-
     def load_bert(self):
         self.bert_vectorizer = BertVectorizer(
-            bert_model_name=self.bert_model_name,
-            multi_process=self.multi_process
+            bert_model_name=self.bert_model_name, multi_process=self.multi_process
         )
         self.bert_vectorizer.fit()
 
@@ -172,33 +170,35 @@ class SentenceClassifier:
         # Load BERT models and transform X
         self.load_bert()
         X_vec = self.bert_vectorizer.transform(X)
-        # add verb features 
+        # add verb features
         X_stack = np.hstack((X_vec, verb_features(X)))
-        print('stacked!')
-        
+        print("stacked!")
+
         return X_stack
 
     def transform(self, X):
         X_vec = self.bert_vectorizer.transform(X)
         return np.hstack((X_vec, verb_features(X)))
-        
-    def fit(self, X_stack, y): 
+
+    def fit(self, X_stack, y):
         xgb = XGBClassifier(
-                        eval_metric='mlogloss',
-                        max_depth = params['max_depth'],
-                        min_child_weight = params['min_child_weight'],
-                        gamma = params['gamma'],
-                        colsample_bytree = params['colsample_bytree'],
-                        subsample = params['subsample'],
-                        reg_alpha = params['reg_alpha'],
-                        use_label_encoder=False
-                    )
+            eval_metric="mlogloss",
+            max_depth=params["max_depth"],
+            min_child_weight=params["min_child_weight"],
+            gamma=params["gamma"],
+            colsample_bytree=params["colsample_bytree"],
+            subsample=params["subsample"],
+            reg_alpha=params["reg_alpha"],
+            use_label_encoder=False,
+        )
         xgb.fit(X_stack, y)
-        lr = LogisticRegression(max_iter=params["max_iter"], 
-                            class_weight=params["class_weight"], 
-                            C = params["C"], 
-                            penalty = params["penalty"], 
-                            solver = params["solver"])
+        lr = LogisticRegression(
+            max_iter=params["max_iter"],
+            class_weight=params["class_weight"],
+            C=params["C"],
+            penalty=params["penalty"],
+            solver=params["solver"],
+        )
         lr.fit(X_stack, y)
 
         self.classifier = Pipeline(
@@ -207,17 +207,19 @@ class SentenceClassifier:
                 (
                     "classifier",
                     VotingClassifier(
-                        estimators=[('xgb', xgb), ('lr', lr)],
-                        voting = 'soft'
-                        ),
+                        estimators=[("xgb", xgb), ("lr", lr)], voting="soft"
                     ),
+                ),
             ]
         )
         self.classifier.fit(X_stack, y)
 
     def predict(self, X_stack):
         probs = self.classifier.predict_proba(X_stack)
-        return [int(np.where(prob[1] >= params['probability_threshold'], 1, 0)) for prob in probs]  
+        return [
+            int(np.where(prob[1] >= params["probability_threshold"], 1, 0))
+            for prob in probs
+        ]
 
     def predict_transform(self, X):
         X_stack = self.transform(X)
@@ -230,7 +232,7 @@ class SentenceClassifier:
             print(confusion_matrix(y, y_pred))
         return class_rep
 
-    def save_model(self, file_name): 
+    def save_model(self, file_name):
         directory = os.path.dirname(file_name)
 
         if not os.path.exists(directory):
@@ -249,7 +251,8 @@ class SentenceClassifier:
 
         return self.classifier
 
-if __name__ ==  '__main__':
+
+if __name__ == "__main__":
     parser = ArgumentParser()
 
     parser.add_argument(
@@ -283,16 +286,15 @@ if __name__ ==  '__main__':
     output_dir = params["output_dir"]
     file_name = os.path.join(output_dir, yaml_file_name.replace(".", "_"))
 
-    # Run flow 
-    training_data = load_training_data('final_training_data')
-        
+    # Run flow
+    training_data = load_training_data("final_training_data")
+
     sent_class = SentenceClassifier(
         split_random_seed=split_random_seed,
         test_size=test_size,
         log_reg_max_iter=log_reg_max_iter,
         bert_model_name=bert_model_name,
-        multi_process=multi_process,    
-
+        multi_process=multi_process,
     )
 
     X_train, X_test, y_train, y_test = sent_class.split_data(
