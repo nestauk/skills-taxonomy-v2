@@ -102,7 +102,7 @@ def load_model(config_name):
     with open(config_dir, "r") as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
 
-    # Loading the model 
+    # Loading the model
     sent_classifier = SentenceClassifier(
         bert_model_name=config["flows"]["sentence_classifier_flow"]["params"][
             "bert_model_name"
