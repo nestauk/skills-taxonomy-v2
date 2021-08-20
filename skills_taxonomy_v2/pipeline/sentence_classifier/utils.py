@@ -15,32 +15,41 @@ import re
 import numpy as np
 
 from skills_taxonomy_v2 import get_yaml_config, Path, PROJECT_DIR
+
 # ---------------------------------------------------------------------------------
 
-skills_config = get_yaml_config(Path(str(PROJECT_DIR) + "/skills_taxonomy_v2/config/base.yaml"))
+skills_config = get_yaml_config(
+    Path(str(PROJECT_DIR) + "/skills_taxonomy_v2/config/base.yaml")
+)
 training_data_path = str(PROJECT_DIR) + skills_config["TRAINING_DATA_PATH"]
+
 
 def lowercase(text):
     """Converts all text to lowercase"""
     return text.lower()
 
+
 def mask_numbers(text):
     """masks numbers in sentence as NUMBER"""
     return re.sub(r"[#]+", " NUMBER ", text)
 
+
 def remove_punctuation(text):
     """remove sentence punctuation"""
-    translator = str.maketrans('', '', string.punctuation)
+    translator = str.maketrans("", "", string.punctuation)
     return text.translate(translator)
+
 
 def remove_trailing_space(text):
     """get rid of multiple whitespaces"""
-    return ' '.join(text.split())
+    return " ".join(text.split())
+
 
 def remove_short_sents(text):
-    """keep sents within a range of 30 - 100 chars""" 
+    """keep sents within a range of 30 - 100 chars"""
     if 30 < len(text) < 100:
         return text
+
 
 def clean_text(text, training=False):
     """
@@ -61,12 +70,9 @@ def clean_text(text, training=False):
 
     elif training is False:
         return pipe(
-            text,
-            lowercase,
-            mask_numbers,
-            remove_trailing_space,
-            remove_punctuation,
+            text, lowercase, mask_numbers, remove_trailing_space, remove_punctuation,
         )
+
 
 def split_sentence(data, nlp, min_length=15, max_length=100):
     """
@@ -75,30 +81,34 @@ def split_sentence(data, nlp, min_length=15, max_length=100):
     This has to be in utils.py and not predict_sentence_class.py so it can be used
     with multiprocessing (see https://stackoverflow.com/questions/41385708/multiprocessing-example-giving-attributeerror/42383397)
     """
-    text = data.get('full_text')
+    text = data.get("full_text")
     # Occassionally this may be filled in as None
     if text:
         sentences = []
-        job_id = data.get('job_id')
+        job_id = data.get("job_id")
         # Split up sentences
         doc = nlp(text)
         for sent in doc.sents:
-            sentence = clean_text(sent.text, training = False) 
+            sentence = clean_text(sent.text, training=False)
             if len(sentence) in range(min_length, max_length):
                 sentences.append(sentence)
         return job_id, sentences
     else:
         return None, None
 
+
 def load_training_data(training_data_file_name):
     """
     loads updated training data file and prints number of skill and non-skill sentences.
     """
-    with open(training_data_path + '/' + training_data_file_name +'.pickle', 'rb') as h:
+    with open(
+        training_data_path + "/" + training_data_file_name + ".pickle", "rb"
+    ) as h:
         training_data = pickle.load(h)
     print(Counter([label[2] for label in training_data]))
 
     return training_data
+
 
 def verb_features(sents):
     """
@@ -111,6 +121,6 @@ def verb_features(sents):
     for text in sents:
         pos_tags = nltk.pos_tag(nltk.word_tokenize(text))
         verbs = [tag[1].count("VB") for tag in pos_tags]
-        starts_with_verbs = np.where(verbs[0] == 1, 1, 0) 
-        verb_feats.append((sum(verbs)/len(verbs), starts_with_verbs))
+        starts_with_verbs = np.where(verbs[0] == 1, 1, 0)
+        verb_feats.append((sum(verbs) / len(verbs), starts_with_verbs))
     return np.array(verb_feats)
