@@ -1,3 +1,8 @@
+"""
+Functions to reduce embeddings, apply DSCAN clustering and name clusters using
+top TF-IDF words. Used in extract_skills.py.
+"""
+
 import logging
 from collections import Counter
 import os

@@ -1,3 +1,7 @@
+"""
+Functions to mask sentences of undesirable words (stopwords, punctuation etc).
+Used in get_sentence_embeddings.py to process sentences before finding embeddings.
+"""
 import re
 
 from skills_taxonomy_v2.pipeline.skills_extraction.cleaning_sentences import (
@@ -5,7 +9,7 @@ from skills_taxonomy_v2.pipeline.skills_extraction.cleaning_sentences import (
 )
 
 
-def is_token_word(token, token_len_threshold, stopwords):
+def is_token_word(token, token_len_threshold, stopwords, custom_stopwords):
     """
                                     Returns true if the token:
                                     - Doesn't contain 'www'
@@ -13,47 +17,6 @@ def is_token_word(token, token_len_threshold, stopwords):
     - Isn't a proper noun/number/quite a few other word types
     - Isn't a word with numbers in (these are always garbage)
     """
-    not_skills_words = [
-        "job",
-        "number",
-        "apply",
-        "experience",
-        "work",
-        "detail",
-        "full",
-        "skill",
-        "_",
-        "click",
-        "hour",
-        "contact",
-        "about",
-        "permalink",
-        "excellent",
-        "good",
-        "strong",
-        "title",
-        "description",
-        "login",
-        "register",
-        "cv",
-        "upload",
-        "knowledge",
-        "ensure",
-        "possible",
-        "ability",
-        "salary",
-        "recruiter",
-        "assist",
-        "need",
-        "prefer",
-        "desirable",
-        "relevant",
-        "able",
-        "looking",
-        "required",
-        "seeking",
-        "candidate",
-    ]
 
     return (
         ("www" not in token.text)
@@ -76,12 +39,13 @@ def is_token_word(token, token_len_threshold, stopwords):
             ]
         )
         and (not re.search("\d", token.text))
-        and (not token.text.lower() in stopwords + not_skills_words)
-        and (not token.lemma_.lower() in stopwords + not_skills_words)
+        and (not token.text.lower() in stopwords + custom_stopwords)
+        and (not token.lemma_.lower() in stopwords + custom_stopwords)
     )
 
+
 def process_sentence_mask(
-    sentence, nlp, bert_vectorizer, token_len_threshold, stopwords
+    sentence, nlp, bert_vectorizer, token_len_threshold, stopwords, custom_stopwords
 ):
     """
     Mask sentence of stopwords etc, then get sentence embedding
@@ -92,7 +56,7 @@ def process_sentence_mask(
     doc = nlp(sentence)
     masked_sentence = ""
     for i, token in enumerate(doc):
-        if is_token_word(token, token_len_threshold, stopwords):
+        if is_token_word(token, token_len_threshold, stopwords, custom_stopwords):
             masked_sentence += " " + token.text
         else:
             masked_sentence += " [MASK]"

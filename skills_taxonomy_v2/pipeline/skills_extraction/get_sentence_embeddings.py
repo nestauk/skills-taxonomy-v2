@@ -10,7 +10,7 @@ From this point we don't really care which job adverts the sentences come from,
 there will also be repeated sentences to remove. Although we will process in batches
 of the original data files, so repeats won't be removed cross files.
 
-python -i skills_taxonomy_v2/pipeline/skills_extraction/get_sentence_embeddings.py 
+python -i skills_taxonomy_v2/pipeline/skills_extraction/get_sentence_embeddings.py
 --config_path 'skills_taxonomy_v2/config/skills_extraction/2021.08.02.yaml'
 
 """
@@ -47,11 +47,16 @@ from skills_taxonomy_v2.pipeline.sentence_classifier.sentence_classifier import 
     BertVectorizer,
 )
 
-from skills_taxonomy_v2 import BUCKET_NAME
+from skills_taxonomy_v2 import BUCKET_NAME, custom_stopwords_dir
 
 nltk.download("stopwords")
 
 logger = logging.getLogger(__name__)
+
+# Get the custom stop words - words which shouldn't be included
+# when finding skills, e.g. 'skill', 'job'
+with open(custom_stopwords_dir) as file:
+    custom_stopwords = file.read().splitlines()
 
 
 def parse_arguments(parser):
@@ -140,6 +145,7 @@ if __name__ == "__main__":
                     bert_vectorizer,
                     token_len_threshold,
                     stopwords=stopwords.words(),
+                    custom_stopwords=custom_stopwords,
                 )
                 if masked_sentence.replace("[MASK]", "").replace(" ", ""):
                     # Don't include sentence if it only consists of masked words

@@ -19,3 +19,4 @@ bokeh
 umap-learn
 fsspec
 s3fs
+python-levenshtein
