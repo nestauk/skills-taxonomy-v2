@@ -2,17 +2,16 @@
 
 After some experimentation, I modified Liz's scaled up code to reflect the new pipeline with more training data:
 
-1. `sentence_classifier.py` - module for the BertVectorizer class the updated SentenceClassifier class 
+1. `sentence_classifier.py` - module for the BertVectorizer class the updated SentenceClassifier class
 2. `predict_sentence_class.py` - make predictions using the sentence classifier on an input file of data
-3. `utils.py` - preprocessing steps for sentences, splitting sentences, verb features 
+3. `utils.py` - preprocessing steps for sentences, splitting sentences, verb features
 
 As the training data labels aren't perfect, I would take the classification report with a slight pinch of salt. Qualitatively, it appears that the most recent classifier pipeline does a worse job of picking up sentences that are labelled 'skill' sentences that are i.e.:
 
-- 'we are looking for an ethusiastic, talented individual to join the team'  
+- 'we are looking for an ethusiastic, talented individual to join the team'
 
-where (presumably) someone labelled this as a skill sentence for 'enthusiastic' etc. 
+where (presumably) someone labelled this as a skill sentence for 'enthusiastic' etc.
 
- 
 ### Sentence classifier - `2021.08.16.yaml`
 
 `python skills_taxonomy_v2/pipeline/sentence_classifier/sentence_classifier.py --yaml_file_name 2021.08.16`
@@ -21,6 +20,7 @@ The test results for this config were:
 
 Train:
 Took 81.8742127418518 seconds
+
 ```
               precision    recall  f1-score   support
 
@@ -35,6 +35,7 @@ weighted avg       0.96      0.96      0.99      2850
 
 Test:
 Took 33.32437086105347 seconds
+
 ```
               precision    recall  f1-score   support
 
@@ -45,7 +46,6 @@ Took 33.32437086105347 seconds
    macro avg       0.90      0.90      0.90       950
 weighted avg       0.90      0.90      0.90       950
 ```
-
 
 ### Sentence classifier - `2021.07.06.yaml`
 
@@ -121,13 +121,14 @@ Train time about 56 seconds
 Test time about 20 seconds
 
 ```
-'Seed': 0, '0 test Recall': 0.83, '1 test Recall': 0.85 
-'Seed': 1, '0 test Recall': 0.88, '1 test Recall': 0.82** 
+'Seed': 0, '0 test Recall': 0.83, '1 test Recall': 0.85
+'Seed': 1, '0 test Recall': 0.88, '1 test Recall': 0.82**
 'Seed': 2, '0 test Recall': 0.83, '1 test Recall': 0.78
 'Seed': 3, '0 test Recall': 0.80, '1 test Recall': 0.87
 'Seed': 4, '0 test Recall': 0.85, '1 test Recall': 0.80
 'Seed': 5, '0 test Recall': 0.85, '1 test Recall': 0.83
 ```
+
 ## Sentence classifier - `2021.07.09.small.yaml`
 
 ```
@@ -139,6 +140,7 @@ python skills_taxonomy_v2/pipeline/sentence_classifier/sentence_classifier.py --
 - 1000 texts takes about 17 seconds.
 
 Train:
+
 ```
 Took 13.46814489364624 seconds
               precision    recall  f1-score   support
@@ -153,6 +155,7 @@ weighted avg       0.89      0.89      0.89       798
 ```
 
 Test:
+
 ```
 Took 7.951373100280762 seconds
               precision    recall  f1-score   support
@@ -176,6 +179,7 @@ python skills_taxonomy_v2/pipeline/sentence_classifier/sentence_classifier.py --
 - 1000 texts takes about 72 seconds.
 
 Train:
+
 ```
 Took 57.075644731521606 seconds
               precision    recall  f1-score   support
@@ -190,6 +194,7 @@ weighted avg       0.96      0.96      0.96       798
 ```
 
 Test:
+
 ```
 Took 18.327223777770996 seconds
               precision    recall  f1-score   support
@@ -206,17 +211,23 @@ weighted avg       0.85      0.85      0.85       267
 ## Predicting
 
 Running
+
 ```
 python skills_taxonomy_v2/pipeline/sentence_classifier/predict_sentence_class.py --config_path 'skills_taxonomy_v2/config/predict_skill_sentences/2021.08.16.local.sample.yaml'
 ```
+
 with the most recent config file will take in job adverts, split them into sentences, and make predictions using a trained skill sentence classifier model (`model_config_name`). The output will be filtered to only include skill sentences. The config file can specify that the data to be predicted on comes from S3 or locally (`data_local`), and it can be a directory of files to predict on or just one file (`input_dir+data_dir`). The outputted file(s) will be in the same folder structure as the inputs and contain one json in the form of:
+
 ```
 {'job_id_1': [('sentence1'), ('sentence2')], 'job_id_2': [('sentence1'), ('sentence2'}
 ```
 
 To predict on all job adverts in the TextKernel data on S3, on the EC2 instance I ran
+
 ```
 python skills_taxonomy_v2/pipeline/sentence_classifier/predict_sentence_class.py --config_path 'skills_taxonomy_v2/config/predict_skill_sentences/2021.08.16.yaml'
 ```
-This will run predictions on a random sample of 10 of the 686 data files. The outputs of this yielded 5,823,903 skill sentences from the 1,000,000 job adverts.
 
+From `2021.07.09`:
+
+  This will run predictions on a random sample of 10 of the 686 data files. The outputs of this yielded 5,823,903 skill sentences from the 1,000,000 job adverts.
