@@ -1,11 +1,11 @@
 flows:
   sentence_classifier_flow:
     params:
-      output_dir: 'outputs/sentence_classifier/models/'
+      output_dir: "outputs/sentence_classifier/models/"
       split_random_seed: 21
       test_size: 0.15
-      bert_model_name: 'bert-base-uncased'
-      layer_type: 'last_hidden_state'
+      bert_model_name: "bert-base-uncased"
+      layer_type: "last_hidden_state"
       multi_process: True
       max_depth: 7
       min_child_weight: 1
@@ -14,10 +14,9 @@ flows:
       subsample: 0.8
       reg_alpha: 0.001
       max_iter: 1000
-      solver: 'liblinear'
-      penalty: 'l2' 
-      class_weight: 'balanced'
+      solver: "liblinear"
+      penalty: "l2"
+      class_weight: "balanced"
       C: 1.0
       probability_threshold: 0.65
     run_id: 0
-
