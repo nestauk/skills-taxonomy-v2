@@ -67,7 +67,6 @@ def split_sentence(data, nlp, min_length=30):
     else:
         return None, None
 
-
 @lru_cache(maxsize=None)
 def load_training_data_from_s3(prefix="final_training_data"):
     """loads data as pickle from S3"""
