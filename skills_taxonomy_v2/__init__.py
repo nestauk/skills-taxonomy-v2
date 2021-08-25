@@ -40,3 +40,6 @@ config = get_yaml_config(_base_config_path)
 
 # BUCKET and METAFLOW_PROFILE
 load_dotenv(f"{PROJECT_DIR}/.env.shared")
+
+# Get file name of custom stop words for skills extraction
+custom_stopwords_dir = f"{PROJECT_DIR}/skills_taxonomy_v2/utils/custom_stop_words.txt"
