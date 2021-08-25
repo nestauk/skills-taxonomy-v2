@@ -1,0 +1,22 @@
+flows:
+  sentence_classifier_flow:
+    params:
+      training_data_file_name: "final_training_data"
+      split_random_seed: 22
+      test_size: 0.15
+      bert_model_name: "bert-base-uncased"
+      layer_type: "last_hidden_state"
+      multi_process: True
+      max_depth: 7
+      min_child_weight: 1
+      gamma: 0.0
+      colsample_bytree: 0.8
+      subsample: 0.8
+      reg_alpha: 0.001
+      max_iter: 1000
+      solver: "liblinear"
+      penalty: "l2"
+      class_weight: "balanced"
+      C: 1.0
+      probability_threshold: 0.67
+    run_id: 0
