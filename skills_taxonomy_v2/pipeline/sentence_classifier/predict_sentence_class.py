@@ -37,9 +37,7 @@ from skills_taxonomy_v2.pipeline.sentence_classifier.sentence_classifier import 
     SentenceClassifier,
 )
 
-from skills_taxonomy_v2.pipeline.sentence_classifier.utils import (
-    split_sentence,
-)
+from skills_taxonomy_v2.pipeline.sentence_classifier.utils import split_sentence
 
 from skills_taxonomy_v2 import PROJECT_DIR, BUCKET_NAME
 
