@@ -29,7 +29,6 @@ from skills_taxonomy_v2 import get_yaml_config, Path, PROJECT_DIR, BUCKET_NAME
 skills_config = get_yaml_config(
     Path(str(PROJECT_DIR) + "/skills_taxonomy_v2/config/base.yaml")
 )
-training_data_path = str(PROJECT_DIR) + skills_config["TRAINING_DATA_PATH"]
 S3_PATH = "inputs/labelled_data/"
 
 
