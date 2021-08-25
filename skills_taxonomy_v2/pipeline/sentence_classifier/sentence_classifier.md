@@ -1,6 +1,6 @@
 # Sentence Classifier
 
-After some experimentation, I modified Liz's scaled up code to reflect the new pipeline with more training data:
+There are three main scripts for the scaled up Sentence Classifier:
 
 1. `sentence_classifier.py` - module for the BertVectorizer class the updated SentenceClassifier class
 2. `predict_sentence_class.py` - make predictions using the sentence classifier on an input file of data
@@ -22,32 +22,32 @@ where (presumably) someone labelled this as a skill sentence for 'enthusiastic',
 The test results for this config were:
 
 Train:
-Took 81.8742127418518 seconds
+Took 314.79356503486633 seconds
 
 ```
               precision    recall  f1-score   support
 
-           0       0.99      1.00      0.99      2029
-           1       1.00      0.97      0.99       821
+           0       0.98      1.00      0.99      3931
+           1       1.00      0.95      0.98      1951
 
-    accuracy                           0.99      2850
-   macro avg       0.96      0.96      0.99      2850
-weighted avg       0.96      0.96      0.99      2850
+    accuracy                           0.98      5882
+   macro avg       0.99      0.98      0.98      5882
+weighted avg       0.98      0.98      0.98      5882
 
 ```
 
 Test:
-Took 33.32437086105347 seconds
+Took 132.80465602874756 seconds
 
 ```
               precision    recall  f1-score   support
 
-           0       0.90      0.97      0.93       676
-           1       0.92      0.73      0.81       274
+           0       0.90      0.97      0.93       694
+           1       0.93      0.78      0.85       344
 
-    accuracy                           0.90       950
-   macro avg       0.90      0.90      0.90       950
-weighted avg       0.90      0.90      0.90       950
+    accuracy                           0.90      1038
+   macro avg       0.90      0.90      0.90      1038
+weighted avg       0.90      0.90      0.90      1038
 ```
 
 ### Sentence classifier - `2021.07.06.yaml`
@@ -233,4 +233,4 @@ python skills_taxonomy_v2/pipeline/sentence_classifier/predict_sentence_class.py
 
 From `2021.07.09`:
 
-  This will run predictions on a random sample of 10 of the 686 data files. The outputs of this yielded 5,823,903 skill sentences from the 1,000,000 job adverts.
+This will run predictions on a random sample of 10 of the 686 data files. The outputs of this yielded 5,823,903 skill sentences from the 1,000,000 job adverts.
