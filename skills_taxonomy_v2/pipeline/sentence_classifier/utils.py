@@ -13,15 +13,17 @@ from toolz import pipe
 from collections import Counter
 import re
 import numpy as np
-import os 
+import os
 import boto3
 from s3fs.core import S3FileSystem
 from functools import lru_cache
 
 import nltk
-nltk.download('averaged_perceptron_tagger')
+
+nltk.download("averaged_perceptron_tagger")
 
 from skills_taxonomy_v2 import get_yaml_config, Path, PROJECT_DIR, BUCKET_NAME
+
 # ---------------------------------------------------------------------------------
 
 skills_config = get_yaml_config(
@@ -30,21 +32,23 @@ skills_config = get_yaml_config(
 training_data_path = str(PROJECT_DIR) + skills_config["TRAINING_DATA_PATH"]
 S3_PATH = "inputs/labelled_data/"
 
+
 def text_cleaning(text):
     # Cleaning where it doesnt matter if you mess up the indices
     text = re.sub(r"[#]+", " NUMBER ", text)
     text = re.sub(
         "C NUMBER", "C#", text
     )  # Some situations you shouldn't have removed the numbers
-    text = text.replace('\n',' ') # This could be mid sentences
+    text = text.replace("\n", " ")  # This could be mid sentences
     # Clean out punctuation - some of this should be cleaned out anyway
-    text = re.sub(r'[^\w\s]', '', text)
-    text = ' '.join(text.split()) # get rid of multiple whitespaces
+    text = re.sub(r"[^\w\s]", "", text)
+    text = " ".join(text.split())  # get rid of multiple whitespaces
     return text.lower()
+
 
 def split_sentence(data, nlp, min_length=30):
     """
-    Split and clean one sentence. 
+    Split and clean one sentence.
     Output is two lists, a list of each sentence and a list of the job_ids they are from.
     This has to be in utils.py and not predict_sentence_class.py so it can be used
     with multiprocessing (see https://stackoverflow.com/questions/41385708/multiprocessing-example-giving-attributeerror/42383397)
@@ -63,14 +67,15 @@ def split_sentence(data, nlp, min_length=30):
         return job_id, sentences
     else:
         return None, None
-        
-    
+
+
 @lru_cache(maxsize=None)
-def load_training_data_from_s3(prefix="final_training_data"): 
+def load_training_data_from_s3(prefix="final_training_data"):
     """loads data as pickle from S3"""
     s3_file = S3FileSystem()
     file_path = S3_PATH + f"{prefix}.pickle"
-    return pickle.load(s3_file.open('{}/{}'.format(BUCKET_NAME, file_path)))
+    return pickle.load(s3_file.open("{}/{}".format(BUCKET_NAME, file_path)))
+
 
 def verb_features(sents):
     """
