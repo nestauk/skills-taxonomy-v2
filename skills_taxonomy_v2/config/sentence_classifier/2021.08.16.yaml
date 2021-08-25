@@ -1,8 +1,8 @@
 flows:
   sentence_classifier_flow:
     params:
-      output_dir: "outputs/sentence_classifier/models/"
-      split_random_seed: 21
+      training_data_file_name: "final_training_data" 
+      split_random_seed: 22
       test_size: 0.15
       bert_model_name: "bert-base-uncased"
       layer_type: "last_hidden_state"
@@ -18,5 +18,5 @@ flows:
       penalty: "l2"
       class_weight: "balanced"
       C: 1.0
-      probability_threshold: 0.65
+      probability_threshold: 0.67
     run_id: 0
