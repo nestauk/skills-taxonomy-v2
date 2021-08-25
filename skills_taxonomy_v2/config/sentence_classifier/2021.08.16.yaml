@@ -1,7 +1,7 @@
 flows:
   sentence_classifier_flow:
     params:
-      training_data_file_name: "final_training_data" 
+      training_data_file_name: "final_training_data"
       split_random_seed: 22
       test_size: 0.15
       bert_model_name: "bert-base-uncased"
