@@ -12,10 +12,6 @@ Usage:
 
 python skills_taxonomy_v2/pipeline/sentence_classifier/predict_sentence_class.py --config_path 'skills_taxonomy_v2/config/predict_skill_sentences/2021.08.16.local.sample.yaml'
 
-or, not locally:
-python skills_taxonomy_v2/pipeline/sentence_classifier/predict_sentence_class.py --config_path 'skills_taxonomy_v2/config/predict_skill_sentences/2021.08.16.yaml'
-
-
 """
 
 import json
@@ -43,7 +39,6 @@ from skills_taxonomy_v2.pipeline.sentence_classifier.sentence_classifier import 
 
 from skills_taxonomy_v2.pipeline.sentence_classifier.utils import (
     split_sentence,
-    clean_text,
 )
 
 from skills_taxonomy_v2 import PROJECT_DIR, BUCKET_NAME
@@ -90,13 +85,11 @@ def load_s3_data(file_name, s3):
     return data
 
 
-def load_model(config_name):
+def load_model(config_name): #change this to be in s3! 
 
     # Load sentence classifier trained model and config it came with
     # Be careful here if you change output locations in sentence_classifier.py
-    model_dir = (
-        f"outputs/sentence_classifier/models/{config_name.replace('.', '_')}.pkl"
-    )
+    model_dir = (f"{config_name.replace('.', '_')}.pkl")
     config_dir = f"skills_taxonomy_v2/config/sentence_classifier/{config_name}.yaml"
 
     with open(config_dir, "r") as f:
@@ -110,7 +103,44 @@ def load_model(config_name):
         multi_process=config["flows"]["sentence_classifier_flow"]["params"][
             "multi_process"
         ],
+        max_depth=config["flows"]["sentence_classifier_flow"]["params"][
+            "max_depth"
+        ],
+         min_child_weight=config["flows"]["sentence_classifier_flow"]["params"][
+            "min_child_weight"
+        ],
+         gamma=config["flows"]["sentence_classifier_flow"]["params"][
+            "gamma"
+        ],
+         colsample_bytree=config["flows"]["sentence_classifier_flow"]["params"][
+            "colsample_bytree"
+        ],
+         subsample=config["flows"]["sentence_classifier_flow"]["params"][
+            "subsample"
+        ],
+         reg_alpha=config["flows"]["sentence_classifier_flow"]["params"][
+            "reg_alpha"
+        ],
+         max_iter=config["flows"]["sentence_classifier_flow"]["params"][
+            "max_iter"
+        ],
+         solver=config["flows"]["sentence_classifier_flow"]["params"][
+            "solver"
+        ],
+         penalty=config["flows"]["sentence_classifier_flow"]["params"][
+            "penalty"
+        ],
+         class_weight=config["flows"]["sentence_classifier_flow"]["params"][
+            "class_weight"
+        ],
+        C=config["flows"]["sentence_classifier_flow"]["params"][
+            "C"
+        ],
+        probability_threshold=config["flows"]["sentence_classifier_flow"]["params"][
+            "probability_threshold"
+        ],
     )
+
     sent_classifier.load_model(model_dir)
 
     return sent_classifier, config
@@ -159,10 +189,8 @@ def get_output_name(data_path, input_dir, output_dir, model_config_name):
     # Put the output in a folder with a similar naming structure to the input
     # Should work for .jsonl and .jsonl.gz
     output_file_dir = os.path.join(
-        output_dir, data_dir.split(".json")[0] + "_" + model_config_name
-    )
-    output_file_dir = output_file_dir.replace(".", "_") + ".json"
-
+        output_dir, data_dir.split(".json")[0] + "_" + model_config_name + '.json')
+    
     return output_file_dir
 
 
@@ -238,13 +266,11 @@ def run_predict_sentence_class(
             output_file_dir = get_output_name(
                 data_path, input_dir, output_dir, model_config_name
             )
-
             logger.info(f"Splitting sentences ...")
             start_time = time.time()
             with Pool(4) as pool:  # 4 cpus
                 partial_split_sentence = partial(
-                    split_sentence, nlp=nlp, min_length=30, max_length=100
-                )
+                    split_sentence, nlp=nlp, min_length=30)
                 split_sentence_pool_output = pool.map(partial_split_sentence, data)
             logger.info(f"Splitting sentences took {time.time() - start_time} seconds")
 
@@ -289,8 +315,9 @@ def parse_arguments(parser):
         default="skills_taxonomy_v2/config/predict_skill_sentences/2021.08.16.local.sample.yaml",
     )
 
-    return parser.parse_args()
+    args, unknown = parser.parse_known_args()
 
+    return args
 
 if __name__ == "__main__":
 
