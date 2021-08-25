@@ -25,8 +25,8 @@ from sentence_transformers import SentenceTransformer
 import tqdm as tqdm
 import spacy
 import numpy as np
+from s3fs.core import S3FileSystem
 
-# %%
 import json
 import random
 from collections import Counter
@@ -38,14 +38,17 @@ import yaml
 import time
 
 from skills_taxonomy_v2.pipeline.sentence_classifier.utils import (
-    clean_text,
-    load_training_data,
+    text_cleaning,
+    load_training_data_from_s3,
     verb_features,
 )
 
+from skills_taxonomy_v2 import PROJECT_DIR, BUCKET_NAME
 # ---------------------------------------------------------------------------------
 # %%
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
+S3_PATH = "outputs/sentence_classifier/models/"
 
 # %%
 class BertVectorizer:
@@ -89,8 +92,8 @@ class SentenceClassifier:
     ...
     Attributes
     ----------
-    test_size : float (default 0.25)
-    split_random_seed : int (default 1)
+    test_size : float (default 0.15)
+    split_random_seed : int (default 22)
     log_reg_max_iter: int (default 1000)
     Methods
     -------
@@ -116,26 +119,51 @@ class SentenceClassifier:
 
     def __init__(
         self,
-        split_random_seed=1,
-        test_size=0.25,
-        log_reg_max_iter=1000,
+        split_random_seed=22,
+        test_size=0.15,
         bert_model_name="sentence-transformers/paraphrase-MiniLM-L6-v2",
         multi_process=True,
+        max_depth = 7,
+        min_child_weight = 1,
+        gamma = 0.0,
+        colsample_bytree = 0.8,
+        subsample = 0.8,
+        reg_alpha = 0.001,
+        max_iter = 1000,
+        solver = "liblinear",
+        penalty = "l2",
+        class_weight = "balanced",
+        C = 1.0,
+        probability_threshold = 0.67, 
     ):
-
         self.split_random_seed = split_random_seed
         self.test_size = test_size
-        self.log_reg_max_iter = log_reg_max_iter
+        self.bert_model_name=bert_model_name
         self.bert_model_name = bert_model_name
         self.multi_process = multi_process
+        self.max_depth = max_depth
+        self.min_child_weight = min_child_weight
+        self.gamma = gamma
+        self.colsample_bytree = colsample_bytree
+        self.subsample = subsample
+        self.reg_alpha = reg_alpha
+        self.max_iter = max_iter
+        self.solver = solver
+        self.penalty = penalty
+        self.class_weight = class_weight
+        self.C = C
+        self.probability_threshold = probability_threshold
 
     def preprocess_text(self, training_data):
 
+        print(f'before removing short sents, the number of +ve and -ve labels are: {Counter([label[1] for label in training_data])}')
         clean_training_data = []
         for sent in training_data:
-            clean_sent = clean_text(sent[1], training=True)
-            if clean_sent is not None:
-                clean_training_data.append((clean_sent, sent[2]))
+            clean_sent = text_cleaning(sent[0])
+            if len(clean_sent) > 30:
+                clean_training_data.append((clean_sent, sent[1]))
+        print(f'after removing short sents, the number of +ve and -ve labels are: {Counter([label[1] for label in clean_training_data])}')
+
 
         return clean_training_data
 
@@ -181,23 +209,24 @@ class SentenceClassifier:
         return np.hstack((X_vec, verb_features(X)))
 
     def fit(self, X_stack, y):
+
         xgb = XGBClassifier(
             eval_metric="mlogloss",
-            max_depth=params["max_depth"],
-            min_child_weight=params["min_child_weight"],
-            gamma=params["gamma"],
-            colsample_bytree=params["colsample_bytree"],
-            subsample=params["subsample"],
-            reg_alpha=params["reg_alpha"],
+            max_depth=self.max_depth,
+            min_child_weight=self.min_child_weight,
+            gamma=self.gamma,
+            colsample_bytree=self.colsample_bytree,
+            subsample=self.subsample,
+            reg_alpha=self.reg_alpha,
             use_label_encoder=False,
         )
         xgb.fit(X_stack, y)
         lr = LogisticRegression(
-            max_iter=params["max_iter"],
-            class_weight=params["class_weight"],
-            C=params["C"],
-            penalty=params["penalty"],
-            solver=params["solver"],
+            max_iter=self.max_iter,
+            class_weight=self.class_weight,
+            C=self.C,
+            penalty=self.penalty,
+            solver=self.solver,
         )
         lr.fit(X_stack, y)
 
@@ -217,7 +246,7 @@ class SentenceClassifier:
     def predict(self, X_stack):
         probs = self.classifier.predict_proba(X_stack)
         return [
-            int(np.where(prob[1] >= params["probability_threshold"], 1, 0))
+            int(np.where(prob[1] >= self.probability_threshold, 1, 0))
             for prob in probs
         ]
 
@@ -233,24 +262,21 @@ class SentenceClassifier:
         return class_rep
 
     def save_model(self, file_name):
-        directory = os.path.dirname(file_name)
+        s3_file = S3FileSystem()
+        bucket = BUCKET_NAME
+        key = S3_PATH + file_name
+        pickle.dump(self.classifier, s3_file.open(f's3://{bucket}/{key}', 'wb'))
 
-        if not os.path.exists(directory):
-            os.makedirs(directory)
-
-        with open(file_name, "wb") as f:
-            pickle.dump(self.classifier, f)
-
-    def load_model(self, file_name):
-
-        with open(file_name, "rb") as f:
-            self.classifier = pickle.load(f)
+    def load_model(self, file_name): 
+        s3_file = S3FileSystem()
+        bucket = BUCKET_NAME
+        key = S3_PATH + file_name
+        self.classifier = pickle.load(s3_file.open('{}/{}'.format(BUCKET_NAME, key)))
 
         # Load BERT models
         self.load_bert()
 
         return self.classifier
-
 
 if __name__ == "__main__":
     parser = ArgumentParser()
@@ -276,25 +302,51 @@ if __name__ == "__main__":
     flow_config = config["flows"][FLOW_ID]
     params = flow_config["params"]
 
+    #params for training data
+    training_data = params["training_data_file_name"]
+
+    #params for model
     split_random_seed = params["split_random_seed"]
     test_size = params["test_size"]
     bert_model_name = params["bert_model_name"]
     multi_process = params["multi_process"]
-    log_reg_max_iter = params["max_iter"]
+
+    max_depth = params["max_depth"]
+    min_child_weight = params["min_child_weight"]
+    gamma = params["gamma"]
+    colsample_bytree = params["colsample_bytree"]
+    subsample = params["subsample"]
+    reg_alpha = params["reg_alpha"]
+    max_iter = params["max_iter"]
+    solver = params["solver"]
+    penalty = params["penalty"]
+    class_weight = params["class_weight"]
+    C = params["C"]
+    probability_threshold = params["probability_threshold"]
+
 
     # Output file name
-    output_dir = params["output_dir"]
-    file_name = os.path.join(output_dir, yaml_file_name.replace(".", "_"))
+    file_name = yaml_file_name.replace(".", "_")
 
     # Run flow
-    training_data = load_training_data("final_training_data")
+    training_data = load_training_data_from_s3(training_data)
 
     sent_class = SentenceClassifier(
         split_random_seed=split_random_seed,
         test_size=test_size,
-        log_reg_max_iter=log_reg_max_iter,
         bert_model_name=bert_model_name,
         multi_process=multi_process,
+        max_depth=max_depth,
+        min_child_weight=min_child_weight,
+        gamma=gamma,
+        colsample_bytree=colsample_bytree,  
+        subsample=subsample,
+        reg_alpha=reg_alpha,
+        max_iter=max_iter,
+        solver=solver,
+        penalty=penalty,
+        C=C,
+        probability_threshold=probability_threshold
     )
 
     X_train, X_test, y_train, y_test = sent_class.split_data(
@@ -316,9 +368,6 @@ if __name__ == "__main__":
 
     # Output
     sent_class.save_model(file_name + ".pkl")
-    with open(file_name + "_results.txt", "w") as file:
-        json.dump(results, file)
-
     # # Loading a model
     # file_name = f'outputs/sentence_classifier/models/{job_id}.pkl'
 
