@@ -19,4 +19,5 @@ bokeh
 umap-learn
 nlpaug
 nltk
-Sklearn
+pigeonXT-jupyter
+boto3
