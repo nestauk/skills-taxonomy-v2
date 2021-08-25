@@ -69,19 +69,6 @@ The test results for this config were:
 weighted avg       0.90      0.90      0.90       189
 ```
 
-### Sentence classifier - `2021.08.06.yaml`
-
-This config includes training data where additional cleaning was done. This allowed better splitting of sentences and so there is more of it. This training data file is `outputs/sentence_classifier/data/training_data_April2021_08_06_21.json`. Uses my own method for getting the last BERT embedding layer from 'bert-base-uncased'. This uses seed 4.
-
-```
-'Seed': 0, '0 test Recall': 0.82, '1 test Recall': 0.85
-'Seed': 1, '0 test Recall': 0.89, '1 test Recall': 0.79
-'Seed': 2, '0 test Recall': 0.86, '1 test Recall': 0.78
-'Seed': 3, '0 test Recall': 0.79, '1 test Recall': 0.86
-'Seed': 4, '0 test Recall': 0.85, '1 test Recall': 0.84
-'Seed': 5, '0 test Recall': 0.82, '1 test Recall': 0.79
-```
-
 ## Experiments with `sentence_embeddings` library
 
 ### paraphrase-MiniLM-L6-v2, multi_process: False
@@ -230,7 +217,3 @@ To predict on all job adverts in the TextKernel data on S3, on the EC2 instance 
 ```
 python skills_taxonomy_v2/pipeline/sentence_classifier/predict_sentence_class.py --config_path 'skills_taxonomy_v2/config/predict_skill_sentences/2021.08.16.yaml'
 ```
-
-From `2021.07.09`:
-
-This will run predictions on a random sample of 10 of the 686 data files. The outputs of this yielded 5,823,903 skill sentences from the 1,000,000 job adverts.
