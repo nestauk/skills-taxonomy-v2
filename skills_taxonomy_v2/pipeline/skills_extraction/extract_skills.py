@@ -93,6 +93,7 @@ if __name__ == "__main__":
     )
     sentences_data["reduced_points x"] = list(reduced_points_umap[:, 0])
     sentences_data["reduced_points y"] = list(reduced_points_umap[:, 1])
+    sentences_data["reduced_points_umap"] = reduced_points_umap.tolist()
     sentences_data.drop(["embedding"], axis=1, inplace=True)
 
     # Get clusters
@@ -127,7 +128,7 @@ if __name__ == "__main__":
         args.config_path, output_dir, "reducer_class.pkl"
     )
     save_to_s3(s3, BUCKET_NAME, reducer_class, reducer_obj_path)
-    
+
     clustering_obj_path = get_output_config_stamped(
         args.config_path, output_dir, "dbscan_clustering.pkl"
     )
