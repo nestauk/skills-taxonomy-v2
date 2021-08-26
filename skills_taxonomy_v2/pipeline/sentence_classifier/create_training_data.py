@@ -182,7 +182,7 @@ def create_training_data(
 
 def update_bad_training_data_labels(
     training_data,
-):  # make sure this actually saves to s3
+):
     """
     Update bad labels in training data using a jupyter notebook widget.
 
