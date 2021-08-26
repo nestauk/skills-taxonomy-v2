@@ -42,6 +42,11 @@ to install xgboost:
 ```
 conda install -c anaconda py-xgboost
 ```
+or
+```
+conda install -c conda-forge py-xgboost
+```
+if you aren't using anaconda.
 
 ### Running on EC2
 

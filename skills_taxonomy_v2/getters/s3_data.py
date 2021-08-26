@@ -11,8 +11,6 @@ import logging
 
 import pandas as pd
 import boto3
-import fsspec
-import s3fs
 
 logger = logging.getLogger(__name__)
 

@@ -21,3 +21,5 @@ nlpaug
 nltk
 pigeonXT-jupyter
 boto3
+fsspec
+s3fs
