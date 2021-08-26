@@ -243,7 +243,7 @@ def run_predict_sentence_class(
         # Run predictions and save outputs iteratively
         logger.info(f"Loading data from {data_path} ...")
         if data_local:
-            data = load_local_data(data_path)
+            data = load_local_data(data_path)[:2]
         else:
             data = load_s3_data(data_path, s3)
 
