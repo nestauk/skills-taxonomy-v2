@@ -44,6 +44,7 @@ from skills_taxonomy_v2.pipeline.sentence_classifier.utils import (
 )
 
 from skills_taxonomy_v2 import PROJECT_DIR, BUCKET_NAME
+
 # ---------------------------------------------------------------------------------
 # %%
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
@@ -103,9 +104,9 @@ class SentenceClassifier:
     split_data(training_data)
             Split the training data (list of pairs of text-label) into test/train sets
     fit_transform(X)
-            Load the pretrained BERT model and transform X. Stack verb features. 
+            Load the pretrained BERT model and transform X. Stack verb features.
     transform(X)
-            Transform X uses already loaded BERT model. Stack verb features. 
+            Transform X uses already loaded BERT model. Stack verb features.
     fit(X_vec, y)
             Fit the classifier to vectorized X
     predict(X_vec)
@@ -121,24 +122,25 @@ class SentenceClassifier:
         self,
         split_random_seed=22,
         test_size=0.15,
+        min_sent_length=30,
         bert_model_name="sentence-transformers/paraphrase-MiniLM-L6-v2",
         multi_process=True,
-        max_depth = 7,
-        min_child_weight = 1,
-        gamma = 0.0,
-        colsample_bytree = 0.8,
-        subsample = 0.8,
-        reg_alpha = 0.001,
-        max_iter = 1000,
-        solver = "liblinear",
-        penalty = "l2",
-        class_weight = "balanced",
-        C = 1.0,
-        probability_threshold = 0.67, 
+        max_depth=7,
+        min_child_weight=1,
+        gamma=0.0,
+        colsample_bytree=0.8,
+        subsample=0.8,
+        reg_alpha=0.001,
+        max_iter=1000,
+        solver="liblinear",
+        penalty="l2",
+        class_weight="balanced",
+        C=1.0,
+        probability_threshold=0.67,
     ):
         self.split_random_seed = split_random_seed
         self.test_size = test_size
-        self.bert_model_name=bert_model_name
+        self.min_sent_length
         self.bert_model_name = bert_model_name
         self.multi_process = multi_process
         self.max_depth = max_depth
@@ -156,14 +158,17 @@ class SentenceClassifier:
 
     def preprocess_text(self, training_data):
 
-        print(f'before removing short sents, the number of +ve and -ve labels are: {Counter([label[1] for label in training_data])}')
+        print(
+            f"before removing short sents, the number of +ve and -ve labels are: {Counter([label[1] for label in training_data])}"
+        )
         clean_training_data = []
         for sent in training_data:
             clean_sent = text_cleaning(sent[0])
-            if len(clean_sent) > 30:
+            if len(clean_sent) > self.min_sent_length:
                 clean_training_data.append((clean_sent, sent[1]))
-        print(f'after removing short sents, the number of +ve and -ve labels are: {Counter([label[1] for label in clean_training_data])}')
-
+        print(
+            f"after removing short sents, the number of +ve and -ve labels are: {Counter([label[1] for label in clean_training_data])}"
+        )
 
         return clean_training_data
 
@@ -246,8 +251,7 @@ class SentenceClassifier:
     def predict(self, X_stack):
         probs = self.classifier.predict_proba(X_stack)
         return [
-            int(np.where(prob[1] >= self.probability_threshold, 1, 0))
-            for prob in probs
+            int(np.where(prob[1] >= self.probability_threshold, 1, 0)) for prob in probs
         ]
 
     def predict_transform(self, X):
@@ -265,18 +269,19 @@ class SentenceClassifier:
         s3_file = S3FileSystem()
         bucket = BUCKET_NAME
         key = S3_PATH + file_name
-        pickle.dump(self.classifier, s3_file.open(f's3://{bucket}/{key}', 'wb'))
+        pickle.dump(self.classifier, s3_file.open(f"s3://{bucket}/{key}", "wb"))
 
-    def load_model(self, file_name): 
+    def load_model(self, file_name):
         s3_file = S3FileSystem()
         bucket = BUCKET_NAME
         key = S3_PATH + file_name
-        self.classifier = pickle.load(s3_file.open('{}/{}'.format(BUCKET_NAME, key)))
+        self.classifier = pickle.load(s3_file.open("{}/{}".format(BUCKET_NAME, key)))
 
         # Load BERT models
         self.load_bert()
 
         return self.classifier
+
 
 if __name__ == "__main__":
     parser = ArgumentParser()
@@ -302,10 +307,10 @@ if __name__ == "__main__":
     flow_config = config["flows"][FLOW_ID]
     params = flow_config["params"]
 
-    #params for training data
+    # params for training data
     training_data = params["training_data_file_name"]
 
-    #params for model
+    # params for model
     split_random_seed = params["split_random_seed"]
     test_size = params["test_size"]
     bert_model_name = params["bert_model_name"]
@@ -324,7 +329,6 @@ if __name__ == "__main__":
     C = params["C"]
     probability_threshold = params["probability_threshold"]
 
-
     # Output file name
     file_name = yaml_file_name.replace(".", "_")
 
@@ -339,14 +343,14 @@ if __name__ == "__main__":
         max_depth=max_depth,
         min_child_weight=min_child_weight,
         gamma=gamma,
-        colsample_bytree=colsample_bytree,  
+        colsample_bytree=colsample_bytree,
         subsample=subsample,
         reg_alpha=reg_alpha,
         max_iter=max_iter,
         solver=solver,
         penalty=penalty,
         C=C,
-        probability_threshold=probability_threshold
+        probability_threshold=probability_threshold,
     )
 
     X_train, X_test, y_train, y_test = sent_class.split_data(
