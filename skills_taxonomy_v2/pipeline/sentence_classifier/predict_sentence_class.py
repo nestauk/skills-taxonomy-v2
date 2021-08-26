@@ -322,13 +322,14 @@ if __name__ == "__main__":
         params["random_seed"] = None
         params["sample_size"] = None
 
+    # Output data in a subfolder with the name of the model used to make the predictions
     if params["data_local"]:
         input_dir = os.path.join(PROJECT_DIR, params["input_dir"])
-        output_dir = os.path.join(PROJECT_DIR, params["output_dir"])
+        output_dir = os.path.join(PROJECT_DIR, params["output_dir"], params["model_config_name"])
     else:
         # If we are pulling the data from S3 we don't want the paths to join with our local project_dir
         input_dir = params["input_dir"]
-        output_dir = params["output_dir"]
+        output_dir = os.path.join(params["output_dir"], params["model_config_name"])
 
     run_predict_sentence_class(
         input_dir,
