@@ -85,7 +85,7 @@ def load_s3_data(file_name, s3):
     return data
 
 
-def load_model(config_name):  # change this to be in s3!
+def load_model(config_name):
 
     # Load sentence classifier trained model and config it came with
     # Be careful here if you change output locations in sentence_classifier.py
