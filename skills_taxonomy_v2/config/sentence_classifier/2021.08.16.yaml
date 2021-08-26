@@ -4,6 +4,7 @@ flows:
       training_data_file_name: "final_training_data"
       split_random_seed: 22
       test_size: 0.15
+      min_sent_length: 30
       bert_model_name: "bert-base-uncased"
       layer_type: "last_hidden_state"
       multi_process: True
