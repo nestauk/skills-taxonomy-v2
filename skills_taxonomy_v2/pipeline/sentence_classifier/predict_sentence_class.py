@@ -130,14 +130,19 @@ def load_model(config_name):  # change this to be in s3!
     return sent_classifier, config
 
 
-def predict_sentences(sent_classifier, sentences):
+def predict_sentences(pool_sentences_vecs, sent_classifier):
 
-    # Predict
-    sentences_vec = sent_classifier.transform(sentences)
-    sentences_pred = sent_classifier.predict(sentences_vec)
+    """
+    Predict one vector at a time for use in pooling.
+    - sent_classifier.predict expects a 2D array (usually predict on many at once)
+    - pool_sentences_vec is a list of tuples [(vec_i, sentence vec1)]
 
-    return sentences_pred, sentences_vec
+    Output is (id, sentence prediction)
+    """
+    vecs = [vec for _, vec in pool_sentences_vecs]
+    sentences_pred = sent_classifier.predict(vecs)
 
+    return [(pool_sentences_vecs[i][0], pred) for i, pred in enumerate(sentences_pred)]
 
 def save_outputs(skill_sentences_dict, output_file_dir):
 
@@ -247,6 +252,7 @@ def run_predict_sentence_class(
         else:
             data = load_s3_data(data_path, s3)
 
+        data = data[0:10000]
         if data:
             output_file_dir = get_output_name(
                 data_path, input_dir, output_dir, model_config_name
@@ -266,22 +272,50 @@ def run_predict_sentence_class(
                     sentences += s
                     job_ids += [job_id] * len(s)
 
+            logger.info(f"Processing sentences took {time.time() - start_time} seconds")
+
             if sentences:
+                logger.info(f"Transforming skill sentences ...")
+                sentences_vec = sent_classifier.transform(sentences)
+                pool_sentences_vec = [(vec_ix, [vec]) for vec_ix, vec in enumerate(sentences_vec)]
+                
+                logger.info(f"Chunking up sentences ...")
+                start_time = time.time()
+                # Manually chunk up the data to predict multiple in a pool
+                # This is because predict can't deal with massive vectors
+                pool_sentences_vecs = []
+                pool_sentences_vec = []
+                for vec_ix, vec in enumerate(sentences_vec):
+                    pool_sentences_vec.append((vec_ix, vec))
+                    if len(pool_sentences_vec) > 1000:
+                        pool_sentences_vecs.append(pool_sentences_vec)
+                        pool_sentences_vec = []
+                if len(pool_sentences_vec) != 0:
+                    # Add the final chunk if not empty
+                    pool_sentences_vecs.append(pool_sentences_vec)
+                logger.info(
+                    f"Chunking up sentences into {len(pool_sentences_vecs)} chunks took {time.time() - start_time} seconds"
+                )
+
                 logger.info(f"Predicting skill sentences ...")
                 start_time = time.time()
-                sentences_pred, _ = predict_sentences(sent_classifier, sentences)
+                with Pool(4) as pool:  # 4 cpus
+                    partial_predict_sentences = partial(predict_sentences, sent_classifier=sent_classifier)
+                    predict_sentences_pool_output = pool.map(partial_predict_sentences, pool_sentences_vecs)
                 logger.info(
                     f"Predicting on {len(sentences)} sentences took {time.time() - start_time} seconds"
                 )
 
+                # Process output into one list of sentences for all documents
                 logger.info(f"Combining data for output ...")
                 start_time = time.time()
                 skill_sentences_dict = defaultdict(list)
-                for job_id, sentence, pred in list(
-                    zip(job_ids, sentences, sentences_pred)
-                ):
-                    if pred == 1:
-                        skill_sentences_dict[job_id].append(sentence)
+                for chunk_output in predict_sentences_pool_output:
+                    for (sent_ix, pred) in chunk_output:
+                        if pred == 1:
+                            job_id = job_ids[sent_ix]
+                            sentence = sentences[sent_ix]
+                            skill_sentences_dict[job_id].append(sentence)
                 logger.info(f"Combining output took {time.time() - start_time} seconds")
 
                 logger.info(f"Saving data to {output_file_dir} ...")
@@ -289,7 +323,6 @@ def run_predict_sentence_class(
                     save_outputs(skill_sentences_dict, output_file_dir)
                 else:
                     save_outputs_to_s3(s3, skill_sentences_dict, output_file_dir)
-
 
 def parse_arguments(parser):
 
