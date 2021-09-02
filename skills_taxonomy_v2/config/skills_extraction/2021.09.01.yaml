@@ -1,0 +1,32 @@
+flows:
+  word_embeddings_flow:
+    params:
+      skill_sentences_dir: "outputs/sentence_classifier/data/skill_sentences/textkernel-files/"
+      token_len_threshold: 20
+      output_dir: "outputs/skills_extraction/word_embeddings/data/"
+  extract_skills:
+    params:
+      sentence_embeddings_dir: "outputs/skills_extraction/word_embeddings/data/"
+      prop_not_masked_threshold: 0.2
+      mask_seq: "[MASK]"
+      umap_n_neighbors: 4
+      umap_min_dist: 0.0
+      umap_random_state: 42
+      umap_n_components: 5
+      dbscan_eps: 0.05
+      dbscan_min_samples: 2
+      ngram: 3
+      min_count: 3
+      threshold: 0.25
+      output_dir: "outputs/skills_extraction/data"
+  esco_mapper:
+    params:
+      esco_data_dir: "inputs/ESCO/v1.0.8/"
+      esco_skills_file: "skills_en.csv"
+      esco_lang_skills_file: "languageSkillsCollection_en.csv"
+      esco_ict_esco_skills_file: "ictSkillsCollection_en.csv"
+      esco_trans_esco_skills_file: "transversalSkillsCollection_en.csv"
+      tk_skills_path: "outputs/skills_extraction/data/2021.08.02_skills_data.json"
+      output_dir: "outputs/skills_extraction/data/"
+      map_similarity_score_threshold: 0.5
+    run_id: 0
