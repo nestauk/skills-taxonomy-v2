@@ -6,18 +6,24 @@ flows:
       output_dir: "outputs/skills_extraction/word_embeddings/data/"
   extract_skills:
     params:
-      sentence_embeddings_dir: "outputs/skills_extraction/word_embeddings/data/"
+      sentence_embeddings_dir: "outputs/skills_extraction/word_embeddings/data/2021.08.31/"
       prop_not_masked_threshold: 0.2
       mask_seq: "[MASK]"
       umap_n_neighbors: 4
       umap_min_dist: 0.0
       umap_random_state: 42
-      umap_n_components: 5
+      umap_n_components: 2
       dbscan_eps: 0.05
-      dbscan_min_samples: 2
+      dbscan_min_samples: 4
       desc_num_top_sent: 5
       name_num_top_words: 5
-      output_dir: "outputs/skills_extraction/data"
+      dir_sample_size: 20
+      dir_sample_seed: 42
+      sent_emb_sample_seed: 42
+      sent_emb_sample_size: 20000
+      sentence_lengths_lower: 50
+      sentence_lengths_upper: 100
+      output_dir: "outputs/skills_extraction/extracted_skills"
   esco_mapper:
     params:
       esco_data_dir: "inputs/ESCO/v1.0.8/"
