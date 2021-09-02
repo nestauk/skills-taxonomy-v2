@@ -87,11 +87,10 @@ if __name__ == "__main__":
         s3, BUCKET_NAME, sentence_embeddings_dir, file_types=["*.json"]
     )
 
-    sentences_data = load_sentences_embeddings(s3, sentence_embeddings_dirs[:2])  #
-    sentences_data_sample = sentences_data[:1000]
+    sentences_data = load_sentences_embeddings(s3, sentence_embeddings_dirs) 
 
     # It's easier to manipulate this dataset as a dataframe
-    sentences_data = pd.DataFrame(sentences_data_sample)
+    sentences_data = pd.DataFrame(sentences_data)
 
     # Reduce to 2d
     reduced_points_umap, reducer_class = reduce_embeddings(
