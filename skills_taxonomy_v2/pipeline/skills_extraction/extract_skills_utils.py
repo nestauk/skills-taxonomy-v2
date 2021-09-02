@@ -28,6 +28,7 @@ from skills_taxonomy_v2 import BUCKET_NAME
 
 logger = logging.getLogger(__name__)
 
+nltk.download('wordnet')
 
 def replace_ngrams(sentence, ngram_words):
     for word_list in ngram_words:

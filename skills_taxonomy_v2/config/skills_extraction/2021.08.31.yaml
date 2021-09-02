@@ -17,10 +17,10 @@ flows:
       dbscan_min_samples: 4
       desc_num_top_sent: 5
       name_num_top_words: 5
-      dir_sample_size: 20
+      dir_sample_size: 50
       dir_sample_seed: 42
       sent_emb_sample_seed: 42
-      sent_emb_sample_size: 20000
+      sent_emb_sample_size:
       sentence_lengths_lower: 50
       sentence_lengths_upper: 100
       output_dir: "outputs/skills_extraction/extracted_skills"
