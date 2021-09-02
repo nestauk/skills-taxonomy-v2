@@ -21,3 +21,6 @@ nlpaug
 nltk
 pigeonXT-jupyter
 boto3
+s3fs
+botocore
+colorama
