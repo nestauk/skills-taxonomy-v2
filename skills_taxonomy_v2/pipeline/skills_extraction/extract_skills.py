@@ -8,7 +8,7 @@ for each skill is found by:
 - description: the most similar original (unmasked) sentence(s) to the cluster centre.
 
 Usage:
-python -i skills_taxonomy_v2/pipeline/skills_extraction/extract_skills.py --config_path 'skills_taxonomy_v2/config/skills_extraction/2021.08.02.yaml'
+python -i skills_taxonomy_v2/pipeline/skills_extraction/extract_skills.py --config_path 'skills_taxonomy_v2/config/skills_extraction/2021.09.01.yaml'
 
 """
 
@@ -23,7 +23,6 @@ import boto3
 from skills_taxonomy_v2.getters.s3_data import get_s3_data_paths, save_to_s3
 from skills_taxonomy_v2.pipeline.skills_extraction.extract_skills_utils import (
     replace_ngrams,
-    get_top_tf_idf_words,
     load_sentences_embeddings,
     clean_cluster_descriptions,
     get_skill_info,
@@ -32,6 +31,9 @@ from skills_taxonomy_v2.pipeline.skills_extraction.extract_skills_utils import (
     get_clusters,
 )
 from skills_taxonomy_v2 import BUCKET_NAME
+from skills_taxonomy_v2.pipeline.sentence_classifier.sentence_classifier import (
+    BertVectorizer,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -68,9 +70,16 @@ if __name__ == "__main__":
     umap_random_state = params["umap_random_state"]
     dbscan_eps = params["dbscan_eps"]
     dbscan_min_samples = params["dbscan_min_samples"]
-    desc_num_top_sent = params["desc_num_top_sent"]
-    name_num_top_words = params["name_num_top_words"]
+    ngram = params["ngram"]
+    min_count = params["min_count"]
+    threshold = params["threshold"]
     output_dir = params["output_dir"]
+
+    bert_vectorizer = BertVectorizer(
+        bert_model_name="sentence-transformers/paraphrase-MiniLM-L6-v2",
+        multi_process=True,
+    )
+    bert_vectorizer.fit()
 
     s3 = boto3.resource("s3")
 
@@ -78,10 +87,11 @@ if __name__ == "__main__":
         s3, BUCKET_NAME, sentence_embeddings_dir, file_types=["*.json"]
     )
 
-    sentences_data = load_sentences_embeddings(s3, sentence_embeddings_dirs)
+    sentences_data = load_sentences_embeddings(s3, sentence_embeddings_dirs[:2])  #
+    sentences_data_sample = sentences_data[:1000]
 
     # It's easier to manipulate this dataset as a dataframe
-    sentences_data = pd.DataFrame(sentences_data)
+    sentences_data = pd.DataFrame(sentences_data_sample)
 
     # Reduce to 2d
     reduced_points_umap, reducer_class = reduce_embeddings(
@@ -93,7 +103,6 @@ if __name__ == "__main__":
     )
     sentences_data["reduced_points x"] = list(reduced_points_umap[:, 0])
     sentences_data["reduced_points y"] = list(reduced_points_umap[:, 1])
-    sentences_data.drop(["embedding"], axis=1, inplace=True)
 
     # Get clusters
     sentences_data["Cluster number"], dbscan_clustering = get_clusters(
@@ -101,7 +110,9 @@ if __name__ == "__main__":
     )
 
     # Get names and descriptions of each skill
-    skills_data = get_skill_info(sentences_data, desc_num_top_sent, name_num_top_words)
+    skills_data = get_skill_info(
+        sentences_data, ngram, bert_vectorizer, min_count, threshold
+    )
 
     # Save
     # The skills data
@@ -127,9 +138,8 @@ if __name__ == "__main__":
         args.config_path, output_dir, "reducer_class.pkl"
     )
     save_to_s3(s3, BUCKET_NAME, reducer_class, reducer_obj_path)
-    
+
     clustering_obj_path = get_output_config_stamped(
         args.config_path, output_dir, "dbscan_clustering.pkl"
     )
     save_to_s3(s3, BUCKET_NAME, dbscan_clustering, clustering_obj_path)
-
