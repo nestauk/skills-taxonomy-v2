@@ -13,8 +13,8 @@ flows:
       umap_min_dist: 0.0
       umap_random_state: 42
       umap_n_components: 2
-      dbscan_eps: 0.05
-      dbscan_min_samples: 4
+      dbscan_eps: 0.01
+      dbscan_min_samples: 3
       desc_num_top_sent: 5
       name_num_top_words: 5
       dir_sample_size: 30

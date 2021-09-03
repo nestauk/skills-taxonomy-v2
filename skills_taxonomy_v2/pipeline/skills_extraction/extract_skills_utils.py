@@ -377,10 +377,14 @@ class ExtractSkills(object):
             bucket_name = BUCKET_NAME
         save_to_s3(s3, bucket_name, self.cluster_centroids, clust_cent_filename)
 
-        with tempfile.TemporaryFile() as fp:
-            joblib.dump(self.reducer_class, fp, compress=('gzip', 5))
-            fp.seek(0)
-            s3.Bucket(bucket_name).put_object(Key=reducer_class_filename , Body=fp.read())
+        try:
+            with tempfile.TemporaryFile() as fp:
+                joblib.dump(self.reducer_class, fp, compress=('gzip', 5))
+                fp.seek(0)
+                s3.Bucket(bucket_name).put_object(Key=reducer_class_filename , Body=fp.read())
+        except:
+            # This is prone to happening due to memory issues
+            logger.info(f"Reducer class not saved")
 
     def load_outputs(
         self,
