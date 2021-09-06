@@ -99,7 +99,7 @@ if __name__ == "__main__":
     # Save out the sentence id: embedding dict separately
     embedding_dict = pd.Series(
         sentences_data["embedding"].values,
-        index=sentences_data["sentence id"].values.astype(str)
+        index=sentences_data["sentence id"].values
         ).to_dict()
     embedding_dict_output_path = get_output_config_stamped(
         args.config_path, output_dir, "sentence_id_2_embedding_dict.json.gz"
