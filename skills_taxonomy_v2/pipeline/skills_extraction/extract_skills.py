@@ -95,6 +95,7 @@ if __name__ == "__main__":
         extract_skills_output_path,
         s3)
 
+    logger.info("Finding dict of sentence id to embeddings for sample...")
     # Save out the sentence id: embedding dict separately
     embedding_dict = pd.Series(
         sentences_data["embedding"].values,
@@ -103,6 +104,7 @@ if __name__ == "__main__":
     embedding_dict_output_path = get_output_config_stamped(
         args.config_path, output_dir, "sentence_id_2_embedding_dict.json"
     )
+    logger.info("Saving dict of sentence id to embeddings for sample...")
     save_to_s3(
         s3,
         BUCKET_NAME,
