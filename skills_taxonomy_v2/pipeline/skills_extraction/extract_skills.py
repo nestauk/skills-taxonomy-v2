@@ -102,8 +102,9 @@ if __name__ == "__main__":
         index=sentences_data["sentence id"].values.astype(str)
         ).to_dict()
     embedding_dict_output_path = get_output_config_stamped(
-        args.config_path, output_dir, "sentence_id_2_embedding_dict.json"
+        args.config_path, output_dir, "sentence_id_2_embedding_dict.json.gz"
     )
+
     logger.info("Saving dict of sentence id to embeddings for sample...")
     save_to_s3(
         s3,
