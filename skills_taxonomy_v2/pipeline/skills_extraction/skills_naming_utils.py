@@ -17,6 +17,10 @@ from nltk.tokenize import word_tokenize
 from gensim.models.phrases import Phrases, Phraser, ENGLISH_CONNECTOR_WORDS
 from sklearn.metrics.pairwise import cosine_similarity
 
+from skills_taxonomy_v2.pipeline.sentence_classifier.sentence_classifier import (
+    BertVectorizer,
+)
+
 logger = logging.getLogger(__name__)
 
 nltk.download('wordnet')
@@ -129,7 +133,7 @@ def get_clean_ngrams(sentence_skills, ngram, min_count, threshold):
     clean_ngrams = [[skill.replace('_', ' ').replace('-', ' ') for skill in skills] for skills in  list(tokenised_skills)]
     clean_ngrams = list(set([skill for skill in list(itertools.chain(*clean_ngrams)) if len(skill.split(' ')) > 1]))
 
-    return clean_ngrams
+    return clean_ngrams, cluster_descriptions
 
 def get_skill_info(clean_ngrams, sentence_skills, sentence_embs, cluster_descriptions, num_top_sent=2):
     """

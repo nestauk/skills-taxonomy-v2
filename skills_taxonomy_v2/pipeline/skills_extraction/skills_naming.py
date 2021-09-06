@@ -23,9 +23,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 from skills_taxonomy_v2.getters.s3_data import load_s3_data
 from skills_taxonomy_v2 import BUCKET_NAME
-from skills_taxonomy_v2.pipeline.sentence_classifier.sentence_classifier import (
-    BertVectorizer,
-)
+
 from skills_taxonomy_v2.pipeline.skills_extraction.skills_naming_utils import (
     clean_cluster_descriptions, get_clean_ngrams, get_skill_info
 )
@@ -65,7 +63,7 @@ if __name__ == "__main__":
     sentence_embs = load_s3_data(s3, BUCKET_NAME, params["embedding_sample_path"])
 
     # Find n-grams and get skill information
-    clean_ngrams = get_clean_ngrams(sentence_skills, params["ngram"], params["min_count"], params["threshold"])
+    clean_ngrams, cluster_descriptions = get_clean_ngrams(sentence_skills, params["ngram"], params["min_count"], params["threshold"])
     skills_data = get_skill_info(clean_ngrams, sentence_skills, sentence_embs, cluster_descriptions, params["num_top_sent"])
 
     # Save skill information
