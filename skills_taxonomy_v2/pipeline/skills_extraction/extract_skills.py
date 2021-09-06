@@ -86,7 +86,7 @@ if __name__ == "__main__":
         dbscan_min_samples=params["dbscan_min_samples"]
         )
     reduced_points_umap = extract_skills.reduce_embeddings(sentences_data["embedding"].tolist())
-    clustering_number, cluster_centroids = extract_skills.get_clusters(reduced_points_umap)
+    clustering_number = extract_skills.get_clusters(reduced_points_umap)
 
     extract_skills_output_path = get_output_config_stamped(
         args.config_path, output_dir, ""
@@ -94,6 +94,21 @@ if __name__ == "__main__":
     extract_skills.save_outputs(
         extract_skills_output_path,
         s3)
+
+    # Save out the sentence id: embedding dict separately
+    embedding_dict = pd.Series(
+        sentences_data["embedding"].values,
+        index=sentences_data["sentence id"].values.astype(str)
+        ).to_dict()
+    embedding_dict_output_path = get_output_config_stamped(
+        args.config_path, output_dir, "sentence_id_2_embedding_dict.json"
+    )
+    save_to_s3(
+        s3,
+        BUCKET_NAME,
+        embedding_dict,
+        embedding_dict_output_path,
+    )
 
     # Add to sentences_data dataframe - each sentence will now have the
     # reduced embedding and the assigned cluster label
@@ -113,4 +128,26 @@ if __name__ == "__main__":
         BUCKET_NAME,
         sentences_data.to_dict(orient="list"),
         sentences_data_output_path,
+    )
+
+    logger.info("Finding effect of sample size on vocabulary...")
+    # See how the vocab size changes as you add more sentences.
+    # Using the words that went into creating the embeddings.
+    sentences_data['description clean'] = sentences_data['description'].apply(
+        lambda x: " ".join(x.split()).split(' '))
+
+    vocab_words = set()
+    vocab_size_iteratively = []
+    for i, desc_list in tqdm(enumerate(sentences_data['description clean'].tolist())):
+        vocab_words = vocab_words.union(set(desc_list))
+        vocab_size_iteratively.append((i, len(vocab_words)))
+
+    vocab_size_iteratively_path = get_output_config_stamped(
+        args.config_path, output_dir, "num_sentences_and_vocab_size.json"
+    )
+    save_to_s3(
+        s3,
+        BUCKET_NAME,
+        vocab_size_iteratively,
+        vocab_size_iteratively_path,
     )

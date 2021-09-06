@@ -15,15 +15,22 @@ flows:
       umap_n_components: 2
       dbscan_eps: 0.01
       dbscan_min_samples: 3
-      desc_num_top_sent: 5
-      name_num_top_words: 5
-      dir_sample_size: 30
+      dir_sample_size: 50
       dir_sample_seed: 42
       sent_emb_sample_seed: 42
       sent_emb_sample_size:
       sentence_lengths_lower: 50
       sentence_lengths_upper: 100
-      output_dir: "outputs/skills_extraction/extracted_skills"
+      output_dir: "outputs/skills_extraction/extracted_skills/"
+  name_skills:
+    params:
+      sentence_skills_path: 'outputs/skills_extraction/extracted_skills/2021.08.31_sentences_data.json'
+      embedding_sample_path: 'outputs/skills_extraction/extracted_skills/2021.08.31_sentence_id_2_embedding_dict.json'
+      ngram: 3
+      min_count: 3
+      threshold: 0.25
+      num_top_sent: 3
+      output_dir: "outputs/skills_extraction/extracted_skills/"
   esco_mapper:
     params:
       esco_data_dir: "inputs/ESCO/v1.0.8/"
@@ -31,7 +38,7 @@ flows:
       esco_lang_skills_file: "languageSkillsCollection_en.csv"
       esco_ict_esco_skills_file: "ictSkillsCollection_en.csv"
       esco_trans_esco_skills_file: "transversalSkillsCollection_en.csv"
-      tk_skills_path: "outputs/skills_extraction/data/2021.08.02_skills_data.json"
-      output_dir: "outputs/skills_extraction/data/"
+      tk_skills_path: "outputs/skills_extraction/extracted_skills/2021.08.31_skills_data.json"
+      output_dir: "outputs/skills_extraction/esco_maps/"
       map_similarity_score_threshold: 0.5
     run_id: 0
