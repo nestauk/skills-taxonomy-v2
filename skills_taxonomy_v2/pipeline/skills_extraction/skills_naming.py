@@ -60,9 +60,9 @@ if __name__ == "__main__":
     s3 = boto3.resource("s3")
 
     # Load data
-    sentence_skills = load_s3_data(s3, bucket_name, params["sentence_skills_path"])
+    sentence_skills = load_s3_data(s3, BUCKET_NAME, params["sentence_skills_path"])
     sentence_skills = pd.DataFrame(sentence_skills)
-    sentence_embs = load_s3_data(s3, bucket_name, params["embedding_sample_path"])
+    sentence_embs = load_s3_data(s3, BUCKET_NAME, params["embedding_sample_path"])
 
     # Find n-grams and get skill information
     clean_ngrams = get_clean_ngrams(sentence_skills, params["ngram"], params["min_count"], params["threshold"])

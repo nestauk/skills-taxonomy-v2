@@ -5,6 +5,7 @@ Functions to name skills. Used in skills_naming.py.
 import logging
 from collections import Counter
 import re
+import itertools
 
 import numpy as np
 from tqdm import tqdm

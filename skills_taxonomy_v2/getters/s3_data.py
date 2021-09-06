@@ -76,7 +76,7 @@ def load_s3_data(s3, bucket_name, file_name):
         return [json.loads(line) for line in file]
     elif fnmatch(file_name, "*.json.gz"):
         with gzip.GzipFile(fileobj=obj.get()["Body"]) as file:
-            return json.loads(file)
+            return json.load(file)
     elif fnmatch(file_name, "*.json"):
         file = obj.get()["Body"].read().decode()
         return json.loads(file)

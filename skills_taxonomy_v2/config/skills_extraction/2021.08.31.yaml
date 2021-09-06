@@ -15,7 +15,7 @@ flows:
       umap_n_components: 2
       dbscan_eps: 0.01
       dbscan_min_samples: 3
-      dir_sample_size: 50
+      dir_sample_size: 30
       dir_sample_seed: 42
       sent_emb_sample_seed: 42
       sent_emb_sample_size:
@@ -25,7 +25,7 @@ flows:
   name_skills:
     params:
       sentence_skills_path: 'outputs/skills_extraction/extracted_skills/2021.08.31_sentences_data.json'
-      embedding_sample_path: 'outputs/skills_extraction/extracted_skills/2021.08.31_sentence_id_2_embedding_dict.json'
+      embedding_sample_path: 'outputs/skills_extraction/extracted_skills/2021.08.31_sentence_id_2_embedding_dict.json.gz'
       ngram: 3
       min_count: 3
       threshold: 0.25
