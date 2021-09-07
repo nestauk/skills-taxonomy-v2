@@ -13,7 +13,7 @@ The parameters for all these steps can be found in the config path `skills_taxon
 
 - Step 0: Predict skill sentences. 87 random files of 10,000 job adverts. Found around 4,000,000 skill sentences.
 - Step 1: Get embeddings for each skill sentence. Get embeddings for sentences in the first 10,000 job adverts from each of the 87 files, remove sentences with only masking.
-- Step 2: Get skills from clustering. Removed sentences with too much masking, remove repeated sentences, and only keep sentences within a certain length bound - 318,772 sentences. Reduce embeddings from 384 to 2 dimensions. Clustered into 18,644 skills, the proportion of data points not put into a cluster was 0.29.
+- Step 2: Get skills from clustering. Removed sentences with too much masking, remove repeated sentences, and only keep sentences within a certain length bound - 322,071 sentences. Reduce embeddings from 384 to 2 dimensions. Clustered into 18,894 skills, the proportion of data points not put into a cluster was 0.28. After removed sentences not clustered there are 232,394 sentences.
 
 Finding skill names and ESCO links wasn't completed for this run.
 
