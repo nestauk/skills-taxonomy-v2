@@ -21,11 +21,14 @@ import boto3
 
 from sklearn.metrics.pairwise import cosine_similarity
 
-from skills_taxonomy_v2.getters.s3_data import load_s3_data
+from skills_taxonomy_v2.getters.s3_data import load_s3_data, save_to_s3
 from skills_taxonomy_v2 import BUCKET_NAME
 
 from skills_taxonomy_v2.pipeline.skills_extraction.skills_naming_utils import (
     clean_cluster_descriptions, get_clean_ngrams, get_skill_info
+)
+from skills_taxonomy_v2.pipeline.skills_extraction.extract_skills_utils import (
+    get_output_config_stamped,
 )
 
 logger = logging.getLogger(__name__)
@@ -60,6 +63,7 @@ if __name__ == "__main__":
     # Load data
     sentence_skills = load_s3_data(s3, BUCKET_NAME, params["sentence_skills_path"])
     sentence_skills = pd.DataFrame(sentence_skills)
+    sentence_skills = sentence_skills[sentence_skills['Cluster number']!=-1]
     sentence_embs = load_s3_data(s3, BUCKET_NAME, params["embedding_sample_path"])
 
     # Find n-grams and get skill information
@@ -68,7 +72,7 @@ if __name__ == "__main__":
 
     # Save skill information
     skills_data_output_path = get_output_config_stamped(
-        args.config_path, extracted_skills_larger, "skills_data.json"
+        args.config_path, params["output_dir"], "skills_data.json"
     )
-    save_to_s3(s3, BUCKET_NAME, skills_data, skills_data_output_path)
 
+    save_to_s3(s3, BUCKET_NAME, skills_data, skills_data_output_path)

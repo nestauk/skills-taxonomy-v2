@@ -160,8 +160,8 @@ def get_skill_info(clean_ngrams, sentence_skills, sentence_embs, cluster_descrip
         cluster_text = cluster_data["original sentence"].tolist()
         cluster_coords = cluster_data[["reduced_points x", "reduced_points y"]].values
         cluster_embeds = [np.array(
-            sentence_embs[sent_id]
-        ).astype('float32') for sent_id in cluster_data['sentence id'].values.tolist() if sent_id in sentence_embs]
+            sentence_embs[str(sent_id)]
+        ).astype('float32') for sent_id in cluster_data['sentence id'].values.tolist() if str(sent_id) in sentence_embs]
         
         # Get sent similarities to centre
         sent_similarities = cosine_similarity(
