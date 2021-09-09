@@ -29,6 +29,8 @@ if __name__ == '__main__':
 	    s3, BUCKET_NAME, tk_data_path, file_types=["*.jsonl*"]
 	)
 
+	file_num = 0
+	count_tk_files = 0
 	job_id_file_dict = {}
 	job_id_date_dict = {}
 	job_id_meta_dict = {}
@@ -56,14 +58,21 @@ if __name__ == '__main__':
 	            job_id_location_dict[d['job_id']] = [
 	                d.get('location_name'),
 	                d.get('location_coordinates'),
-	                d.get('region').get('label'),
-	                d.get('subregion').get('label'),
+	                d.get('region'),
+	                d.get('subregion'),
 	            ]
-
-	print('Saving data ...')
-	save_to_s3(s3, BUCKET_NAME, job_id_file_dict, os.path.join(output_dir, 'metadata_file.json'))
-	save_to_s3(s3, BUCKET_NAME, job_id_date_dict, os.path.join(output_dir, 'metadata_date.json'))
-	save_to_s3(s3, BUCKET_NAME, job_id_meta_dict, os.path.join(output_dir, 'metadata_meta.json'))
-	save_to_s3(s3, BUCKET_NAME, job_id_job_dict, os.path.join(output_dir, 'metadata_job.json'))
-	save_to_s3(s3, BUCKET_NAME, job_id_location_dict, os.path.join(output_dir, 'metadata_location.json'))
-
+	    count_tk_files += 1
+	    if count_tk_files == 100:
+			print('Saving data ...')
+			save_to_s3(s3, BUCKET_NAME, job_id_file_dict, os.path.join(output_dir, f'metadata_file_{file_num}.json'))
+			save_to_s3(s3, BUCKET_NAME, job_id_date_dict, os.path.join(output_dir, f'metadata_date_{file_num}.json'))
+			save_to_s3(s3, BUCKET_NAME, job_id_meta_dict, os.path.join(output_dir, f'metadata_meta_{file_num}.json'))
+			save_to_s3(s3, BUCKET_NAME, job_id_job_dict, os.path.join(output_dir, f'metadata_job_{file_num}.json'))
+			save_to_s3(s3, BUCKET_NAME, job_id_location_dict, os.path.join(output_dir, f'metadata_location_{file_num}.json'))
+			file_num += 1
+			count_tk_files = 0
+			job_id_file_dict = {}
+			job_id_date_dict = {}
+			job_id_meta_dict = {}
+			job_id_job_dict = {}
+			job_id_location_dict = {}
