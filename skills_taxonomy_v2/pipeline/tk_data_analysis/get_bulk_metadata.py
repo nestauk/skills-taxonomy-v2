@@ -42,7 +42,7 @@ if __name__ == '__main__':
 			for line in file:
 				d = json.loads(line)
 				# Save out as little info as possible to make file smaller
-				job_id_file_dict[d['job_id']] = file_name
+				job_id_file_dict[d['job_id']] = file_name.split(tk_data_path)[1]
 				job_id_date_dict[d['job_id']] = [
 					d.get('date'),
 					d.get('expiration_date')
@@ -55,14 +55,16 @@ if __name__ == '__main__':
 					d.get('job_title'),
 					d.get('organization_industry').get('label'),
 				]
+				region = d.get('region')
+				subregion = d.get('subregion')
 				job_id_location_dict[d['job_id']] = [
-					d.get('location_name'),
+					d.get('location_name')
 					d.get('location_coordinates'),
-					d.get('region'),
-					d.get('subregion'),
+					region.get('label') if region else None,
+					subregion.get('label') if subregion else None,
 				]
 		count_tk_files += 1
-		if count_tk_files == 100:
+		if count_tk_files == 50:
 			print('Saving data ...')
 			save_to_s3(s3, BUCKET_NAME, job_id_file_dict, os.path.join(output_dir, f'metadata_file/{file_num}.json'))
 			save_to_s3(s3, BUCKET_NAME, job_id_date_dict, os.path.join(output_dir, f'metadata_date/{file_num}.json'))
