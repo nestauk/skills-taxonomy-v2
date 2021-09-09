@@ -33,6 +33,7 @@ if __name__ == '__main__':
 	job_id_date_dict = {}
 	job_id_meta_dict = {}
 	job_id_job_dict = {}
+	job_id_location_dict = {}
 	for file_name in tqdm(all_tk_data_paths):
 	    obj = s3.Object(BUCKET_NAME, file_name)
 	    with gzip.GzipFile(fileobj=obj.get()["Body"]) as file:
@@ -52,10 +53,17 @@ if __name__ == '__main__':
 	                d.get('job_title'),
 	                d.get('organization_industry').get('label'),
 	            ]
+	            job_id_location_dict[d['job_id']] = [
+	                d.get('location_name'),
+	                d.get('location_coordinates'),
+	                d.get('region').get('label'),
+	                d.get('subregion').get('label'),
+	            ]
 
 	print('Saving data ...')
 	save_to_s3(s3, BUCKET_NAME, job_id_file_dict, os.path.join(output_dir, 'metadata_file.json'))
 	save_to_s3(s3, BUCKET_NAME, job_id_date_dict, os.path.join(output_dir, 'metadata_date.json'))
 	save_to_s3(s3, BUCKET_NAME, job_id_meta_dict, os.path.join(output_dir, 'metadata_meta.json'))
 	save_to_s3(s3, BUCKET_NAME, job_id_job_dict, os.path.join(output_dir, 'metadata_job.json'))
+	save_to_s3(s3, BUCKET_NAME, job_id_location_dict, os.path.join(output_dir, 'metadata_location.json'))
 
