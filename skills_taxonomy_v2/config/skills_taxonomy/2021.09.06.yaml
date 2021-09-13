@@ -1,0 +1,15 @@
+flows:
+  build_taxonomy_flow:
+    params:
+      clustered_sentences_path: "outputs/skills_extraction/extracted_skills/2021.08.31_sentences_data.json"
+      skills_data_path: 'outputs/skills_extraction/extracted_skills/2021.08.31_skills_data.json'
+      level_c_n: 250
+      level_b_n: 50
+      level_a_n: 10
+      k_means_max_iter: 5000
+      check_low_siloutte_b: True
+      silhouette_threshold: 0
+      level_a_consensus_numclust_its: 100
+      level_names_tfidif_n: 3
+      use_level_a_consensus: True
+      output_dir: "outputs/skills_hierarchy/"
