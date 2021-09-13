@@ -51,14 +51,15 @@ if __name__ == '__main__':
 					d.get('source_website'),
 					d.get('language'),
 				]
+				organization_industry = d.get('organization_industry')
 				job_id_job_dict[d['job_id']] = [
 					d.get('job_title'),
-					d.get('organization_industry').get('label'),
+					organization_industry.get('label') if organization_industry else None,
 				]
 				region = d.get('region')
 				subregion = d.get('subregion')
 				job_id_location_dict[d['job_id']] = [
-					d.get('location_name')
+					d.get('location_name'),
 					d.get('location_coordinates'),
 					region.get('label') if region else None,
 					subregion.get('label') if subregion else None,
