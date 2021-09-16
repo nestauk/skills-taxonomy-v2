@@ -35,6 +35,7 @@ from skills_taxonomy_v2 import PROJECT_DIR, BUCKET_NAME
 logger = logging.getLogger(__name__)
 s3 = boto3.resource("s3")
 
+
 def parse_arguments(parser):
 
     parser.add_argument(
@@ -56,20 +57,23 @@ def get_nuts_shapefile(shape_url, shapefile_path, nuts_file):
 
     Returns:
     geo dataframe of UK nuts2 codes. 
-    """    
+    """
     full_shapefile_path = str(PROJECT_DIR) + shapefile_path
     if not os.path.isdir(full_shapefile_path):
         os.mkdir(full_shapefile_path)
 
-    zip_path , _ = urlretrieve(shape_url)
-    with ZipFile(zip_path, 'r') as zip_files:
+    zip_path, _ = urlretrieve(shape_url)
+    with ZipFile(zip_path, "r") as zip_files:
         for zip_names in zip_files.namelist():
             if zip_names == nuts_file:
                 zip_files.extract(zip_names, path=full_shapefile_path)
                 nuts_geo = gpd.read_file(full_shapefile_path + nuts_file)
-                nuts_geo = nuts_geo[nuts_geo['CNTR_CODE'] == 'UK'].reset_index(drop = True)
-    
+                nuts_geo = nuts_geo[nuts_geo["CNTR_CODE"] == "UK"].reset_index(
+                    drop=True
+                )
+
     return nuts_geo
+
 
 def get_job_adverts_with_skills(sentence_outputs_path, bucket_name):
     """gets job adverts with skills.
@@ -86,22 +90,24 @@ def get_job_adverts_with_skills(sentence_outputs_path, bucket_name):
     """
     sentence_data = load_s3_data(s3, bucket_name, sentence_outputs_path)
     sentence_data = pd.DataFrame(sentence_data)
-    sentence_data = sentence_data[sentence_data['Cluster number']!=-1]
+    sentence_data = sentence_data[sentence_data["Cluster number"] != -1]
     # The job adverts that we have skills for
-    job_ids = set(sentence_data['job id'].tolist())
+    job_ids = set(sentence_data["job id"].tolist())
     # Load the job advert location data - only for the job adverts we have skills for
     # Each one is really big (77secs to load)! There are 13 files
     job_id_loc_dict = {}
-    for i, file_name in enumerate(tqdm(range(0,13))):
+    for i, file_name in enumerate(tqdm(range(0, 13))):
         file_loc_dict = load_s3_data(
             s3,
             bucket_name,
-            f'outputs/tk_data_analysis/metadata_location/{file_name}.json')
-        job_id_loc_dict.update({k:v for k,v in file_loc_dict.items() if k in job_ids})
+            f"outputs/tk_data_analysis/metadata_location/{file_name}.json",
+        )
+        job_id_loc_dict.update({k: v for k, v in file_loc_dict.items() if k in job_ids})
 
     return job_id_loc_dict
 
-def map_job_adverts_with_skills_to_nuts(job_id_loc_dict, nuts_geo, epsg = int):
+
+def map_job_adverts_with_skills_to_nuts(job_id_loc_dict, nuts_geo, epsg=int):
     """maps lat/longs associated to job adverts with skills to nuts codes.
 
     Args:
@@ -115,16 +121,25 @@ def map_job_adverts_with_skills_to_nuts(job_id_loc_dict, nuts_geo, epsg = int):
         lat/long, country and county name, nuts code and nuts name 
         associated to the job id. 
     """
-    df = pd.DataFrame(job_id_loc_dict).T
-    df[['lat', 'long']] = df[1].str.split(',', 1, expand=True).astype('float64')
+    df = pd.DataFrame(job_id_loc_dict).T.replace({"Unknown": None})
+    df[["lat", "long"]] = df[1].str.split(",", 1, expand=True).astype("float64")
     geometry = [Point(xy) for xy in zip(df.long, df.lat)]
 
     gdf = GeoDataFrame(df, geometry=geometry)
     gdf = gdf.set_crs(epsg=epsg, inplace=True)
-    gdf = gdf[(gdf.lat.notna()) | (gdf.long.notna())] #get rid of nas 
-    job_nuts = gpd.sjoin(gdf, nuts_geo, how='left')
 
-    return job_nuts[[0, 1, 2, 3, 'NUTS_ID', 'NUTS_NAME']].T.to_dict('list')
+    with_lat = gdf[(gdf.lat.notna()) | (gdf.long.notna())]
+    job_nuts = gpd.sjoin(with_lat, nuts_geo, how="left")
+    with_nuts = job_nuts[[0, 1, 2, 3, "NUTS_ID", "NUTS_NAME"]].T.to_dict("list")
+
+    with_nuts.update(gdf[gdf.lat.isna()][[0, 1, 2, 3]].T.to_dict("list"))
+
+    return {
+        job_key: locations
+        for job_key, locations in with_nuts.items()
+        if locations.count(None) != len(locations)
+    }
+
 
 if __name__ == "__main__":
 
@@ -134,7 +149,7 @@ if __name__ == "__main__":
     with open(args.config_path, "r") as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
 
-    #get parameters
+    # get parameters
     params = config["params"]
     shape_url = params["shape_url"]
     shapefile_path = params["output_path"]
@@ -145,5 +160,7 @@ if __name__ == "__main__":
 
     nuts_geo = get_nuts_shapefile(shape_url, shapefile_path, nuts_file)
     job_id_loc_dict = get_job_adverts_with_skills(sentence_outputs_path, BUCKET_NAME)
-    job_adverts_nuts = map_job_adverts_with_skills_to_nuts(job_id_loc_dict, nuts_geo, epsg)
+    job_adverts_nuts = map_job_adverts_with_skills_to_nuts(
+        job_id_loc_dict, nuts_geo, epsg
+    )
     save_to_s3(s3, BUCKET_NAME, job_adverts_nuts, sentences_outputs_nuts_path)
