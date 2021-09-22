@@ -34,7 +34,9 @@ def get_consensus_clusters_mappings(consensus_results_df, k):
     
     consensus_sets = ["".join([str(cc) for cc in c]) for c in consensus_results_df.values.tolist()]
 
-    consensus_sets_unique = set(consensus_sets)
+    # set(consensus_sets) is stochastic - so need to sort
+    consensus_sets_unique = list(set(consensus_sets))
+    consensus_sets_unique.sort()
 
     # e.g. how similar is '1234' to '1235'?
     all_dists_matrix = []
@@ -138,7 +140,7 @@ def get_new_level_consensus(sentence_embs, previous_level_col, k_means_n, numclu
         )
 
     consensus_set_mappings = get_consensus_clusters_mappings(clustering_results, k=k_means_n)
-                
+
     cluster_mapper = dict(zip(
         list(average_emb_dict.keys()),
         consensus_set_mappings

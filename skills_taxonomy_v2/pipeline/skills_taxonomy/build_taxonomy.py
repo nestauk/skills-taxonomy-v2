@@ -165,6 +165,7 @@ if __name__ == "__main__":
                         'Skills': {k: {
                             'Skill name': skill_hierarchy[k]['Skill name'],
                             'Number of sentences that created skill': skill_hierarchy[k]['Number of sentences that created skill'],
+                            'Example sentences with skill in': skills_data[str(k)]['Texts'][0:10]
                             } for k in skill_nums}
                     }
                 skill_nums_c = level_c_num_data['Cluster number'].unique().tolist()
