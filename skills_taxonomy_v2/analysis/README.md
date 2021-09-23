@@ -1,13 +1,15 @@
-This analysis folder contains analysis and experimentation notebooks.
+# Analysis of skills and the skills taxonomy
+
+This analysis folder contains analysis and experimentation notebooks for 5 themes:
+1. `tk_analysis/`
+2. `sentence_classifier/`
+3. `skills_extraction/`
+4. `skills_taxonomy/`
+5. `skills_taxonomy_application/`
 
 Outputs (figures and data) from analysis are saved to a corresponding folder in the `outputs/` folder.
 
-
-## `esco_skills`
-
-Can delete?
-
-## `tk_analysis`
+## `tk_analysis/`
 
 This folder contains two notebooks:
 1. `TextKernel Data.ipynb` - Provides a summary of TextKernel dataset.
@@ -15,9 +17,9 @@ This folder contains two notebooks:
 
 Outputs are in `outputs/tk_analysis`.
 
-## `sentence_classifier`
+## `sentence_classifier/`
 
-## `skills_extraction`
+## `skills_extraction/`
 
 In this folder we have two scripts for various bits of analysis and figure plotting after extracting skills:
 1. `Effect of sample size.ipynb` - Investigate the effect of sample size of skill sentences and how many words are in the vocab.
@@ -31,7 +33,7 @@ In this folder we also have experimentation notebooks showing 4 approaches for s
 
 The last approach was what we used in the final pipeline (refactored in `skills_taxonomy_v2/pipeline/skills_extraction/`).
 
-## `skills_taxonomy`
+## `skills_taxonomy/`
 
 In this folder we perform some analysis on the skills taxonomy created when running `skills_taxonomy_v2/pipeline/skills_taxonomy/build_taxonomy.py`.
 
@@ -40,7 +42,7 @@ In this folder we perform some analysis on the skills taxonomy created when runn
 3. `Renaming sample of skill groups.ipynb` - Manually creating names for some of the skill groups, outputs `skills_taxonomy_v2/utils/2021.09.06_level_a_rename_dict.json` which is used in other notebooks.
 4. `Skills Taxonomy Analysis and Figures.ipynb` - this notebook provides some visualisation and analysis of it. Outputs are stored in `outputs/skills_taxonomy/figures/2021.09.06/`.
 
-## `skills_taxonomy_application`
+## `skills_taxonomy_application/`
 
 This folder contains two notebooks to analyse the skills taxonomy in application to the job location and whether the job was advertise pre or post COVID.
 
@@ -48,8 +50,4 @@ This folder contains two notebooks to analyse the skills taxonomy in application
 2. `Application - COVID.ipynb` See how different skill groups in the taxonomy relate with whether the job advert was out pre or post COVID. Outputs in `outputs/skills_taxonomy_application/covid_application`.
 
 This folder also contains the script `locations_to_nuts2.py` to convert longitude and latitude coordinates from the job adverts to NUTS2 regional classifications - this was neccessary for use in `Application - Geography.ipynb` .
-
-
-
-
 
