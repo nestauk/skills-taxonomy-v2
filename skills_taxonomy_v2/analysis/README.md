@@ -31,3 +31,14 @@ In this folder we also have experimentation notebooks showing 4 approaches for s
 The last approach was what we used in the final pipeline (refactored in `skills_taxonomy_v2/pipeline/skills_extraction/`).
 
 ## `skills_taxonomy`
+
+In this folder we perform some analysis on the skills taxonomy created when running `skills_taxonomy_v2/pipeline/skills_taxonomy/build_taxonomy.py`.
+
+1. `Evaluate hierarchy.ipynb` - Evaluate hierarchy based on popular skill groups for job titles. Output csvs stored in `outputs/skills_taxonomy/evaluation/`.
+2. `Tranversal Skills.ipynb` - Identify the most and least transversal skills and skill groups. Outputs in `outputs/skills_taxonomy/transversal/`.
+3. `Renaming sample of skill groups.ipynb` - Manually creating names for some of the skill groups, outputs `skills_taxonomy_v2/utils/2021.09.06_level_a_rename_dict.json` which is used in other notebooks.
+4. `Skills Taxonomy Analysis and Figures.ipynb` - this notebook provides some visualisation and analysis of it. Outputs are stored in `outputs/skills_taxonomy/figures/2021.09.06/`.
+
+
+
+
