@@ -39,6 +39,21 @@ In this folder we perform some analysis on the skills taxonomy created when runn
 3. `Renaming sample of skill groups.ipynb` - Manually creating names for some of the skill groups, outputs `skills_taxonomy_v2/utils/2021.09.06_level_a_rename_dict.json` which is used in other notebooks.
 4. `Skills Taxonomy Analysis and Figures.ipynb` - this notebook provides some visualisation and analysis of it. Outputs are stored in `outputs/skills_taxonomy/figures/2021.09.06/`.
 
+## `skills_taxonomy_application`
+
+This folder contains two notebooks to analyse the skills taxonomy in application to the job location and whether the job was advertise pre or post COVID.
+
+1. `Application - Geography.ipynb` See how different skill groups in the taxonomy relate with location of the job advert. Outputs in `outputs/skills_taxonomy_application/region_application/`.
+2. `Application - COVID.ipynb` See how different skill groups in the taxonomy relate with whether the job advert was out pre or post COVID. Outputs in `outputs/skills_taxonomy_application/covid_application`.
+
+This folder also contains the script `locations_to_nuts2.py` to convert longitude and latitude coordinates from the job adverts to NUTS2 regional classifications - this was neccessary for use in `Application - Geography.ipynb` .
+
+
+
+
+
+`Application - COVID.ipynb`
+
 
 
 
