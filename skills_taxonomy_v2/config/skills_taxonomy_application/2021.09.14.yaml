@@ -1,0 +1,7 @@
+params:
+  shape_url: "https://gisco-services.ec.europa.eu/distribution/v2/nuts/download/ref-nuts-2021-20m.geojson.zip"
+  nuts_file: "NUTS_RG_20M_2021_4326_LEVL_1.geojson"
+  output_path: "/inputs/shapefiles/"
+  sentence_outputs_path: "outputs/skills_extraction/extracted_skills/2021.08.31_sentences_data.json"
+  sentences_outputs_nuts_path: "outputs/tk_data_analysis/metadata_location/2021.09.14_jobs_with_nuts_codes.json"
+  epsg: 4326

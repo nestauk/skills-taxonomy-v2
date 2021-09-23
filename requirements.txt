@@ -23,3 +23,7 @@ pigeonXT-jupyter
 boto3
 fsspec
 s3fs
+geopandas
+rtree
+urllib3
+shapely
