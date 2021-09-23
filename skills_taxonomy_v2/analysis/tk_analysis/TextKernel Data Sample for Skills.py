@@ -85,7 +85,7 @@ for file_name in tqdm(range(0,13)):
 print(len(tk_dates))
 
 # %%
-pd.DataFrame(tk_dates).to_csv('tk_dates.csv')
+pd.DataFrame(tk_dates).to_csv('outputs/tk_analysis/tk_dates.csv')
 
 # %%
 skill_tk_dates = pd.DataFrame(tk_dates)
