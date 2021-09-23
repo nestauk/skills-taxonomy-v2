@@ -231,6 +231,15 @@ To predict on all job adverts in the TextKernel data on S3, on the EC2 instance 
 python skills_taxonomy_v2/pipeline/sentence_classifier/predict_sentence_class.py --config_path 'skills_taxonomy_v2/config/predict_skill_sentences/2021.08.16.yaml'
 ```
 
-From `2021.07.09`:
+### From `2021.07.09.yaml`:
 
 This will run predictions on a random sample of 10 of the 686 data files. The outputs of this yielded 5,823,903 skill sentences from the 1,000,000 job adverts.
+
+### From `2021.08.16.yaml`:
+
+This will run predictions on a random sample of 100 of the 686 data files. Only the first 10,000 job adverts from each file were processed due to memory issues.
+
+The skill sentences predicted are stored in "outputs/sentence_classifier/data/skill_sentences/2021.08.16/textkernel-files/", only 87 files were found, suggesting that 13 from the sample of 100 didn't have any skill sentences in for one reason or another.
+
+In each of the 87 files around 45,000 skill sentences were identified, thus we expect to have processed around 4,000,000 skill sentences. 
+

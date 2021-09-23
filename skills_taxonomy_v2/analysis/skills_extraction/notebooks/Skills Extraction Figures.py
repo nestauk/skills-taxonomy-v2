@@ -311,6 +311,17 @@ print(skills_data[skill_id])
 print(sentence_clusters[sentence_clusters["Cluster number"]==int(skill_id)]['original sentence'].tolist())
 
 
+# %%
+data_skills = []
+for k,v in skills_data.items():
+    if ('machine' in v['Skill name']) and ('learning' in v['Skill name']):
+        data_skills.append(k)
+
+# %%
+skill_id = '9487'
+print(skills_data[skill_id])
+print(sentence_clusters[sentence_clusters["Cluster number"]==int(skill_id)]['original sentence'].tolist())
+
 # %% [markdown]
 # ## How many sentences in each skill?
 # - Are those with loads of skills junk?
@@ -375,5 +386,60 @@ for esco_id in not_in_tk[0:10]:
 not_in_esco = list(set(skills_data.keys()).difference(set(tk2esco_mapper.keys())))
 for tk_id in not_in_esco[0:10]:
     print(skills_data[tk_id]['Skill name'])
+
+# %%
+tk_mapper_to_esco = sentence_clusters['Cluster number'].apply(lambda x: 1 if str(x) in tk2esco_mapper else 0).tolist()
+sentence_clusters['Cluster in ESCO'] = tk_mapper_to_esco
+
+# %%
+sentence_clusters.head(2)
+
+# %%
+## Where are the mapped TK skills to ESCO?
+output_file(filename="outputs/skills_extraction/figures/skill_clusters_in_esco_map.html")
+
+colors_by_labels = sentence_clusters["Cluster in ESCO"].astype(str).tolist()
+reduced_x = sentence_clusters['reduced_points x'].tolist()
+reduced_y = sentence_clusters['reduced_points y'].tolist()
+color_palette = viridis
+
+ds_dict = dict(
+    x=reduced_x,
+    y=reduced_y,
+    texts=sentence_clusters["description"].tolist(),
+    label=colors_by_labels,
+)
+hover = HoverTool(
+    tooltips=[
+        ("Sentence", "@texts"),
+        ("Skill cluster mapped to ESCO", "@label"),
+    ]
+)
+source = ColumnDataSource(ds_dict)
+unique_colors = list(set(colors_by_labels))
+num_unique_colors = len(unique_colors)
+
+# color_palette_cols = color_palette(len(unique_colors))
+# color_mapper = CategoricalColorMapper(factors=unique_colors, palette=color_palette_cols)
+
+color_mapper = LinearColorMapper(palette="Turbo256", low=0, high=len(unique_colors) + 1)
+
+p = figure(
+    plot_width=500,
+    plot_height=500,
+    tools=[hover, WheelZoomTool(), BoxZoomTool(), SaveTool()],
+    title=f"Whether the sentence are mapped to ESCO skills",
+    toolbar_location="below",
+)
+p.circle(
+    x="x",
+    y="y",
+    radius=0.01,
+    alpha=0.5,
+    source=source,
+    color={"field": "label", "transform": color_mapper},
+)
+
+save(p)
 
 # %%
