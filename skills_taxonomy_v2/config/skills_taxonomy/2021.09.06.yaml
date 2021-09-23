@@ -5,7 +5,7 @@ flows:
       skills_data_path: 'outputs/skills_extraction/extracted_skills/2021.08.31_skills_data.json'
       level_c_n: 250
       level_b_n: 50
-      level_a_n: 10
+      level_a_n: 6
       k_means_max_iter: 5000
       check_low_siloutte_b: True
       silhouette_threshold: 0
