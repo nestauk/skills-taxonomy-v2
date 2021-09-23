@@ -9,10 +9,11 @@ Can delete?
 
 ## `tk_analysis`
 
-- Summary of TextKernel dataset
-- Comparison of our sample of TextKernel data to all data
+This folder contains two notebooks:
+1. `TextKernel Data.ipynb` - Provides a summary of TextKernel dataset.
+2. `TextKernel Data Sample for Skills.ipynb` - Comparison of our sample of TextKernel data to all data.
 
-Outputs in `outputs/tk_analysis`
+Outputs are in `outputs/tk_analysis`.
 
 ## `sentence_classifier`
 
@@ -48,11 +49,6 @@ This folder contains two notebooks to analyse the skills taxonomy in application
 
 This folder also contains the script `locations_to_nuts2.py` to convert longitude and latitude coordinates from the job adverts to NUTS2 regional classifications - this was neccessary for use in `Application - Geography.ipynb` .
 
-
-
-
-
-`Application - COVID.ipynb`
 
 
 
