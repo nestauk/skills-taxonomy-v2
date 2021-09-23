@@ -13,7 +13,7 @@ Experimentation with 4 approaches is done in the relevant notebooks in `skills_t
 
 ## Network approach
 
-In `Network approach.ipynb` we try to find skills using a network approach. In this, the skill sentences are cleaned and separated into words. A network is built on the co-occurence of words within the skill sentences. The hypothesis is that clusters of words frequently co-occuring should provide a proxy of a skill.
+In `Experiment - Network approach.ipynb` we try to find skills using a network approach. In this, the skill sentences are cleaned and separated into words. A network is built on the co-occurence of words within the skill sentences. The hypothesis is that clusters of words frequently co-occuring should provide a proxy of a skill.
 
 Communities in the pruned network (low TF-IDF words are removed) were found using the Louvain algorithm. 232 communities were found, the top 10 of these were (named by top 5 TF-IDF words):
 
@@ -37,7 +37,7 @@ Note: these results were only done on 6862 skill sentences, as this analysis was
 
 ## Transformers sentence embeddings approach - unmasked
 
-In `Transformers sentence embeddings approach - unmasked.ipynb` I experimented with unmasked sentence embeddings and clustering to find skills. When we predicted the skill sentences we also outputted the sentence embeddings, so I thought it'd be good to see if these could be clustered.
+In `Experiment - Transformers sentence embeddings approach - unmasked.ipynb` I experimented with unmasked sentence embeddings and clustering to find skills. When we predicted the skill sentences we also outputted the sentence embeddings, so I thought it'd be good to see if these could be clustered.
 
 Again, the results from this were very encouraging - I didn't even bother to cluster the 2D transformation into skills because I could tell in 2D space they didn't look very good. At this point I felt like there could be a bug somewhere, but also that it was likely that the non-skill words were effecting the sentence embedding.
 
@@ -47,7 +47,7 @@ Note: these results were only done on 6862 skill sentences, as this analysis was
 
 ## Word2vec approach
 
-In `Word2vec approach.ipynb` I decided to use average word embeddings for a sentence to cluster skills by. In used the "word2vec-google-news-300" gensim word2vec model to find word embeddings for each word in a cleaned sentence. I reduced these to 2D using UMAP, and found clusters using K-means.
+In `Experiment - Word2vec approach.ipynb` I decided to use average word embeddings for a sentence to cluster skills by. In used the "word2vec-google-news-300" gensim word2vec model to find word embeddings for each word in a cleaned sentence. I reduced these to 2D using UMAP, and found clusters using K-means.
 
 Note: these results were only done on 6862 skill sentences, as this analysis was performed before scaling up the skill sentence predictions on more data.
 
@@ -72,7 +72,7 @@ Although these results were a bit more encouraging, they still weren't great, so
 
 ## Transformers sentence embeddings approach - masked
 
-In `Transformers sentence embeddings approach - masked.ipynb` I experiment with using some masked sentence embeddings to extract skills from. In this approach the data is much bigger since we had processed more skill sentences by this point. The sentences were masked of various non-skill words (proper nouns etc) and then the data reduced via UMAP and clustered using DBSCAN. Some sentences had such a high proportion of words masked - so we got rid of these since their embeddings didn't have much signal in.
+In `Experiment - Transformers sentence embeddings approach - masked.ipynb` I experiment with using some masked sentence embeddings to extract skills from. In this approach the data is much bigger since we had processed more skill sentences by this point. The sentences were masked of various non-skill words (proper nouns etc) and then the data reduced via UMAP and clustered using DBSCAN. Some sentences had such a high proportion of words masked - so we got rid of these since their embeddings didn't have much signal in.
 
 The clustering looked a lot more reasonable. There is probably a lot more scope at this point to play with the data reduction and clustering parameters, but at this point in the experimentation I opted to not spend too long on this.
 
