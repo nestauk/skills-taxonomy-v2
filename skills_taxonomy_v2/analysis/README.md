@@ -41,6 +41,7 @@ In this folder we perform some analysis on the skills taxonomy created when runn
 2. `Tranversal Skills.ipynb` - Identify the most and least transversal skills and skill groups. Outputs in `outputs/skills_taxonomy/transversal/`.
 3. `Renaming sample of skill groups.ipynb` - Manually creating names for some of the skill groups, outputs `skills_taxonomy_v2/utils/2021.09.06_level_a_rename_dict.json` which is used in other notebooks.
 4. `Skills Taxonomy Analysis and Figures.ipynb` - this notebook provides some visualisation and analysis of it. Outputs are stored in `outputs/skills_taxonomy/figures/2021.09.06/`.
+5. `Plot interactive hierarchy.ipynb` - this notebook plot interactive plots of the hierarchy for interrogation.
 
 ## `skills_taxonomy_application/`
 
