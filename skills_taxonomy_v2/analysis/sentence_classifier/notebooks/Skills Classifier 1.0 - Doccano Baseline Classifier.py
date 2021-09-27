@@ -38,20 +38,26 @@ from sklearn.metrics import (
     precision_score,
     recall_score,
 )
+
 # -
 
 # ### Import data
 
-with open('../../../../inputs/karlis_ojo_manually_labelled/OJO_test_labelling_April2021_jobs.jsonl', 'r') as file:
+with open(
+    "../../../../inputs/karlis_ojo_manually_labelled/OJO_test_labelling_April2021_jobs.jsonl",
+    "r",
+) as file:
     jobs_data = [json.loads(line) for line in file]
 
 jobs_data[0].keys()
 
-with open('../../../../inputs/karlis_ojo_manually_labelled/OJO_test_labelling_April2021_labels.json', 'r') as file:
+with open(
+    "../../../../inputs/karlis_ojo_manually_labelled/OJO_test_labelling_April2021_labels.json",
+    "r",
+) as file:
     labels_data = json.load(file)
 
-label_type_dict = {label_type['id']: label_type['text']
-                   for label_type in labels_data}
+label_type_dict = {label_type["id"]: label_type["text"] for label_type in labels_data}
 label_type_dict
 
 # ### Restructuring to have a look
@@ -60,20 +66,23 @@ label_type_dict
 all_job_tags_text = {}
 
 for job_id, job_info in enumerate(jobs_data):
-    text = job_info['text']
-    annotations = job_info['annotations']
+    text = job_info["text"]
+    annotations = job_info["annotations"]
     job_tags_text = {}
     for label_number, label_type in label_type_dict.items():
-        job_tags_text[label_type] = [text[label['start_offset']:label['end_offset']]
-                                     for label in annotations if label['label'] == label_number]
+        job_tags_text[label_type] = [
+            text[label["start_offset"] : label["end_offset"]]
+            for label in annotations
+            if label["label"] == label_number
+        ]
     all_job_tags_text[job_id] = job_tags_text
 # -
 
 job_id = 1
-print(jobs_data[job_id]['text'])
+print(jobs_data[job_id]["text"])
 print("\n")
-print(all_job_tags_text[job_id]['SKILL'])
-print(all_job_tags_text[job_id]['SKILL-RELATED'])
+print(all_job_tags_text[job_id]["SKILL"])
+print(all_job_tags_text[job_id]["SKILL-RELATED"])
 
 
 # ## Create a basic classifier
@@ -81,11 +90,15 @@ print(all_job_tags_text[job_id]['SKILL-RELATED'])
 #
 # Method assumes sentences are split by full stop and will run into problems if the skill has a full stop in.
 
+
 def label_sentences(job_id):
-    annotations = jobs_data[job_id]['annotations']
-    skill_spans = [(label['start_offset'], label['end_offset'])
-                   for label in annotations if label['label'] in [1, 5]]
-    sentences = jobs_data[job_id]['text'].split('.')
+    annotations = jobs_data[job_id]["annotations"]
+    skill_spans = [
+        (label["start_offset"], label["end_offset"])
+        for label in annotations
+        if label["label"] in [1, 5]
+    ]
+    sentences = jobs_data[job_id]["text"].split(".")
 
     # Indices of where sentences start and end
     sentences_ix = []
@@ -109,8 +122,8 @@ def label_sentences(job_id):
 # Testing
 job_id = 2
 sentences, sentences_label = label_sentences(job_id)
-print(all_job_tags_text[job_id]['SKILL'])
-print(all_job_tags_text[job_id]['SKILL-RELATED'])
+print(all_job_tags_text[job_id]["SKILL"])
+print(all_job_tags_text[job_id]["SKILL-RELATED"])
 print([sentences[i] for i, label in enumerate(sentences_label) if label == 1])
 print([sentences[i] for i, label in enumerate(sentences_label) if label == 0])
 
@@ -148,7 +161,7 @@ vectorizer = CountVectorizer(
     analyzer="word",
     token_pattern=r"(?u)\b\w+\b",
     ngram_range=(1, 2),
-    stop_words='english'
+    stop_words="english",
 )
 X_train_vect = vectorizer.fit_transform(X_train)
 

@@ -15,19 +15,17 @@ Since objective 1 is slightly more important than 2 we record both these recalls
 
 ### Summary:
 
-
-| Experiment number |Change | Vectorizer | Classifier | Cleaning | Training size | Recall of the positive class | Recall of the negative class |
-|---|---|---|---|---|---|---|---|
-|1|Baseline|CountVectorizer|MultinomialNB|Split on '.'|495|**0.86**|0.66|
-|2|Baseline|CountVectorizer|LogisticRegression|Split on '.'|495|0.59|0.89|
-|3|Use BERT|BERT last layer+scaler|LogisticRegression|Split on '.'|?|**0.85**|**0.84**|
-|4|Mask numbers, remove camel case, split sentences using spacy|BERT last layer+scaler|LogisticRegression|Mask numbers, remove camel case, split sentences using spacy|810|0.80|0.88|
-|5|Mask numbers with 'NUMBER'|BERT last layer+scaler|LogisticRegression|Mask numbers and remove hashes, remove camel case, split sentences using spacy|810|0.77|0.87|
-|6|Remove bullets and small sentences|BERT last layer+scaler|LogisticRegression|Mask numbers and remove hashes, remove camel case, split sentences using spacy, remove bullet points, not included if length <-15|704|0.80|0.82|
-|7|Keep camel cases in|BERT last layer+scaler|LogisticRegression|Mask numbers and remove hashes, split sentences using spacy, remove bullet points, not included if length <-15|566|**0.83**|**0.93**|
-|8|Add no-skill extra data to both train/test|BERT last layer+scaler|LogisticRegression|Mask numbers and remove hashes, split sentences using spacy, remove bullet points, not included if length <-15|1061|0.75|0.90|
-|9|Add skill and no-skill extra data to just train|BERT last layer+scaler|LogisticRegression|Mask numbers and remove hashes, split sentences using spacy, remove bullet points, not included if length <-15|1064|0.79|**0.93**|
-
+| Experiment number | Change                                                       | Vectorizer             | Classifier         | Cleaning                                                                                                                          | Training size | Recall of the positive class | Recall of the negative class |
+| ----------------- | ------------------------------------------------------------ | ---------------------- | ------------------ | --------------------------------------------------------------------------------------------------------------------------------- | ------------- | ---------------------------- | ---------------------------- |
+| 1                 | Baseline                                                     | CountVectorizer        | MultinomialNB      | Split on '.'                                                                                                                      | 495           | **0.86**                     | 0.66                         |
+| 2                 | Baseline                                                     | CountVectorizer        | LogisticRegression | Split on '.'                                                                                                                      | 495           | 0.59                         | 0.89                         |
+| 3                 | Use BERT                                                     | BERT last layer+scaler | LogisticRegression | Split on '.'                                                                                                                      | ?             | **0.85**                     | **0.84**                     |
+| 4                 | Mask numbers, remove camel case, split sentences using spacy | BERT last layer+scaler | LogisticRegression | Mask numbers, remove camel case, split sentences using spacy                                                                      | 810           | 0.80                         | 0.88                         |
+| 5                 | Mask numbers with 'NUMBER'                                   | BERT last layer+scaler | LogisticRegression | Mask numbers and remove hashes, remove camel case, split sentences using spacy                                                    | 810           | 0.77                         | 0.87                         |
+| 6                 | Remove bullets and small sentences                           | BERT last layer+scaler | LogisticRegression | Mask numbers and remove hashes, remove camel case, split sentences using spacy, remove bullet points, not included if length <-15 | 704           | 0.80                         | 0.82                         |
+| 7                 | Keep camel cases in                                          | BERT last layer+scaler | LogisticRegression | Mask numbers and remove hashes, split sentences using spacy, remove bullet points, not included if length <-15                    | 566           | **0.83**                     | **0.93**                     |
+| 8                 | Add no-skill extra data to both train/test                   | BERT last layer+scaler | LogisticRegression | Mask numbers and remove hashes, split sentences using spacy, remove bullet points, not included if length <-15                    | 1061          | 0.75                         | 0.90                         |
+| 9                 | Add skill and no-skill extra data to just train              | BERT last layer+scaler | LogisticRegression | Mask numbers and remove hashes, split sentences using spacy, remove bullet points, not included if length <-15                    | 1064          | 0.79                         | **0.93**                     |
 
 ## Baseline - 1 & 2
 
@@ -37,6 +35,7 @@ Since objective 1 is slightly more important than 2 we record both these recalls
 - 495 training sentences, 165 test sentences
 
 Test results:
+
 ```
  precision    recall  f1-score   support
 
@@ -70,8 +69,8 @@ weighted avg       0.76      0.75      0.74       165
 - LogisticRegression(max_iter=1000, class_weight="balanced")
 - x training sentences, x test sentences
 
-
 Test results:
+
 ```
       precision    recall  f1-score   support
 
@@ -83,16 +82,15 @@ Test results:
 weighted avg       0.85      0.84      0.84       165
 ```
 
-
 Experiments with different classifiers and using scalers or not:
 
-||Test F1|Test precision|Test recall|
-|---|---|---|---|
-|MinMaxScaler + MultinomialNB|0.73|0.69|**0.78**|
-|MinMaxScaler + SVC|**0.79**|0.79|**0.78**|
-|SVC|0.78|0.80|0.77|
-|MinMaxScaler + LogisticRegression|**0.79**|**0.81**|0.77|
-|LogisticRegression|0.78|0.80|0.76|
+|                                   | Test F1  | Test precision | Test recall |
+| --------------------------------- | -------- | -------------- | ----------- |
+| MinMaxScaler + MultinomialNB      | 0.73     | 0.69           | **0.78**    |
+| MinMaxScaler + SVC                | **0.79** | 0.79           | **0.78**    |
+| SVC                               | 0.78     | 0.80           | 0.77        |
+| MinMaxScaler + LogisticRegression | **0.79** | **0.81**       | 0.77        |
+| LogisticRegression                | 0.78     | 0.80           | 0.76        |
 
 ## BERT with sentence cleaning - 4, 5, 6 & 7
 
@@ -125,8 +123,7 @@ macro avg       0.82      0.82      0.82       271
 weighted avg       0.83      0.83      0.83       271
 ```
 
-
-- Convert '*', '-' and bullet point to ',' (deal with lists as being part of the same sentence).
+- Convert '\*', '-' and bullet point to ',' (deal with lists as being part of the same sentence).
 - Only include data if the sentence is of length > 15
 - 704 training sentences, 235 test sentences
 
@@ -140,7 +137,6 @@ accuracy                           0.81       235
 macro avg       0.81      0.81      0.81       235
 weighted avg       0.81      0.81      0.81       235
 ```
-
 
 - Keep in camel case (I was worried there might be some bad applications of it e.g. PowerPoint, JavaScript).
 - 566 training sentences, 189 test sentences
@@ -158,7 +154,7 @@ weighted avg       0.88      0.88      0.88       189
 
 ## BERT with sentence cleaning and TextKernel extra data - 8 & 9
 
-- Add no-skill data from Text Kernel  'conditions_description' field that some JDs have (assume all of these are no skill sentences).
+- Add no-skill data from Text Kernel 'conditions_description' field that some JDs have (assume all of these are no skill sentences).
 - Add random sample of 100 of these.
 - 1061 training sentences, 354 test sentences
 - Training Counter({0: 818, 1: 243})
@@ -173,7 +169,6 @@ accuracy                           0.87       354
 macro avg       0.81      0.83      0.82       354
 weighted avg       0.87      0.87      0.87       354
 ```
-
 
 In a way we want this to filter out no-skill sentences, so it being very good at classifying not-skills is good. But we don't want to leave too much in.
 
@@ -198,13 +193,12 @@ weighted avg       0.87      0.87      0.87       189
 
 Since the dataset isn't very big, the split chosen for the test/train divide effects the outcome quite a lot. Using the parameters as in experiment 7 I retrained the model 5 times with different random seeds.
 
-| Random seed | '0' recall | '1' recall | '0' precision | '1' precision | Number of 0 / 1 | 
-|---|---|---|---|---|---|
-| 0 | 0.824 | 0.84 | 0.873 | 0.782 | 108 / 81|
-| 1 | 0.926 | 0.864 | 0.901 | 0.897 | 108 / 81|
-| 2 | 0.824 | 0.852 | 0.881 | 0.784 | 108 / 81|
-| 3 | 0.815 | 0.79 | 0.838 | 0.762 | 108 / 81|
-| 42 | 0.88 | 0.84 | 0.88 | 0.84 | 108 / 81|
+| Random seed | '0' recall | '1' recall | '0' precision | '1' precision | Number of 0 / 1 |
+| ----------- | ---------- | ---------- | ------------- | ------------- | --------------- |
+| 0           | 0.824      | 0.84       | 0.873         | 0.782         | 108 / 81        |
+| 1           | 0.926      | 0.864      | 0.901         | 0.897         | 108 / 81        |
+| 2           | 0.824      | 0.852      | 0.881         | 0.784         | 108 / 81        |
+| 3           | 0.815      | 0.79       | 0.838         | 0.762         | 108 / 81        |
+| 42          | 0.88       | 0.84       | 0.88          | 0.84          | 108 / 81        |
 
 Slightly problematically (due to overfitting to the test set) I will pick to use random seed 1.
-

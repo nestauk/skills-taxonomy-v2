@@ -27,6 +27,29 @@
 # cd ../../../..
 
 # %%
+from bokeh.palettes import Plasma, magma, cividis, inferno, plasma, viridis
+import gensim.downloader as api
+from gensim.models.word2vec import Word2Vec
+from skills_taxonomy_v2.pipeline.skills_extraction.cleaning_sentences import (
+    deduplicate_sentences,
+    sentences2cleantokens,
+    build_ngrams,
+    get_common_tuples,
+    remove_common_tuples,
+)
+from bokeh.embed import file_html
+from bokeh.resources import CDN
+from bokeh.io import output_file, reset_output, save, export_png, show
+from bokeh.models import (
+    BoxZoomTool,
+    WheelZoomTool,
+    HoverTool,
+    SaveTool,
+    Label,
+    CategoricalColorMapper,
+)
+from bokeh.plotting import ColumnDataSource, figure, output_file, show
+import bokeh.plotting as bpl
 import json
 from collections import Counter
 from itertools import chain, combinations
@@ -56,30 +79,10 @@ from nltk.corpus import stopwords
 nltk.download("stopwords")
 
 # %%
-import bokeh.plotting as bpl
-from bokeh.plotting import ColumnDataSource, figure, output_file, show
-from bokeh.models import (
-    BoxZoomTool,
-    WheelZoomTool,
-    HoverTool,
-    SaveTool,
-    Label,
-    CategoricalColorMapper,
-)
-from bokeh.io import output_file, reset_output, save, export_png, show
-from bokeh.resources import CDN
-from bokeh.embed import file_html
 
 bpl.output_notebook()
 
 # %%
-from skills_taxonomy_v2.pipeline.skills_extraction.cleaning_sentences import (
-    deduplicate_sentences,
-    sentences2cleantokens,
-    build_ngrams,
-    get_common_tuples,
-    remove_common_tuples,
-)
 
 # %%
 config_name = "2021.07.09.small"
@@ -104,7 +107,8 @@ with open(
 
 # %%
 token_len_threshold = (
-    20  # To adjust. I had a look and > this number seems to all be not words (urls etc)
+    # To adjust. I had a look and > this number seems to all be not words (urls etc)
+    20
 )
 lemma_n = 2
 top_n_common_remove = 20
@@ -144,8 +148,6 @@ lemma_sentence_words_clean = remove_common_tuples(
 
 # %%
 # May be able to find a more appropriate pre-trained model
-from gensim.models.word2vec import Word2Vec
-import gensim.downloader as api
 
 # %%
 wv = api.load("word2vec-google-news-300")
@@ -203,11 +205,7 @@ skills_data = pd.DataFrame(
 
 # %%
 ds_dict = dict(x=reduced_x, y=reduced_y, texts=skills_data["description"].tolist())
-hover = HoverTool(
-    tooltips=[
-        ("node", "@texts"),
-    ]
-)
+hover = HoverTool(tooltips=[("node", "@texts"),])
 source = ColumnDataSource(ds_dict)
 p = figure(
     plot_width=500,
@@ -217,11 +215,7 @@ p = figure(
     toolbar_location="below",
 )
 p.circle(
-    x="x",
-    y="y",
-    radius=0.05,
-    alpha=0.5,
-    source=source,
+    x="x", y="y", radius=0.05, alpha=0.5, source=source,
 )
 show(p)
 
@@ -297,7 +291,6 @@ skills_data_cluster, cluster_info = cluster_data(
 )
 
 # %%
-from bokeh.palettes import Plasma, magma, cividis, inferno, plasma, viridis
 
 # %%
 colors_by_labels = skills_data_cluster["Cluster number"].astype(str).tolist()
@@ -309,11 +302,7 @@ ds_dict = dict(
     texts=skills_data_cluster["description"].tolist(),
     label=colors_by_labels,
 )
-hover = HoverTool(
-    tooltips=[
-        ("node", "@texts"),
-    ]
-)
+hover = HoverTool(tooltips=[("node", "@texts"),])
 source = ColumnDataSource(ds_dict)
 unique_colors = list(set(colors_by_labels))
 num_unique_colors = len(unique_colors)

@@ -37,9 +37,7 @@ from skills_taxonomy_v2.pipeline.sentence_classifier.sentence_classifier import 
     SentenceClassifier,
 )
 
-from skills_taxonomy_v2.pipeline.sentence_classifier.utils import (
-    split_sentence,
-)
+from skills_taxonomy_v2.pipeline.sentence_classifier.utils import split_sentence
 
 from skills_taxonomy_v2 import PROJECT_DIR, BUCKET_NAME
 
@@ -131,7 +129,6 @@ def load_model(config_name):  # change this to be in s3!
 
 
 def predict_sentences(pool_sentences_vecs, sent_classifier):
-
     """
     Predict one vector at a time for use in pooling.
     - sent_classifier.predict expects a 2D array (usually predict on many at once)
@@ -143,6 +140,7 @@ def predict_sentences(pool_sentences_vecs, sent_classifier):
     sentences_pred = sent_classifier.predict(vecs)
 
     return [(pool_sentences_vecs[i][0], pred) for i, pred in enumerate(sentences_pred)]
+
 
 def save_outputs(skill_sentences_dict, output_file_dir):
 
@@ -277,8 +275,10 @@ def run_predict_sentence_class(
             if sentences:
                 logger.info(f"Transforming skill sentences ...")
                 sentences_vec = sent_classifier.transform(sentences)
-                pool_sentences_vec = [(vec_ix, [vec]) for vec_ix, vec in enumerate(sentences_vec)]
-                
+                pool_sentences_vec = [
+                    (vec_ix, [vec]) for vec_ix, vec in enumerate(sentences_vec)
+                ]
+
                 logger.info(f"Chunking up sentences ...")
                 start_time = time.time()
                 # Manually chunk up the data to predict multiple in a pool
@@ -300,8 +300,12 @@ def run_predict_sentence_class(
                 logger.info(f"Predicting skill sentences ...")
                 start_time = time.time()
                 with Pool(4) as pool:  # 4 cpus
-                    partial_predict_sentences = partial(predict_sentences, sent_classifier=sent_classifier)
-                    predict_sentences_pool_output = pool.map(partial_predict_sentences, pool_sentences_vecs)
+                    partial_predict_sentences = partial(
+                        predict_sentences, sent_classifier=sent_classifier
+                    )
+                    predict_sentences_pool_output = pool.map(
+                        partial_predict_sentences, pool_sentences_vecs
+                    )
                 logger.info(
                     f"Predicting on {len(sentences)} sentences took {time.time() - start_time} seconds"
                 )
@@ -323,6 +327,7 @@ def run_predict_sentence_class(
                     save_outputs(skill_sentences_dict, output_file_dir)
                 else:
                     save_outputs_to_s3(s3, skill_sentences_dict, output_file_dir)
+
 
 def parse_arguments(parser):
 
@@ -358,7 +363,9 @@ if __name__ == "__main__":
     # Output data in a subfolder with the name of the model used to make the predictions
     if params["data_local"]:
         input_dir = os.path.join(PROJECT_DIR, params["input_dir"])
-        output_dir = os.path.join(PROJECT_DIR, params["output_dir"], params["model_config_name"])
+        output_dir = os.path.join(
+            PROJECT_DIR, params["output_dir"], params["model_config_name"]
+        )
     else:
         # If we are pulling the data from S3 we don't want the paths to join with our local project_dir
         input_dir = params["input_dir"]
