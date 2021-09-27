@@ -8,6 +8,8 @@ This repo contains the source code for this project. To read the extended articl
 
 The high level methodology can be visualised below:
 
+<img width="610" alt="Screenshot 2021-09-27 at 15 16 09" src="https://user-images.githubusercontent.com/46863334/134926332-be67c6f2-9a88-4998-97e3-9a00027bb662.png">
+
 ## Setup
 
 - Meet the data science cookiecutter [requirements](http://nestauk.github.io/ds-cookiecutter), in brief:
