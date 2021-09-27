@@ -19,6 +19,18 @@ Outputs are in `outputs/tk_analysis`.
 
 ## `sentence_classifier/`
 
+This folder contains three markdown files:
+1. `Sentence Splitter Experiments.md` - Notes on experiments for the initial skills classifier
+2. `skills_classifier_2.0_experiments.md` - Notes on experiments for the skills classifier after labelling more data
+3. `skills_codebook.md` - A codebook for labellers to follow when labelling sentences as either skill sentences or not. 
+
+Within `notebooks`, there's a number of `.ipynb` and `.py` files related to experimentation:
+1. `Skills Classifier 1.0 - Analyse sentence predictions.py` - initial experiments from skills classifier 1.0
+2. `Skills Classifier 1.0 - Doccano Baseline Classifier.py` - initial experiments from skills classifier 1.0
+3. `Skills Classifier 1.0 - TextKernel Automated Training Data.py` - initial experiments from skills classifier 1.0
+4. `Skills Classifier 1.0 - Sentence Classifier.py` - initial experiments from skills classifier 1.0
+5. `Skills Classifier 2.0 - improve_classifier.ipynb` - experiments using more labelled data from skills classifier 2.0
+
 ## `skills_extraction/`
 
 In this folder we have two scripts for various bits of analysis and figure plotting after extracting skills:
