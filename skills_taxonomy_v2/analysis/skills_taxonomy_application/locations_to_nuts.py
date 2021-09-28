@@ -7,7 +7,7 @@ lat, long, nuts code, nuts name, county and country.
 
 Usage:
 
-python -i skills_taxonomy_v2/analysis/skills_taxonomy_application/locations_to_nuts2.py --config_path 'skills_taxonomy_v2/config/skills_taxonomy_application/2021.09.14.yaml'
+python -i skills_taxonomy_v2/analysis/skills_taxonomy_application/locations_to_nuts.py --config_path 'skills_taxonomy_v2/config/skills_taxonomy_application/2021.09.14.yaml'
 
 """
 from argparse import ArgumentParser
