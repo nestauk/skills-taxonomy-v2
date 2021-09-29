@@ -22,12 +22,12 @@ from skills_taxonomy_v2.pipeline.skills_extraction.extract_skills_utils import (
     load_sentences_embeddings,
     get_output_config_stamped,
     sample_sentence_embeddings_dirs,
-    ExtractSkills
+    ExtractSkills,
 )
 from skills_taxonomy_v2 import BUCKET_NAME
 
 logger = logging.getLogger(__name__)
-        
+
 
 def parse_arguments(parser):
 
@@ -63,7 +63,10 @@ if __name__ == "__main__":
 
     if params.get("dir_sample_size"):
         sentence_embeddings_dirs = sample_sentence_embeddings_dirs(
-            sentence_embeddings_dirs, params["dir_sample_size"], sample_seed=params["dir_sample_seed"])
+            sentence_embeddings_dirs,
+            params["dir_sample_size"],
+            sample_seed=params["dir_sample_seed"],
+        )
 
     sentences_data = load_sentences_embeddings(
         s3,
@@ -71,8 +74,12 @@ if __name__ == "__main__":
         mask_seq=params["mask_seq"],
         prop_not_masked_threshold=params["prop_not_masked_threshold"],
         sample_seed=params["sent_emb_sample_seed"],
-        sample_embeddings_size=params.get("sent_emb_sample_size"), 
-        sentence_lengths=[params["sentence_lengths_lower"], params["sentence_lengths_upper"]])
+        sample_embeddings_size=params.get("sent_emb_sample_size"),
+        sentence_lengths=[
+            params["sentence_lengths_lower"],
+            params["sentence_lengths_upper"],
+        ],
+    )
 
     # It's easier to manipulate this dataset as a dataframe
     sentences_data = pd.DataFrame(sentences_data)
@@ -83,34 +90,30 @@ if __name__ == "__main__":
         umap_random_state=params["umap_random_state"],
         umap_n_components=params["umap_n_components"],
         dbscan_eps=params["dbscan_eps"],
-        dbscan_min_samples=params["dbscan_min_samples"]
-        )
-    reduced_points_umap = extract_skills.reduce_embeddings(sentences_data["embedding"].tolist())
+        dbscan_min_samples=params["dbscan_min_samples"],
+    )
+    reduced_points_umap = extract_skills.reduce_embeddings(
+        sentences_data["embedding"].tolist()
+    )
     clustering_number = extract_skills.get_clusters(reduced_points_umap)
 
     extract_skills_output_path = get_output_config_stamped(
         args.config_path, output_dir, ""
     )
-    extract_skills.save_outputs(
-        extract_skills_output_path,
-        s3)
+    extract_skills.save_outputs(extract_skills_output_path, s3)
 
     logger.info("Finding dict of sentence id to embeddings for sample...")
     # Save out the sentence id: embedding dict separately
     embedding_dict = pd.Series(
-        sentences_data["embedding"].values,
-        index=sentences_data["sentence id"].values
-        ).to_dict()
+        sentences_data["embedding"].values, index=sentences_data["sentence id"].values
+    ).to_dict()
     embedding_dict_output_path = get_output_config_stamped(
         args.config_path, output_dir, "sentence_id_2_embedding_dict.json.gz"
     )
 
     logger.info("Saving dict of sentence id to embeddings for sample...")
     save_to_s3(
-        s3,
-        BUCKET_NAME,
-        embedding_dict,
-        embedding_dict_output_path,
+        s3, BUCKET_NAME, embedding_dict, embedding_dict_output_path,
     )
 
     # Add to sentences_data dataframe - each sentence will now have the
