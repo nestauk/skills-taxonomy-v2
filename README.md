@@ -10,6 +10,16 @@ The high level methodology can be visualised below:
 
 <img width="610" alt="Screenshot 2021-09-27 at 15 16 09" src="https://user-images.githubusercontent.com/46863334/134926332-be67c6f2-9a88-4998-97e3-9a00027bb662.png">
 
+### Pipeline steps
+
+More details of the steps included in this project, and running instructions, can be found in their respective documents:
+
+1. [Training a classifier to predict skill sentences](skills_taxonomy_v2/pipeline/sentence_classifier/sentence_classifier.md)
+2. [Extracting skills](skills_taxonomy_v2/pipeline/skills_extraction/Skills Extraction.md)
+3. [Building a skills taxonomy](skills_taxonomy_v2/pipeline/skills_taxonomy/Skills Taxonomy.md)
+4. [Analysis of skills, the skills taxonomy, the job advert sample, and the taxonomy applications](skills_taxonomy_v2/analysis/README.md)
+
+
 ## Setup
 
 - Meet the data science cookiecutter [requirements](http://nestauk.github.io/ds-cookiecutter), in brief:
