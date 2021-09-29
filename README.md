@@ -15,8 +15,8 @@ The high level methodology can be visualised below:
 More details of the steps included in this project, and running instructions, can be found in their respective documents:
 
 1. [Training a classifier to predict skill sentences](skills_taxonomy_v2/pipeline/sentence_classifier/sentence_classifier.md)
-2. [Extracting skills](skills_taxonomy_v2/pipeline/skills_extraction/Skills Extraction.md)
-3. [Building a skills taxonomy](skills_taxonomy_v2/pipeline/skills_taxonomy/Skills Taxonomy.md)
+2. [Extracting skills]("skills_taxonomy_v2/pipeline/skills_extraction/Skills Extraction.md")
+3. [Building a skills taxonomy]("skills_taxonomy_v2/pipeline/skills_taxonomy/Skills Taxonomy.md")
 4. [Analysis of skills, the skills taxonomy, the job advert sample, and the taxonomy applications](skills_taxonomy_v2/analysis/README.md)
 
 
