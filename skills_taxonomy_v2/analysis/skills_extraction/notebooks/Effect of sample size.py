@@ -95,4 +95,61 @@ plt.savefig(
 )
 
 
+# %% [markdown]
+# ## Number of job adverts and unique number of skills
+
+# %%
+file_name_date = '2021.08.31'
+sentence_data = load_s3_data(s3, BUCKET_NAME, f'outputs/skills_extraction/extracted_skills/{file_name_date}_sentences_data.json')
+
+
+# %%
+sentence_data = pd.DataFrame(sentence_data)
+sentence_data = sentence_data[sentence_data['Cluster number']!=-1]
+
+# %%
+len(sentence_data)
+
+# %%
+unique_skills = {}
+for k in tqdm(range(0, len(sentence_data))):
+    unique_skills[k] = sentence_data.iloc[0:k]['Cluster number'].nunique()
+
+# %%
+x = list(unique_skills.keys())
+y = list(unique_skills.values())
+
+nesta_orange = [255/255,90/255,0/255]
+plt.plot(x,y, color='black');
+plt.xlabel('Number of sentences')
+plt.ylabel('Number of unique skills')
+plt.savefig('outputs/skills_extraction/figures/num_sent_num_skills.pdf',bbox_inches='tight')
+
+
+# %% [markdown]
+# ## Together
+
+# %%
+x_vocab = [v[0] for v in num_sentences_and_vocab_size]
+y_vocab = [v[1] for v in num_sentences_and_vocab_size]
+
+x_skills = list(unique_skills.keys())
+y_skills = list(unique_skills.values())
+
+# %%
+fig, axs = plt.subplots(1,2, figsize=(10,3))
+
+axs[0].plot(x_vocab, y_vocab, color='black');
+axs[0].axvline(322071, color=nesta_orange, ls='--')
+axs[0].set_xlabel('Number of sentences')
+axs[0].set_ylabel('Number of unique words in vocab')
+
+axs[1].plot(x_skills, y_skills, color='black');
+axs[1].set_xlabel('Number of sentences')
+axs[1].set_ylabel('Number of unique skills')
+
+plt.tight_layout()
+plt.savefig('outputs/skills_extraction/figures/num_sent_num_skills_vocab_size.pdf',bbox_inches='tight')
+
+
 # %%

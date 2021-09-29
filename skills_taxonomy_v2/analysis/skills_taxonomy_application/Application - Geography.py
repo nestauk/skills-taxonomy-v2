@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # ---
 # jupyter:
 #   jupytext:
@@ -464,9 +465,12 @@ sum(sentence_data_with_meta["NUTs region"].notna())
 sum(sentence_data_with_meta["subregion"].notna())
 
 # %%
-level_b_prop_all = sentence_data_with_meta[
-    "Hierarchy level B name"
-].value_counts() / len(sentence_data_with_meta)
+sentence_data_rest = sentence_data_with_meta[
+    sentence_data_with_meta["NUTs region"] != "Greater London"
+]
+level_b_prop_rest = sentence_data_rest["Hierarchy level B name"].value_counts() / len(
+    sentence_data_rest
+)
 
 sentence_data_with_meta_filter = sentence_data_with_meta[
     sentence_data_with_meta["subregion"] == "Greater London"
@@ -475,7 +479,8 @@ level_b_prop_london = sentence_data_with_meta_filter[
     "Hierarchy level B name"
 ].value_counts() / len(sentence_data_with_meta_filter)
 
-london_quotient = level_b_prop_london / level_b_prop_all
+london_quotient = level_b_prop_london / level_b_prop_rest
+
 london_quotient = london_quotient[pd.notnull(london_quotient)].sort_values(
     ascending=True
 )
@@ -494,11 +499,12 @@ plt.savefig(
     bbox_inches="tight",
 )
 
-
-# %%
-level_a_prop_all = sentence_data_with_meta[
-    "Hierarchy level A name"
-].value_counts() / len(sentence_data_with_meta)
+sentence_data_rest = sentence_data_with_meta[
+    sentence_data_with_meta["NUTs region"] != "Greater London"
+]
+level_a_prop_rest = sentence_data_rest["Hierarchy level A name"].value_counts() / len(
+    sentence_data_rest
+)
 
 sentence_data_with_meta_filter = sentence_data_with_meta[
     sentence_data_with_meta["subregion"] == "Greater London"
@@ -507,7 +513,7 @@ level_a_prop_london = sentence_data_with_meta_filter[
     "Hierarchy level A name"
 ].value_counts() / len(sentence_data_with_meta_filter)
 
-london_quotient = level_a_prop_london / level_a_prop_all
+london_quotient = level_a_prop_london / level_a_prop_rest
 london_quotient = london_quotient[pd.notnull(london_quotient)].sort_values(
     ascending=True
 )
@@ -526,69 +532,152 @@ plt.savefig(
     bbox_inches="tight",
 )
 
-
 # %% [markdown]
-# ## Load other metadata
+# ## Other outliers
 
 # %%
-# Really big!
-job_id_data_dict = load_s3_data(
-    s3, bucket_name, "outputs/tk_data_analysis/metadata_date_dict.json"
-)
-len(job_id_data_dict)
+# The North East has a much higher demand for “Teaching and care”.
 
-# %%
-date_years = [v[0][0:4] for k, v in job_id_data_dict.items()]
-Counter(date_years)
+region = "North East (England)"
 
-# %% [markdown]
-# ## Level B in 2019 compared to others
-
-# %%
-level_b_prop_all = skill_job_meta["Hierarchy level B name"].value_counts() / len(
-    skill_job_meta
-)
-
-skill_job_meta_filter = skill_job_meta[skill_job_meta["job year"] == "2019"]
-level_b_prop_2019 = skill_job_meta_filter[
+sentence_data_region = sentence_data_with_meta[
+    sentence_data_with_meta["NUTs region"] == region
+]
+level_b_prop_region = sentence_data_region[
     "Hierarchy level B name"
-].value_counts() / len(skill_job_meta_filter)
+].value_counts() / len(sentence_data_region)
 
-# %%
-year_quotient = level_b_prop_2019 / level_b_prop_all
-year_quotient = year_quotient[pd.notnull(year_quotient)].sort_values(ascending=True)
-
-# %%
-year_quotient.plot.barh(
-    figsize=(8, 10),
-    ylabel="Year quotient",
-    xlabel="Level B hierarchy",
-    title="Year 2019 quotient",
-)
-plt.axvline(1)
-
-# %% [markdown]
-# ## Level A in 2019 compared to others
-
-# %%
-level_a_prop_all = skill_job_meta["Hierarchy level A name"].value_counts() / len(
-    skill_job_meta
+sentence_data_rest = sentence_data_with_meta[
+    sentence_data_with_meta["NUTs region"] != region
+]
+level_b_prop_rest = sentence_data_rest["Hierarchy level B name"].value_counts() / len(
+    sentence_data_rest
 )
 
-skill_job_meta_filter = skill_job_meta[skill_job_meta["job year"] == "2019"]
-level_a_prop_2019 = skill_job_meta_filter[
-    "Hierarchy level A name"
-].value_counts() / len(skill_job_meta_filter)
-
-# %%
-year_quotient = level_a_prop_2019 / level_a_prop_all
-year_quotient = year_quotient[pd.notnull(year_quotient)].sort_values(ascending=True)
-
-# %%
-year_quotient.plot.barh(
-    figsize=(8, 3),
-    ylabel="Year quotient",
-    xlabel="Level A hierarchy",
-    title="Year 2019 quotient",
+region_quotient = level_b_prop_region / level_b_prop_rest
+region_quotient = region_quotient[pd.notnull(region_quotient)].sort_values(
+    ascending=True
 )
-plt.axvline(1)
+
+region_quotient
+
+# %%
+sentence_data[sentence_data["Hierarchy level B name"] == "clinical-patients-nursing"][
+    "Hierarchy level C name"
+].value_counts()
+
+
+# %%
+# Wales has a particular low demand for “Customer service and marketing” skills.
+region = "Wales"
+
+sentence_data_region = sentence_data_with_meta[
+    sentence_data_with_meta["NUTs region"] == region
+]
+level_b_prop_region = sentence_data_region[
+    "Hierarchy level B name"
+].value_counts() / len(sentence_data_region)
+
+sentence_data_rest = sentence_data_with_meta[
+    sentence_data_with_meta["NUTs region"] != region
+]
+level_b_prop_rest = sentence_data_rest["Hierarchy level B name"].value_counts() / len(
+    sentence_data_rest
+)
+
+region_quotient = level_b_prop_region / level_b_prop_rest
+region_quotient = region_quotient[pd.notnull(region_quotient)].sort_values(
+    ascending=True
+)
+
+region_quotient
+
+# %%
+
+region = "Northern Ireland"
+
+sentence_data_region = sentence_data_with_meta[
+    sentence_data_with_meta["NUTs region"] == region
+]
+level_b_prop_region = sentence_data_region[
+    "Hierarchy level B name"
+].value_counts() / len(sentence_data_region)
+
+sentence_data_rest = sentence_data_with_meta[
+    sentence_data_with_meta["NUTs region"] != region
+]
+level_b_prop_rest = sentence_data_rest["Hierarchy level B name"].value_counts() / len(
+    sentence_data_rest
+)
+
+
+region_quotient = level_b_prop_region / level_b_prop_rest
+region_quotient = region_quotient[pd.notnull(region_quotient)].sort_values(
+    ascending=True
+)
+
+region_quotient
+
+# %%
+region = "East Midlands (England)"
+
+sentence_data_region = sentence_data_with_meta[
+    sentence_data_with_meta["NUTs region"] == region
+]
+level_b_prop_region = sentence_data_region[
+    "Hierarchy level B name"
+].value_counts() / len(sentence_data_region)
+
+sentence_data_rest = sentence_data_with_meta[
+    sentence_data_with_meta["NUTs region"] != region
+]
+level_b_prop_rest = sentence_data_rest["Hierarchy level B name"].value_counts() / len(
+    sentence_data_rest
+)
+
+
+region_quotient = level_b_prop_region / level_b_prop_rest
+region_quotient = region_quotient[pd.notnull(region_quotient)].sort_values(
+    ascending=True
+)
+
+region_quotient
+
+# %%
+sentence_data[sentence_data["Hierarchy level B name"] == "driving-licence-vehicle"][
+    "Hierarchy level C name"
+].value_counts()
+
+# %%
+
+sentence_data[sentence_data["Hierarchy level B name"] == "stock-contractors-warehouse"][
+    "Hierarchy level C name"
+].value_counts()
+
+
+# %%
+region = "London"
+
+sentence_data_region = sentence_data_with_meta[
+    sentence_data_with_meta["NUTs region"] == region
+]
+level_b_prop_region = sentence_data_region[
+    "Hierarchy level B name"
+].value_counts() / len(sentence_data_region)
+
+sentence_data_rest = sentence_data_with_meta[
+    sentence_data_with_meta["NUTs region"] != region
+]
+level_b_prop_rest = sentence_data_rest["Hierarchy level B name"].value_counts() / len(
+    sentence_data_rest
+)
+
+
+region_quotient = level_b_prop_region / level_b_prop_rest
+region_quotient = region_quotient[pd.notnull(region_quotient)].sort_values(
+    ascending=True
+)
+
+region_quotient
+
+# %%
