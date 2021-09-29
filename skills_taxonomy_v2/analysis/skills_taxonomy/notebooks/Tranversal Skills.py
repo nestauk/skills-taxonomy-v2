@@ -597,7 +597,11 @@ for lev_a_id, lev_a in hier_structure.items():
                     "Level B name": lev_b_name_dict[lev_b_id]}
 
 # %%
+num_all_job_ads = sentence_data['job id'].nunique()
 trans_skills_levc = pd.concat([trans_skills_levc,pd.DataFrame(trans_skills_hier).T], axis=1)
+trans_skills_levc['Percentage of job adverts with this skill'] = trans_skills_levc['Level C'].apply(
+    lambda x: round(sentence_data[sentence_data['Hierarchy level C']==int(x)]['job id'].nunique()*100/num_all_job_ads, 2)
+                                  )
 trans_skills_levc.to_csv('outputs/skills_taxonomy/transversal/lev_c_trans_skills.csv')
 trans_skills_levc
 

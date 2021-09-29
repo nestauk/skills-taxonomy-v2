@@ -164,6 +164,31 @@ plt.ylabel("")
 plt.savefig('outputs/skills_taxonomy_application/covid_application/covid_prop_a_T2.pdf',bbox_inches='tight')
 
 
+# %%
+sentence_data_with_meta_filter = sentence_data_with_meta[sentence_data_with_meta[
+    'covid']=='Post-COVID']
+level_a_prop_post_covid = sentence_data_with_meta_filter['Hierarchy level A name'].value_counts()/len(sentence_data_with_meta_filter)
+
+sentence_data_precovid = sentence_data_with_meta[sentence_data_with_meta[
+    'covid']=='Pre-COVID']
+level_a_prop_pre_covid = sentence_data_precovid['Hierarchy level A name'].value_counts()/len(sentence_data_precovid)
+
+df = pd.concat([
+    pd.DataFrame(level_a_prop_pre_covid).rename(
+        columns={'Hierarchy level A name':'Proportion of level A skill group in pre-covid job adverts only'}),
+    pd.DataFrame(level_a_prop_post_covid).rename(
+        columns={'Hierarchy level A name':'Proportion of level A skill group in post-covid job adverts only'})
+], axis=1)
+df['Increase from before to after COVID'] = df['Proportion of level A skill group in post-covid job adverts only']/df['Proportion of level A skill group in pre-covid job adverts only']
+df.round(3).to_csv('outputs/skills_taxonomy_application/covid_application/covid_prepost_leva.csv')
+
+
+
+# %%
+prop_level_a_covid.reset_index().groupby(['level_1','covid']).apply(
+    lambda x: x['Hierarchy level A name'].iloc[0]
+)
+
 # %% [markdown]
 # ## pre vs post covid quotients
 
