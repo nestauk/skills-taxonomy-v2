@@ -30,6 +30,9 @@
 # cd ../../..
 
 # %%
+from geopandas import GeoDataFrame
+from shapely.geometry import Point
+from bokeh.palettes import Turbo256
 from skills_taxonomy_v2.getters.s3_data import load_s3_data
 
 # %%
@@ -176,7 +179,6 @@ sentence_data_with_meta.head(2)
 nesta_orange = [255 / 255, 90 / 255, 0 / 255]
 
 # %%
-from bokeh.palettes import Turbo256
 
 # %%
 levela_cols = []
@@ -363,10 +365,6 @@ plt.savefig(
 # - How mnay from the 4 most diverging level A code
 
 # %%
-import pandas as pd
-from shapely.geometry import Point
-import geopandas as gpd
-from geopandas import GeoDataFrame
 
 
 # %%
@@ -467,8 +465,6 @@ sum(sentence_data_with_meta["NUTs region"].notna())
 sum(sentence_data_with_meta["subregion"].notna())
 
 # %%
-# I think you should compare to the rest minus london, not including
-
 sentence_data_rest = sentence_data_with_meta[
     sentence_data_with_meta["NUTs region"] != "Greater London"
 ]
@@ -484,6 +480,7 @@ level_b_prop_london = sentence_data_with_meta_filter[
 ].value_counts() / len(sentence_data_with_meta_filter)
 
 london_quotient = level_b_prop_london / level_b_prop_rest
+
 london_quotient = london_quotient[pd.notnull(london_quotient)].sort_values(
     ascending=True
 )
@@ -501,10 +498,6 @@ plt.savefig(
     "outputs/skills_taxonomy_application/region_application/london_quotient_levb.pdf",
     bbox_inches="tight",
 )
-
-
-# %%
-# I think you should compare to the rest minus london, not including
 
 sentence_data_rest = sentence_data_with_meta[
     sentence_data_with_meta["NUTs region"] != "Greater London"
@@ -538,7 +531,6 @@ plt.savefig(
     "outputs/skills_taxonomy_application/region_application/london_quotient_leva.pdf",
     bbox_inches="tight",
 )
-
 
 # %% [markdown]
 # ## Other outliers
@@ -656,8 +648,8 @@ sentence_data[sentence_data["Hierarchy level B name"] == "driving-licence-vehicl
     "Hierarchy level C name"
 ].value_counts()
 
-
 # %%
+
 sentence_data[sentence_data["Hierarchy level B name"] == "stock-contractors-warehouse"][
     "Hierarchy level C name"
 ].value_counts()

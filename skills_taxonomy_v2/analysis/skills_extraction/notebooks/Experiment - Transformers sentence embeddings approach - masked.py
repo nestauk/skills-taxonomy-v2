@@ -25,6 +25,7 @@
 # cd ../../../..
 
 # %%
+from collections import Counter
 from skills_taxonomy_v2.getters.s3_data import get_s3_data_paths, load_s3_data
 
 # %%
@@ -132,7 +133,6 @@ len(sentence_mean_embeddings[0])
 # You should probably do this in get_word_embeddings too
 
 # %%
-from collections import Counter
 
 flat_sentence_words = [
     item for sublist in sentence_words for item in sublist.split(" ")
@@ -319,9 +319,7 @@ def cluster_data(
     cluster_texts = cluster_texts.set_index("Cluster number").T.to_dict("records")[0]
 
     cluster_info = {
-        cluster_num: {
-            "Number skills": int(cluster_sizes[cluster_num]),
-        }
+        cluster_num: {"Number skills": int(cluster_sizes[cluster_num]),}
         for cluster_num in cluster_texts.keys()
     }
 
@@ -359,11 +357,7 @@ ds_dict = dict(
     texts=skills_data_cluster["description"].tolist(),
     label=colors_by_labels,
 )
-hover = HoverTool(
-    tooltips=[
-        ("node", "@texts"),
-    ]
-)
+hover = HoverTool(tooltips=[("node", "@texts"),])
 source = ColumnDataSource(ds_dict)
 unique_colors = list(set(colors_by_labels))
 num_unique_colors = len(unique_colors)
@@ -412,11 +406,7 @@ ds_dict_2 = dict(
 source2 = ColumnDataSource(ds_dict_2)
 
 # %%
-hover = HoverTool(
-    tooltips=[
-        ("node", "@texts"),
-    ]
-)
+hover = HoverTool(tooltips=[("node", "@texts"),])
 
 p = figure(
     plot_width=500,
@@ -426,20 +416,10 @@ p = figure(
     toolbar_location="below",
 )
 p.circle(
-    x="x",
-    y="y",
-    radius=0.01,
-    alpha=0.5,
-    source=source1,
-    color="grey",
+    x="x", y="y", radius=0.01, alpha=0.5, source=source1, color="grey",
 )
 p.circle(
-    x="x",
-    y="y",
-    radius=0.01,
-    alpha=0.5,
-    source=source2,
-    color="red",
+    x="x", y="y", radius=0.01, alpha=0.5, source=source2, color="red",
 )
 show(p)
 

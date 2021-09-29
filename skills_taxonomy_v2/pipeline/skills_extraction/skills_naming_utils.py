@@ -23,12 +23,14 @@ from skills_taxonomy_v2.pipeline.sentence_classifier.sentence_classifier import 
 
 logger = logging.getLogger(__name__)
 
-nltk.download('wordnet')
+nltk.download("wordnet")
+
 
 def replace_ngrams(sentence, ngram_words):
     for word_list in ngram_words:
         sentence = sentence.replace(" ".join(word_list), "-".join(word_list))
     return sentence
+
 
 def get_top_tf_idf_words(clusters_vect, feature_names, top_n=2):
     """
@@ -36,6 +38,7 @@ def get_top_tf_idf_words(clusters_vect, feature_names, top_n=2):
     """
     sorted_nzs = np.argsort(clusters_vect.data)[: -(top_n + 1) : -1]
     return feature_names[clusters_vect.indices[sorted_nzs]]
+
 
 def clean_cluster_descriptions(sentences_data):
     """
@@ -110,32 +113,47 @@ def get_clean_ngrams(sentence_skills, ngram, min_count, threshold):
     # Clean sentences
     cluster_descriptions = clean_cluster_descriptions(sentence_skills)
 
-    # get cluster texts 
-    cluster_texts = [
-    " ".join(sentences) for sentences in cluster_descriptions.values()
-    ]
+    # get cluster texts
+    cluster_texts = [" ".join(sentences) for sentences in cluster_descriptions.values()]
 
-    # tokenise skills  
+    # tokenise skills
     tokenised_skills = [word_tokenize(skill) for skill in cluster_texts]
 
-    # generate ngrams 
+    # generate ngrams
     t = 1
     while t < ngram:
         phrases = Phrases(
-                tokenised_skills, min_count=min_count, threshold=threshold, scoring="npmi",
-            connector_words = ENGLISH_CONNECTOR_WORDS
-            )
+            tokenised_skills,
+            min_count=min_count,
+            threshold=threshold,
+            scoring="npmi",
+            connector_words=ENGLISH_CONNECTOR_WORDS,
+        )
         ngram_phraser = Phraser(phrases)
         tokenised_skills = ngram_phraser[tokenised_skills]
         t += 1
 
-    # clean up ngrams 
-    clean_ngrams = [[skill.replace('_', ' ').replace('-', ' ') for skill in skills] for skills in  list(tokenised_skills)]
-    clean_ngrams = list(set([skill for skill in list(itertools.chain(*clean_ngrams)) if len(skill.split(' ')) > 1]))
+    # clean up ngrams
+    clean_ngrams = [
+        [skill.replace("_", " ").replace("-", " ") for skill in skills]
+        for skills in list(tokenised_skills)
+    ]
+    clean_ngrams = list(
+        set(
+            [
+                skill
+                for skill in list(itertools.chain(*clean_ngrams))
+                if len(skill.split(" ")) > 1
+            ]
+        )
+    )
 
     return clean_ngrams, cluster_descriptions
 
-def get_skill_info(clean_ngrams, sentence_skills, sentence_embs, cluster_descriptions, num_top_sent=2):
+
+def get_skill_info(
+    clean_ngrams, sentence_skills, sentence_embs, cluster_descriptions, num_top_sent=2
+):
     """
     Output: skills_data (dict), for each skill number:
         'Skills name' : join the closest ngram to the centroid
@@ -144,43 +162,53 @@ def get_skill_info(clean_ngrams, sentence_skills, sentence_embs, cluster_descrip
     """
 
     bert_vectorizer = BertVectorizer(
-            bert_model_name="sentence-transformers/paraphrase-MiniLM-L6-v2",
-            multi_process=True,
+        bert_model_name="sentence-transformers/paraphrase-MiniLM-L6-v2",
+        multi_process=True,
     )
     bert_vectorizer.fit()
 
     # embed ngrams
     ngram_embeddings = bert_vectorizer.transform(clean_ngrams)
 
-    #calculate similarities 
+    # calculate similarities
     skills_data = {}
     for cluster_num, cluster_data in tqdm(sentence_skills.groupby("Cluster number")):
         # There may be the same sentence repeated
         cluster_data.drop_duplicates(["sentence id"], inplace=True)
         cluster_text = cluster_data["original sentence"].tolist()
         cluster_coords = cluster_data[["reduced_points x", "reduced_points y"]].values
-        cluster_embeds = [np.array(
-            sentence_embs[str(sent_id)]
-        ).astype('float32') for sent_id in cluster_data['sentence id'].values.tolist() if str(sent_id) in sentence_embs]
-        
+        cluster_embeds = [
+            np.array(sentence_embs[str(sent_id)]).astype("float32")
+            for sent_id in cluster_data["sentence id"].values.tolist()
+            if str(sent_id) in sentence_embs
+        ]
+
         # Get sent similarities to centre
         sent_similarities = cosine_similarity(
             np.mean(cluster_coords, axis=0).reshape(1, -1), cluster_coords
         )
 
-        #calculate similarities between ngrams per cluster and cluster mean 
-        ngram_similarities = cosine_similarity(np.mean(cluster_embeds, axis=0).reshape(1, -1), ngram_embeddings)
+        # calculate similarities between ngrams per cluster and cluster mean
+        ngram_similarities = cosine_similarity(
+            np.mean(cluster_embeds, axis=0).reshape(1, -1), ngram_embeddings
+        )
 
         skills_data[cluster_num] = {
-            'Skills name': ' '.join(
-                [clean_ngrams[i] for i in ngram_similarities.argsort()[0][::-1].tolist()[0:1]]),
-            'Examples': " ".join(
+            "Skills name": " ".join(
                 [
-                    cluster_text[i]
-                    for i in sent_similarities.argsort()[0][::-1].tolist()[0:num_top_sent]
+                    clean_ngrams[i]
+                    for i in ngram_similarities.argsort()[0][::-1].tolist()[0:1]
                 ]
             ),
-            'Texts': cluster_descriptions[cluster_num]
+            "Examples": " ".join(
+                [
+                    cluster_text[i]
+                    for i in sent_similarities.argsort()[0][::-1].tolist()[
+                        0:num_top_sent
+                    ]
+                ]
+            ),
+            "Texts": cluster_descriptions[cluster_num],
         }
 
     return skills_data

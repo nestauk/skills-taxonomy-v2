@@ -15,47 +15,55 @@ from skills_taxonomy_v2 import BUCKET_NAME
 
 s3 = boto3.resource("s3")
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
-	sentences_data_dir = 'outputs/skills_extraction/extracted_skills/2021.08.31_sentences_data.json'
-	
-	sentence_data = load_s3_data(s3, BUCKET_NAME, sentences_data_dir)
-	sentence_data = pd.DataFrame(sentence_data)
-	sentence_data = sentence_data[sentence_data['Cluster number']!=-1]
+    sentences_data_dir = (
+        "outputs/skills_extraction/extracted_skills/2021.08.31_sentences_data.json"
+    )
 
-	# Job adverts in our sample
-	skill_job_ads = set(sentence_data['job id'].unique())
+    sentence_data = load_s3_data(s3, BUCKET_NAME, sentences_data_dir)
+    sentence_data = pd.DataFrame(sentence_data)
+    sentence_data = sentence_data[sentence_data["Cluster number"] != -1]
 
-	# Job titles
-	job_titles = {}
-	for file_name in tqdm(range(0,13)):
-	    file_dict = load_s3_data(
-	        s3,
-	        BUCKET_NAME,
-	        f'outputs/tk_data_analysis/metadata_job/{file_name}.json')
-	    job_titles.update({job_id: f for job_id, f in file_dict.items() if job_id in skill_job_ads})
-    
-	print(len(job_titles))
-	save_to_s3(
-		s3,
-		BUCKET_NAME,
-		job_titles,
-		'outputs/tk_data_analysis/metadata_job/sample_filtered.json'
-		)
+    # Job adverts in our sample
+    skill_job_ads = set(sentence_data["job id"].unique())
 
-	# Job dates
-	job_dates = {}
-	for file_name in tqdm(range(0,13)):
-	    file_date_dict = load_s3_data(
-	        s3,
-	        BUCKET_NAME,
-	        f'outputs/tk_data_analysis/metadata_date/{file_name}.json')
-	    job_dates.update({job_id: f[0] for job_id, f in file_date_dict.items() if job_id in skill_job_ads})
-	    
-	print(len(job_dates))
-	save_to_s3(
-		s3,
-		BUCKET_NAME,
-		job_dates,
-		'outputs/tk_data_analysis/metadata_date/sample_filtered.json'
-		)
+    # Job titles
+    job_titles = {}
+    for file_name in tqdm(range(0, 13)):
+        file_dict = load_s3_data(
+            s3, BUCKET_NAME, f"outputs/tk_data_analysis/metadata_job/{file_name}.json"
+        )
+        job_titles.update(
+            {job_id: f for job_id, f in file_dict.items() if job_id in skill_job_ads}
+        )
+
+    print(len(job_titles))
+    save_to_s3(
+        s3,
+        BUCKET_NAME,
+        job_titles,
+        "outputs/tk_data_analysis/metadata_job/sample_filtered.json",
+    )
+
+    # Job dates
+    job_dates = {}
+    for file_name in tqdm(range(0, 13)):
+        file_date_dict = load_s3_data(
+            s3, BUCKET_NAME, f"outputs/tk_data_analysis/metadata_date/{file_name}.json"
+        )
+        job_dates.update(
+            {
+                job_id: f[0]
+                for job_id, f in file_date_dict.items()
+                if job_id in skill_job_ads
+            }
+        )
+
+    print(len(job_dates))
+    save_to_s3(
+        s3,
+        BUCKET_NAME,
+        job_dates,
+        "outputs/tk_data_analysis/metadata_date/sample_filtered.json",
+    )

@@ -158,7 +158,8 @@ if __name__ == "__main__":
     ) as file:
         sentences = pickle.load(file)
 
-    token_len_threshold = 20  # To adjust. I had a look and > this number seems to all be not words (urls etc)
+    # To adjust. I had a look and > this number seems to all be not words (urls etc)
+    token_len_threshold = 20
     lemma_n = 2
     top_n_common_remove = 20
 

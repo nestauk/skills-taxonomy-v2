@@ -113,11 +113,7 @@ reduced_y = reduced_points[:, 1]
 
 # %%
 ds_dict = dict(x=reduced_x, y=reduced_y, texts=deduplicated_sentences)
-hover = HoverTool(
-    tooltips=[
-        ("node", "@texts"),
-    ]
-)
+hover = HoverTool(tooltips=[("node", "@texts"),])
 source = ColumnDataSource(ds_dict)
 p = figure(
     plot_width=500,
@@ -127,11 +123,7 @@ p = figure(
     toolbar_location="below",
 )
 p.circle(
-    x="x",
-    y="y",
-    radius=0.1,
-    alpha=0.5,
-    source=source,
+    x="x", y="y", radius=0.1, alpha=0.5, source=source,
 )
 show(p)
 

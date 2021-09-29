@@ -215,7 +215,6 @@ def get_cooccurence_network(sentence_data, level_skill_group):
 
 # %% [markdown]
 # ## Level D analysis
-
 # %%
 level_skill_group = "Hierarchy level D"  # Can be Cluster number
 net_lev_d = get_cooccurence_network(sentence_data, level_skill_group)
@@ -515,7 +514,6 @@ def print_untrans_skills(skill_group_scores, level_skill_group, cent_max, clust_
 
 # %% [markdown]
 # ## Level D
-
 # %%
 level_d_skill_group_scores = get_transversal_skills(net_lev_d, "Hierarchy level D")
 
