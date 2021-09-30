@@ -15,7 +15,7 @@ transformers
 sentence-transformers==1.2.0
 networkx
 gensim
-bokeh
+bokeh==2.2.2
 umap-learn
 nlpaug
 nltk
@@ -27,3 +27,4 @@ geopandas
 rtree
 urllib3
 shapely
+streamlit
