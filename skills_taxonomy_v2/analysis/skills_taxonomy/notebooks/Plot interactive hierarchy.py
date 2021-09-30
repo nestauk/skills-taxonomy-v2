@@ -25,6 +25,7 @@
 
 # %%
 from skills_taxonomy_v2.getters.s3_data import load_s3_data
+from skills_taxonomy_v2 import PROJECT_DIR
 
 # %%
 from collections import Counter, defaultdict
@@ -35,6 +36,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import boto3
 from ipywidgets import interact
+import streamlit as st
 import bokeh.plotting as bpl
 from bokeh.plotting import (
     ColumnDataSource,
@@ -105,7 +107,10 @@ skill_hierarchy = load_s3_data(s3, bucket_name, skill_hierarchy_file)
 # ### Manual names for level A
 
 # %%
-with open("skills_taxonomy_v2/utils/2021.09.06_level_a_rename_dict.json", "r") as f:
+with open(
+    str(PROJECT_DIR) + "/skills_taxonomy_v2/utils/2021.09.06_level_a_rename_dict.json",
+    "r",
+) as f:
     level_a_rename_dict = json.load(f)
 
 # %% [markdown]
@@ -218,10 +223,6 @@ def plot_skills_by_level(skill_hierarchy_df, col_by="A"):
 
 
 # %%
-p = plot_skills_by_level(skill_hierarchy_df, col_by="A")
-show(p)
-
-
 # %% [markdown]
 # ## Interactive plot - plot skills and use interactive filter to colour by skills groups
 
@@ -322,3 +323,15 @@ interact(
 )
 
 # %%
+# streamlit code
+title = '<span style="color:blue; font-family:Courier New; text-align:center; font-size:40px;">Explore the Skills Taxonomy.</span>'
+st.markdown(title, unsafe_allow_html=True)
+instruction = '<span style="color:black; font-family:Courier New; text-align:center; font-size:20px;">Select a skill level in the dropdown box:</span>'
+st.markdown(instruction, unsafe_allow_html=True)
+
+levels = st.selectbox("", ("A", "B", "C"))
+p = plot_skills_by_level(skill_hierarchy_df, col_by=levels)
+st.bokeh_chart(p)
+
+links = '<span style="color:black; font-family:Courier New; text-align:center; font-size:15px;">Read the full technical report [here](https://docs.google.com/document/d/1ZHE6Z6evxyUsSiojdNatSa_yMDJ8_UlB1K4YD1AhGG8/edit) and the extended article [here](https://docs.google.com/document/d/14lY7niHD0lyYpBj8TtlFGMSA2q4p4u5hl6LnXE4HYLs/edit).</span>'
+st.markdown(links, unsafe_allow_html=True)
