@@ -1,5 +1,15 @@
 # skills-taxonomy-v2
 
+## Introduction
+
+The UK labour market has been especially tumultuous in light of COVID-19 and Brexit. Employers [now face both long-running and circumstantial skills challenges](https://www.edge.co.uk/documents/167/04.05.21_Skills_shortages_bulletin_summary.pdf) due to such disruptive events. As we observe the impact of current events on the skills landscape, an informed labour market is more important than ever. Therefore, in partnership with the [Economic Statistics Centre of Excellence (ESCoE)](https://www.escoe.ac.uk/), we are releasing an updated skills taxonomy that is more open, more up-to-date and methodologically refined.
+
+This repo contains the source code for this project. To read the extended article and the full technical report, click here and here respectively.
+
+The high level methodology can be visualised below:
+
+<img width="610" alt="Screenshot 2021-09-27 at 15 16 09" src="https://user-images.githubusercontent.com/46863334/134926332-be67c6f2-9a88-4998-97e3-9a00027bb662.png">
+
 ## Setup
 
 - Meet the data science cookiecutter [requirements](http://nestauk.github.io/ds-cookiecutter), in brief:
@@ -42,6 +52,14 @@ to install xgboost:
 ```
 conda install -c anaconda py-xgboost
 ```
+
+or
+
+```
+conda install -c conda-forge py-xgboost
+```
+
+if you aren't using anaconda.
 
 ### Running on EC2
 

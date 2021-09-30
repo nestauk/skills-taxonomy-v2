@@ -107,7 +107,10 @@ if __name__ == "__main__":
 
     skill_sentences_dir = params["skill_sentences_dir"]
     token_len_threshold = params["token_len_threshold"]
-    output_dir = params["output_dir"]
+    # Use config file name as a date stamp for the output dir
+    output_dir = os.path.join(
+        params["output_dir"], os.path.basename(args.config_path).replace(".yaml", "")
+    )
 
     nlp = spacy.load("en_core_web_sm")
     bert_vectorizer = BertVectorizer(
@@ -125,8 +128,10 @@ if __name__ == "__main__":
     # For loop through each data path
     logger.info(f"Running predictions on {len(data_paths)} data files ...")
 
-    for data_path in data_paths:
-        logger.info(f"Loading data for {data_path} ...")
+    for data_path_i, data_path in enumerate(data_paths):
+        logger.info(
+            f"Loading data for {data_path} ({data_path_i} of {len(data_paths)}) ..."
+        )
         data = load_s3_data(s3, BUCKET_NAME, data_path)
         logger.info(f"Predicting embeddings for {len(data)} sentences...")
 

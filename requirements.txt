@@ -10,7 +10,7 @@ filelock
 typer
 sh
 jupyter
-sklearn
+scikit-learn==0.23.2
 transformers
 sentence-transformers==1.2.0
 networkx
@@ -21,6 +21,9 @@ nlpaug
 nltk
 pigeonXT-jupyter
 boto3
+fsspec
 s3fs
-botocore
-colorama
+geopandas
+rtree
+urllib3
+shapely

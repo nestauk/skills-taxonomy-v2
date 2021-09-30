@@ -6,6 +6,7 @@ additional features.
 
 """
 # ---------------------------------------------------------------------------------
+from skills_taxonomy_v2 import get_yaml_config, Path, PROJECT_DIR, BUCKET_NAME
 import string
 import nltk
 import pickle
@@ -21,8 +22,8 @@ from functools import lru_cache
 import nltk
 
 nltk.download("averaged_perceptron_tagger")
+nltk.download("punkt")
 
-from skills_taxonomy_v2 import get_yaml_config, Path, PROJECT_DIR, BUCKET_NAME
 
 # ---------------------------------------------------------------------------------
 

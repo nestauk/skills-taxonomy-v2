@@ -11,8 +11,6 @@ import logging
 
 import pandas as pd
 import boto3
-import fsspec
-import s3fs
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +49,9 @@ def save_to_s3(s3, bucket_name, output_var, output_file_dir):
     obj = s3.Object(bucket_name, output_file_dir)
 
     if fnmatch(output_file_dir, "*.pkl") or fnmatch(output_file_dir, "*.pickle"):
-        byte_obj = pickle.dumps(output_var) 
+        byte_obj = pickle.dumps(output_var)
+    elif fnmatch(output_file_dir, "*.gz"):
+        byte_obj = gzip.compress(json.dumps(output_var).encode())
     else:
         byte_obj = json.dumps(output_var)
     obj.put(Body=byte_obj)
@@ -74,6 +74,9 @@ def load_s3_data(s3, bucket_name, file_name):
     elif fnmatch(file_name, "*.jsonl"):
         file = obj.get()["Body"].read().decode()
         return [json.loads(line) for line in file]
+    elif fnmatch(file_name, "*.json.gz"):
+        with gzip.GzipFile(fileobj=obj.get()["Body"]) as file:
+            return json.load(file)
     elif fnmatch(file_name, "*.json"):
         file = obj.get()["Body"].read().decode()
         return json.loads(file)

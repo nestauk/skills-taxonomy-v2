@@ -98,7 +98,7 @@ def find_esco_tk_mappings(
 
     # For each TK skill do you want to find the closest ESCO skill to it (over a threshold) and just map to that one? OR you can find all the ESCO skills over a threshold similar to it and map it to multiple?
 
-    ## Only map to one ESCO skill if the similarity is over a threshold
+    # Only map to one ESCO skill if the similarity is over a threshold
     esco2tk_mapper = {}
     tk2esco_mapper = {}
     for tk_id, esco_id in enumerate(np.argmax(similarities, axis=1)):
