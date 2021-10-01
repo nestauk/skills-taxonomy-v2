@@ -179,8 +179,6 @@ sentence_data_with_meta.head(2)
 nesta_orange = [255 / 255, 90 / 255, 0 / 255]
 
 # %%
-
-# %%
 levela_cols = []
 for i in range(0, 7):
     levela_cols.append(Turbo256[i * round(len(Turbo256) / 7)])
@@ -288,6 +286,7 @@ axes = prop_level_a_nuts.reset_index().boxplot(
     color=props,
     patch_artist=True,
 )
+
 axes.set_title("Spread of proportions of skill types over all NUTs regions")
 axes.set_xlabel("")
 plt.suptitle("")
@@ -365,9 +364,6 @@ plt.savefig(
 # - How mnay from the 4 most diverging level A code
 
 # %%
-
-
-# %%
 df = sentence_data_with_meta.groupby("NUTs region")[["latitude", "longitude"]].mean()
 # Add the number of unique job ids
 df = pd.concat(
@@ -405,20 +401,26 @@ rowi = 0
 for i, col_name in enumerate(
     sentence_data_with_meta["Hierarchy level A name"].unique()
 ):
-    color = levela_cols[name2num_dict[col_name]]
-    if name2num_dict[col_name] == 0:
-        color = "white"
+    #     color = levela_cols[name2num_dict[col_name]]
+    #     if name2num_dict[col_name] == 0:
+    #         color = "white"
+    color = [
+        [1, 1 - c, 0]
+        for c in gdf[f"{col_name} - normalised"] / max(gdf[f"{col_name} - normalised"])
+    ]
     if i != 0 and i % 3 == 0:
         rowi += 1
         coli = 0
+
     world[world.name == "United Kingdom"].plot(ax=ax_map[rowi, coli], color="black")
     gdf.plot(
         ax=ax_map[rowi, coli],
         marker="o",
         color=color,
-        markersize=gdf[f"{col_name} - normalised"] * 500,
-        alpha=0.8,
+        markersize=200,  # gdf[f"{col_name} - normalised"] * 500,
+        alpha=1,
     )
+
     ax_map[rowi, coli].set_title(f"{col_name}")
     ax_map[rowi, coli].set_axis_off()
 
@@ -439,15 +441,28 @@ world[world.name == "United Kingdom"].plot(ax=ax_map[0], color="black")
 gdf.plot(
     ax=ax_map[0],
     marker="o",
-    color=nesta_orange,
-    markersize=gdf["job id"] / 10,
-    alpha=0.6,
+    c=[[1, 1 - c, 0] for c in gdf["job id"] / max(gdf["job id"])],
+    markersize=200,  # gdf["job id"] / 10,
+    alpha=1,
 )
 ax_map[0].set_title("Number of job adverts in sample by region")
 ax_map[0].set_axis_off()
 
-sentence_data_with_meta["NUTs region"].value_counts().plot.barh(
-    xlabel="", ylabel="", title="", color=nesta_orange, ax=ax_map[1]
+# sentence_data_with_meta["NUTs region"].value_counts().plot.barh(
+#     xlabel="", ylabel="", title="",
+#     color=nesta_orange,
+#     ax=ax_map[1]
+# )
+nuts_num_jobs = (
+    sentence_data_with_meta.groupby(["NUTs region"])["job id"].nunique().sort_values()
+)
+
+nuts_num_jobs.plot.barh(
+    xlabel="",
+    ylabel="",
+    title="",
+    color=[[1, 1 - c, 0] for c in nuts_num_jobs / max(nuts_num_jobs)],
+    ax=ax_map[1],
 )
 plt.savefig(
     "outputs/skills_taxonomy_application/region_application/nuts_numbers_maps.pdf",
@@ -485,20 +500,39 @@ london_quotient = london_quotient[pd.notnull(london_quotient)].sort_values(
     ascending=True
 )
 
+# Get the level A names for each of these (in same order)
+# level_a_names_mapped = [sentence_data[sentence_data['Hierarchy level B name']==i]['Hierarchy level A name'].unique()[0] for i in london_quotient.index]
+# level_a_cols_mapped = [levela_cols[name2num_dict[level_a_name]] for level_a_name in level_a_names_mapped]
+
 london_quotient.plot.barh(
-    figsize=(8, 10),
+    figsize=(8, 15),
     ylabel="London quotient",
     xlabel="Level B hierarchy",
-    title="Greater London quotient",
-    color=nesta_orange,
+    title="London quotient",
+    color=level_a_cols_mapped,
 )
 plt.axvline(1, color="black")
+
+color_dict = {k: levela_cols[v] for k, v in name2num_dict.items()}
+markers = [
+    plt.Line2D([0, 0], [0, 0], color=color, marker="o", linestyle="")
+    for color in color_dict.values()
+]
+plt.legend(
+    markers,
+    color_dict.keys(),
+    numpoints=1,
+    title="Level A skill group",
+    loc="lower right",
+)
+
 
 plt.savefig(
     "outputs/skills_taxonomy_application/region_application/london_quotient_levb.pdf",
     bbox_inches="tight",
 )
 
+# %%
 sentence_data_rest = sentence_data_with_meta[
     sentence_data_with_meta["NUTs region"] != "Greater London"
 ]
