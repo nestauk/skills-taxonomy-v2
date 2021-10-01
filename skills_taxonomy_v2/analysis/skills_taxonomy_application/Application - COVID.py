@@ -113,6 +113,12 @@ sentence_data_with_meta["covid"] = sentence_data_with_meta["date"].apply(
 )
 
 
+# %%
+sentence_data_with_meta["date"].min()
+
+# %%
+sentence_data_with_meta["date"].max()
+
 # %% [markdown]
 # ## Colours
 
@@ -125,6 +131,31 @@ levela_cols = []
 for i in range(0, 7):
     levela_cols.append(Turbo256[i * round(len(Turbo256) / 7)])
 levela_cols = levela_cols[0:6]
+
+# %% [markdown]
+# ## Hist of years
+
+# %%
+print(len(sentence_data_with_meta))
+unique_job_adverts_df = sentence_data_with_meta[
+    ["job id", "covid", "date"]
+].drop_duplicates()
+len(unique_job_adverts_df)
+
+# %%
+pd.to_datetime(
+    unique_job_adverts_df[unique_job_adverts_df["covid"] == "Post-COVID"]["date"]
+).hist(bins=12, grid=False, color=nesta_orange, label="Post-COVID")
+pd.to_datetime(
+    unique_job_adverts_df[unique_job_adverts_df["covid"] == "Pre-COVID"]["date"]
+).hist(bins=50, grid=False, color=nesta_grey, label="Pre-COVID")
+plt.xlabel("Date of job advert")
+plt.ylabel("Number of job adverts")
+plt.legend()
+plt.savefig(
+    "outputs/skills_taxonomy_application/covid_application/num_job_adverts_date.pdf",
+    bbox_inches="tight",
+)
 
 # %% [markdown]
 # ## Proportion of year from each year
@@ -205,45 +236,87 @@ plt.savefig(
 
 
 # %%
-sentence_data_with_meta_filter = sentence_data_with_meta[sentence_data_with_meta[
-    'covid']=='Post-COVID']
-level_a_prop_post_covid = sentence_data_with_meta_filter['Hierarchy level A name'].value_counts()/len(sentence_data_with_meta_filter)
+sentence_data_with_meta_filter = sentence_data_with_meta[
+    sentence_data_with_meta["covid"] == "Post-COVID"
+]
+level_a_prop_post_covid = (
+    sentence_data_with_meta_filter["Hierarchy level A name"].value_counts()
+    * 100
+    / len(sentence_data_with_meta_filter)
+)
 
-sentence_data_precovid = sentence_data_with_meta[sentence_data_with_meta[
-    'covid']=='Pre-COVID']
-level_a_prop_pre_covid = sentence_data_precovid['Hierarchy level A name'].value_counts()/len(sentence_data_precovid)
+sentence_data_precovid = sentence_data_with_meta[
+    sentence_data_with_meta["covid"] == "Pre-COVID"
+]
+level_a_prop_pre_covid = (
+    sentence_data_precovid["Hierarchy level A name"].value_counts()
+    * 100
+    / len(sentence_data_precovid)
+)
 
-df = pd.concat([
-    pd.DataFrame(level_a_prop_pre_covid).rename(
-        columns={'Hierarchy level A name':'Proportion of level A skill group in pre-covid job adverts only'}),
-    pd.DataFrame(level_a_prop_post_covid).rename(
-        columns={'Hierarchy level A name':'Proportion of level A skill group in post-covid job adverts only'})
-], axis=1)
-df['Increase from before to after COVID'] = df['Proportion of level A skill group in post-covid job adverts only']/df['Proportion of level A skill group in pre-covid job adverts only']
-df.round(3).to_csv('outputs/skills_taxonomy_application/covid_application/covid_prepost_leva.csv')
-
+df = pd.concat(
+    [
+        pd.DataFrame(level_a_prop_pre_covid).rename(
+            columns={
+                "Hierarchy level A name": "Percentage of level A skill group in pre-covid job adverts only"
+            }
+        ),
+        pd.DataFrame(level_a_prop_post_covid).rename(
+            columns={
+                "Hierarchy level A name": "Percentage of level A skill group in post-covid job adverts only"
+            }
+        ),
+    ],
+    axis=1,
+)
+df["Increase from before to after COVID"] = (
+    df["Percentage of level A skill group in post-covid job adverts only"]
+    / df["Percentage of level A skill group in pre-covid job adverts only"]
+)
+df.round(3).to_csv(
+    "outputs/skills_taxonomy_application/covid_application/covid_prepost_leva.csv"
+)
 
 
 # %%
-prop_level_a_covid.reset_index().groupby(['level_1','covid']).apply(
-    lambda x: x['Hierarchy level A name'].iloc[0]
+prop_level_a_covid.reset_index().groupby(["level_1", "covid"]).apply(
+    lambda x: x["Hierarchy level A name"].iloc[0]
 )
 
 # %% [markdown]
 # ## pre vs post covid quotients
 
 # %%
+## Only include skills groups that make up at least x% of skills
+## to avoid large changes in very small groups.
+level_b_prop_thresh = 0.01
+level_b_grouped = sentence_data_with_meta.groupby("Hierarchy level B name")
+print(len(level_b_grouped))
+level_b_all_prop = level_b_grouped["Hierarchy level B name"].count() / len(
+    sentence_data_with_meta
+)
+level_b_high_prob_names = level_b_all_prop[
+    level_b_all_prop >= level_b_prop_thresh
+].index.tolist()
+print(len(level_b_high_prob_names))
+
+sentence_data_with_meta_high_levb = sentence_data_with_meta[
+    sentence_data_with_meta["Hierarchy level B name"].isin(level_b_high_prob_names)
+]
+len(sentence_data_with_meta_high_levb)
+
+# %%
 # level_b_prop_all = sentence_data_with_meta['Hierarchy level B name'].value_counts()/len(sentence_data_with_meta)
 
-sentence_data_with_meta_filter = sentence_data_with_meta[
-    sentence_data_with_meta["covid"] == "Post-COVID"
+sentence_data_postcovid = sentence_data_with_meta_high_levb[
+    sentence_data_with_meta_high_levb["covid"] == "Post-COVID"
 ]
-level_b_prop_post_covid = sentence_data_with_meta_filter[
+level_b_prop_post_covid = sentence_data_postcovid[
     "Hierarchy level B name"
-].value_counts() / len(sentence_data_with_meta_filter)
+].value_counts() / len(sentence_data_postcovid)
 
-sentence_data_precovid = sentence_data_with_meta[
-    sentence_data_with_meta["covid"] == "Pre-COVID"
+sentence_data_precovid = sentence_data_with_meta_high_levb[
+    sentence_data_with_meta_high_levb["covid"] == "Pre-COVID"
 ]
 level_b_prop_pre_covid = sentence_data_precovid[
     "Hierarchy level B name"
@@ -279,38 +352,66 @@ df = pd.concat(
             level_b_prop_pre_covid[low_covid_quotient + high_covid_quotient]
         ).rename(
             columns={
-                "Hierarchy level B name": "Proportion of level B skill group in pre-covid job adverts only"
+                "Hierarchy level B name": "Percentage of level B skill group in pre-covid job adverts only"
             }
         ),
         pd.DataFrame(
             level_b_prop_post_covid[low_covid_quotient + high_covid_quotient]
         ).rename(
             columns={
-                "Hierarchy level B name": "Proportion of level B skill group in post-covid job adverts only"
+                "Hierarchy level B name": "Percentage of level B skill group in post-covid job adverts only"
             }
         ),
     ],
     axis=1,
 )
-df["Increase from before to after COVID"] = (
-    df["Proportion of level B skill group in post-covid job adverts only"]
-    / df["Proportion of level B skill group in pre-covid job adverts only"]
+df = df * 100
+df["Change from before to after COVID"] = (
+    df["Percentage of level B skill group in post-covid job adverts only"]
+    * 100
+    / df["Percentage of level B skill group in pre-covid job adverts only"]
 )
-df.round(3).to_csv(
+df.round(2).to_csv(
     "outputs/skills_taxonomy_application/covid_application/covid_prepost_levb.csv"
 )
 
 
 # %%
-df.round(3)
+df.round(2)
 
 # %%
 # Level C covid
 
 # %%
-level_c_prop_post_covid = sentence_data_with_meta_filter[
+## Only include skills groups that make up at least x% of skills
+## to avoid large changes in very small groups.
+level_c_prop_thresh = 0.005
+level_c_grouped = sentence_data_with_meta.groupby("Hierarchy level C name")
+print(len(level_c_grouped))
+level_c_all_prop = level_c_grouped["Hierarchy level C name"].count() / len(
+    sentence_data_with_meta
+)
+level_c_high_prob_names = level_c_all_prop[
+    level_c_all_prop >= level_c_prop_thresh
+].index.tolist()
+print(len(level_c_high_prob_names))
+
+sentence_data_with_meta_high_levc = sentence_data_with_meta[
+    sentence_data_with_meta["Hierarchy level C name"].isin(level_c_high_prob_names)
+]
+len(sentence_data_with_meta_high_levc)
+
+# %%
+sentence_data_precovid = sentence_data_with_meta_high_levc[
+    sentence_data_with_meta_high_levc["covid"] == "Pre-COVID"
+]
+sentence_data_postcovid = sentence_data_with_meta_high_levc[
+    sentence_data_with_meta_high_levc["covid"] == "Post-COVID"
+]
+
+level_c_prop_post_covid = sentence_data_postcovid[
     "Hierarchy level C name"
-].value_counts() / len(sentence_data_with_meta_filter)
+].value_counts() / len(sentence_data_postcovid)
 level_c_prop_pre_covid = sentence_data_precovid[
     "Hierarchy level C name"
 ].value_counts() / len(sentence_data_precovid)
@@ -332,29 +433,31 @@ df = pd.concat(
             level_c_prop_pre_covid[low_covid_quotient_levc + high_covid_quotient_levc]
         ).rename(
             columns={
-                "Hierarchy level C name": "Proportion of level C skill group in pre-covid job adverts only"
+                "Hierarchy level C name": "Percentage of level C skill group in pre-covid job adverts only"
             }
         ),
         pd.DataFrame(
             level_c_prop_post_covid[low_covid_quotient_levc + high_covid_quotient_levc]
         ).rename(
             columns={
-                "Hierarchy level C name": "Proportion of level C skill group in post-covid job adverts only"
+                "Hierarchy level C name": "Percentage of level C skill group in post-covid job adverts only"
             }
         ),
     ],
     axis=1,
 )
+df = df * 100
 df["Increase from before to after COVID"] = (
-    df["Proportion of level C skill group in post-covid job adverts only"]
-    / df["Proportion of level C skill group in pre-covid job adverts only"]
+    df["Percentage of level C skill group in post-covid job adverts only"]
+    * 100
+    / df["Percentage of level C skill group in pre-covid job adverts only"]
 )
-df.round(3).to_csv(
+df.round(2).to_csv(
     "outputs/skills_taxonomy_application/covid_application/covid_prepost_levc.csv"
 )
 
 
 # %%
-df.round(3)
+df.round(2)
 
 # %%

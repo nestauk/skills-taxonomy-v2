@@ -114,7 +114,8 @@ bpl.output_notebook()
 nlp = spacy.load("en_core_web_sm")
 
 bert_vectorizer = BertVectorizer(
-    bert_model_name="sentence-transformers/paraphrase-MiniLM-L6-v2", multi_process=True,
+    bert_model_name="sentence-transformers/paraphrase-MiniLM-L6-v2",
+    multi_process=True,
 )
 bert_vectorizer.fit()
 
@@ -256,9 +257,15 @@ reduced_y = sentence_clusters["reduced_points y"].tolist()
 color_palette = viridis
 
 ds_dict = dict(
-    x=reduced_x, y=reduced_y, texts=sentence_clusters["description"].tolist(),
+    x=reduced_x,
+    y=reduced_y,
+    texts=sentence_clusters["description"].tolist(),
 )
-hover = HoverTool(tooltips=[("Sentence", "@texts"),])
+hover = HoverTool(
+    tooltips=[
+        ("Sentence", "@texts"),
+    ]
+)
 source = ColumnDataSource(ds_dict)
 
 p = figure(
@@ -269,7 +276,12 @@ p = figure(
     toolbar_location="below",
 )
 p.circle(
-    x="x", y="y", radius=0.01, alpha=0.1, source=source, color="black",
+    x="x",
+    y="y",
+    radius=0.01,
+    alpha=0.1,
+    source=source,
+    color="black",
 )
 p.xaxis.visible = False
 p.xgrid.visible = False
@@ -294,7 +306,12 @@ ds_dict = dict(
     texts=sentence_clusters["description"].tolist(),
     label=colors_by_labels,
 )
-hover = HoverTool(tooltips=[("Sentence", "@texts"), ("Skill cluster", "@label"),])
+hover = HoverTool(
+    tooltips=[
+        ("Sentence", "@texts"),
+        ("Skill cluster", "@label"),
+    ]
+)
 source = ColumnDataSource(ds_dict)
 unique_colors = list(set(colors_by_labels))
 num_unique_colors = len(unique_colors)
@@ -351,7 +368,12 @@ ds_dict_2 = dict(
 )
 source2 = ColumnDataSource(ds_dict_2)
 
-hover = HoverTool(tooltips=[("Sentence", "@texts"), ("Clustered", "@label"),])
+hover = HoverTool(
+    tooltips=[
+        ("Sentence", "@texts"),
+        ("Clustered", "@label"),
+    ]
+)
 
 p = figure(
     plot_width=500,
@@ -361,10 +383,20 @@ p = figure(
     toolbar_location="below",
 )
 p.circle(
-    x="x", y="y", radius=0.01, alpha=0.5, source=source1, color="grey",
+    x="x",
+    y="y",
+    radius=0.01,
+    alpha=0.5,
+    source=source1,
+    color="grey",
 )
 p.circle(
-    x="x", y="y", radius=0.01, alpha=0.5, source=source2, color="red",
+    x="x",
+    y="y",
+    radius=0.01,
+    alpha=0.5,
+    source=source2,
+    color="red",
 )
 p.xaxis.visible = False
 p.xgrid.visible = False
@@ -391,7 +423,12 @@ ds_dict = dict(
     texts=sentence_clusters_notnone["description"].tolist(),
     label=colors_by_labels,
 )
-hover = HoverTool(tooltips=[("Sentence", "@texts"), ("Skill cluster", "@label"),])
+hover = HoverTool(
+    tooltips=[
+        ("Sentence", "@texts"),
+        ("Skill cluster", "@label"),
+    ]
+)
 source = ColumnDataSource(ds_dict)
 unique_colors = list(set(colors_by_labels))
 num_unique_colors = len(unique_colors)
@@ -519,7 +556,7 @@ p = figure(
     toolbar_location="below",
 )
 
-p.circle(x="x", y="y", radius=0.04, alpha=0.15, source=source, color="grey")
+p.circle(x="x", y="y", radius=0.04, alpha=0.08, source=source, color="grey")
 
 skills_clusters_sample_n = [
     13189,

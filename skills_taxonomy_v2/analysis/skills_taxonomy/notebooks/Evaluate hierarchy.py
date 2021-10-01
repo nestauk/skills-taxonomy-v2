@@ -86,8 +86,6 @@ from bokeh.transform import linear_cmap
 
 bpl.output_notebook()
 
-# %%
-
 # %% [markdown]
 # ## Load skills sentences and hierarchy information
 
@@ -403,6 +401,45 @@ print(
 
 
 # %% [markdown]
+# ### Which skill group levels does each job have the highest proportions in
+
+# %%
+job_skill_leva_props = {}
+job_skill_levb_props = {}
+job_skill_levc_props = {}
+for job_name, job_group in sentence_data.groupby(["Job title"]):
+    ## Level A
+    levas = job_group["Hierarchy level A"].value_counts(sort=True)
+    leva_props_dict = (levas / sum(levas)).to_dict()
+    leva_props_dict["Number of unique job ids"] = job_group["job id"].nunique()
+    job_skill_leva_props[job_name] = leva_props_dict
+
+    ## Level B
+    levbs = job_group["Hierarchy level B"].value_counts(sort=True)
+    levb_props_dict = (levbs / sum(levbs)).to_dict()
+    levb_props_dict["Number of unique job ids"] = job_group["job id"].nunique()
+    job_skill_levb_props[job_name] = levb_props_dict
+
+    ## Level C
+    levcs = job_group["Hierarchy level C"].value_counts(sort=True)
+    levc_props_dict = (levcs / sum(levcs)).to_dict()
+    levc_props_dict["Number of unique job ids"] = job_group["job id"].nunique()
+    job_skill_levc_props[job_name] = levc_props_dict
+
+job_skill_leva_props_df = pd.DataFrame(job_skill_leva_props).T
+job_skill_levb_props_df = pd.DataFrame(job_skill_levb_props).T
+job_skill_levc_props_df = pd.DataFrame(job_skill_levc_props).T
+
+# %%
+sentence_data["Job title"].nunique()
+
+# %%
+sum(sentence_data["Job title"].value_counts() > 10)
+
+# %%
+min_num_job_ids = 10
+
+# %% [markdown]
 # ### Level A skills
 
 # %%
@@ -421,6 +458,11 @@ lev_a_top_jobs = []
 for level_a_name, leve_a_group in sentence_data.groupby(["Hierarchy level A"]):
     job_titles = leve_a_group["Job title"].value_counts(sort=True)
     org_inds = leve_a_group["Organization industry"].value_counts(sort=True)
+
+    top_job_titles_by_prop = job_skill_leva_props_df[
+        job_skill_leva_props_df["Number of unique job ids"] > min_num_job_ids
+    ][level_a_name].sort_values(ascending=False)[0:10]
+
     lev_a_top_jobs.append(
         {
             "Level A name": level_a_rename_dict[str(level_a_name)],
@@ -439,6 +481,12 @@ for level_a_name, leve_a_group in sentence_data.groupby(["Hierarchy level A"]):
             ],
             "Top 10 organization industries": [
                 f"{j} ({n})" for j, n in list(zip(org_inds.index[0:10], org_inds[0:10]))
+            ],
+            f"Top 10 job titles with >{min_num_job_ids} job adverts, with highest proportion in this level": [
+                f"{j} ({round(n*100,2)}%)"
+                for j, n in list(
+                    zip(top_job_titles_by_prop.index, top_job_titles_by_prop)
+                )
             ],
         }
     )
@@ -470,6 +518,11 @@ lev_b_top_jobs = []
 for level_b_name, leve_b_group in sentence_data.groupby(["Hierarchy level B"]):
     job_titles = leve_b_group["Job title"].value_counts(sort=True)
     org_inds = leve_b_group["Organization industry"].value_counts(sort=True)
+
+    top_job_titles_by_prop = job_skill_levb_props_df[
+        job_skill_levb_props_df["Number of unique job ids"] > min_num_job_ids
+    ][level_b_name].sort_values(ascending=False)[0:10]
+
     lev_b_top_jobs.append(
         {
             "Level B name": lev_b_name_dict[str(level_b_name)],
@@ -489,6 +542,12 @@ for level_b_name, leve_b_group in sentence_data.groupby(["Hierarchy level B"]):
             "Top 10 organization industries": [
                 f"{j} ({n})" for j, n in list(zip(org_inds.index[0:10], org_inds[0:10]))
             ],
+            f"Top 10 job titles with >{min_num_job_ids} job adverts, with highest proportion in this level": [
+                f"{j} ({round(n*100,2)}%)"
+                for j, n in list(
+                    zip(top_job_titles_by_prop.index, top_job_titles_by_prop)
+                )
+            ],
         }
     )
 
@@ -506,6 +565,11 @@ lev_c_top_jobs = []
 for level_c_name, leve_c_group in sentence_data.groupby(["Hierarchy level C"]):
     job_titles = leve_c_group["Job title"].value_counts(sort=True)
     org_inds = leve_c_group["Organization industry"].value_counts(sort=True)
+
+    top_job_titles_by_prop = job_skill_levc_props_df[
+        job_skill_levc_props_df["Number of unique job ids"] > min_num_job_ids
+    ][level_c_name].sort_values(ascending=False)[0:10]
+
     lev_c_top_jobs.append(
         {
             "Level C name": lev_c_name_dict[str(level_c_name)],
@@ -524,6 +588,12 @@ for level_c_name, leve_c_group in sentence_data.groupby(["Hierarchy level C"]):
             ],
             "Top 10 organization industries": [
                 f"{j} ({n})" for j, n in list(zip(org_inds.index[0:10], org_inds[0:10]))
+            ],
+            f"Top 10 job titles with >{min_num_job_ids} job adverts, with highest proportion in this level": [
+                f"{j} ({round(n*100,2)}%)"
+                for j, n in list(
+                    zip(top_job_titles_by_prop.index, top_job_titles_by_prop)
+                )
             ],
         }
     )
@@ -555,15 +625,15 @@ per_top_job_levels = []
 for job_title in top_jobs:
     job_df = sentence_data[sentence_data["Job title"] == job_title]
     levas = round(
-        job_df["Hierarchy level A name"].value_counts(sort=True) / len(job_df), 3
+        job_df["Hierarchy level A name"].value_counts(sort=True) * 100 / len(job_df)
     )
     levbs = round(
-        job_df["Hierarchy level B name"].value_counts(sort=True) / len(job_df), 3
+        job_df["Hierarchy level B name"].value_counts(sort=True) * 100 / len(job_df)
     )
     levcs = round(
-        job_df["Hierarchy level C name"].value_counts(sort=True) / len(job_df), 3
+        job_df["Hierarchy level C name"].value_counts(sort=True) * 100 / len(job_df)
     )
-    skills_d = round(job_df["Skill name"].value_counts(sort=True) / len(job_df), 3)
+    skills_d = round(job_df["Skill name"].value_counts(sort=True) * 100 / len(job_df))
     per_top_job_levels.append(
         {
             "Job title": job_title,
