@@ -12,6 +12,19 @@ research_daps/
 *.bbl
 *.blg
 
+# Figures, data and Bokeh html
+*.pptx
+*.png
+*.pdf
+*.jpg
+*.html
+*.csv
+*.json
+*.zip
+
+# Notebook messing
+*Mess - *.py
+
 # Metaflow
 .metaflow
 metaflow.s3.*

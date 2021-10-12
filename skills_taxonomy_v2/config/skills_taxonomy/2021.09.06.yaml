@@ -12,4 +12,4 @@ flows:
       level_a_consensus_numclust_its: 100
       level_names_tfidif_n: 3
       use_level_a_consensus: True
-      output_dir: "outputs/skills_hierarchy/"
+      output_dir: "outputs/skills_taxonomy/"
