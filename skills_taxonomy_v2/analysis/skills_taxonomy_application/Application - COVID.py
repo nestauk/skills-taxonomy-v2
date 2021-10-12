@@ -42,7 +42,7 @@ bucket_name = "skills-taxonomy-v2"
 s3 = boto3.resource("s3")
 
 # %%
-skill_hierarchy_file = "outputs/skills_hierarchy/2021.09.06_skills_hierarchy.json"
+skill_hierarchy_file = "outputs/skills_taxonomy/2021.09.06_skills_hierarchy.json"
 skill_hierarchy = load_s3_data(s3, bucket_name, skill_hierarchy_file)
 
 # %%

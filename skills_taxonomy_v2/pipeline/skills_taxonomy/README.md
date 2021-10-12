@@ -17,8 +17,8 @@ python -i skills_taxonomy_v2/pipeline/skills_taxonomy/build_taxonomy.py --config
 ```
 
 Outputs:
-- A dictionary of each skill with what part of the hierarchy it is in - `outputs/skills_hierarchy/2021.09.06_skills_hierarchy.json`
-- A nested dictionary of each skill group with the skill groups it contains - `outputs/skills_hierarchy/2021.09.06_hierarchy_structure.json`
+- A dictionary of each skill with what part of the hierarchy it is in - `outputs/skills_taxonomy/2021.09.06_skills_hierarchy.json`
+- A nested dictionary of each skill group with the skill groups it contains - `outputs/skills_taxonomy/2021.09.06_hierarchy_structure.json`
 
 ## 2. Output the taxonomy
 
@@ -30,4 +30,4 @@ python -i skills_taxonomy_v2/pipeline/skills_taxonomy/output_taxonomy.py --confi
 ```
 
 Outputs:
-- `outputs/skills_hierarchy/2021.09.06_hierarchy_structure_named.json`
+- `outputs/skills_taxonomy/2021.09.06_hierarchy_structure_named.json`
