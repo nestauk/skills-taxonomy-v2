@@ -8,7 +8,7 @@ This repo contains the source code for this project. To read the full technical 
 
 An overview of the methodology, coloured by the three main steps to the pipeline, can be visualised below:
 
-![image info](./outputs/reports/figures/methodology_overview_pipeline.jpg)
+![](./outputs/reports/figures/methodology_overview_pipeline.jpg)
 
 ### Pipeline steps
 
