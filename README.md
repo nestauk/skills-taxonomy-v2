@@ -22,6 +22,11 @@ More details of the steps included in this project, and running instructions, ca
 
 This repository also contains various pieces of analysis of the taxonomy. These are discussed in the main analysis [README file](skills_taxonomy_v2/analysis/README.md).
 
+<img src="./outputs/reports/figures/hierarchy_numbers.jpg" width="700">
+
+#### Examples of the hierarchy
+<img src="./outputs/reports/figures/taxonomy_example.jpg" width="700">
+
 ## Setup
 
 - Meet the data science cookiecutter [requirements](http://nestauk.github.io/ds-cookiecutter), in brief:
@@ -40,39 +45,18 @@ As a one off, if needed, you will also have to run:
 
 ```
 conda install pytorch torchvision torchaudio -c pytorch
-```
-
-to use pytorch, and
-
-```
 conda install -c conda-forge spacy==3.0.0
 python -m spacy download en_core_web_sm
-```
-
-for spaCy.
-
-Then
-
-```
 conda install cdlib=0.2.3
 ```
-
-(this doesn't work when added to the environment.yaml).
-
-to install xgboost:
-
+and
 ```
 conda install -c anaconda py-xgboost
 ```
-
-or
-
+or, if you aren't using anaconda:
 ```
 conda install -c conda-forge py-xgboost
 ```
-
-if you aren't using anaconda.
-
 
 
 ## Contributor guidelines

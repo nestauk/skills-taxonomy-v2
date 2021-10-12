@@ -9,9 +9,7 @@ The aim of this pipeline is to extract skills from job adverts. There are 4 step
 
 The parameters for all these steps can be found in the config path `skills_taxonomy_v2/config/skills_extraction/2021.08.31.yaml`.
 
-
-![Skill sentences in 2D embedding space, coloured by skill cluster](./outputs/skills_extraction/figures/2021.08.31_skill_clusters.png)
-
+<img src="../../../outputs/reports/figures/extract_skill_methodology_overview.jpg" width="700">
 
 ## `2021.08.31.yaml` summary
 
@@ -58,7 +56,7 @@ Output : Which skill each sentence has been clustered into and its reduced embed
 - UMAP embeddings reduction to 2D
 - DBSCAN clustering of 2D reduced data
 - Output sentences grouped into clusters - assumption that these are each a single skill. e.g. in once cluster 'technical engineering', 'software engineer'
-- To examine the sample size of sentences used in clustering we also calculate the cumulative vocab size as more sentences are added. 
+- To examine the sample size of sentences used in clustering we also calculate the cumulative vocab size as more sentences are added.
 
 This is done by running:
 
