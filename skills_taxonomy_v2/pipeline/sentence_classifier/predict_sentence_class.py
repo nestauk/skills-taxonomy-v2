@@ -363,9 +363,6 @@ def run_predict_sentence_class_presample(
             if job_ad["job_id"] in job_ids_set
         ]
 
-        # CHANGE ==========================================!!!!!!!!!!!!
-        data = data[0:10]
-
         if data:
             output_file_dir = get_output_name(
                 data_path, input_dir, output_dir, model_config_name
