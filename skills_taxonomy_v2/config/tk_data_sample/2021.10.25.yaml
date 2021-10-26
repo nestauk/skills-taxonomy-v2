@@ -1,0 +1,7 @@
+flows:
+  get_tk_sample:
+    params:
+      tk_metadata_dir: "outputs/tk_data_analysis/metadata_file/"
+      sample_size: 5000000
+      random_seed: 42
+      output_dir: "outputs/tk_sample_data/"
