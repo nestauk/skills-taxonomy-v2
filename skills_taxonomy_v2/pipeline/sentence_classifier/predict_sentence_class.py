@@ -37,7 +37,7 @@ from skills_taxonomy_v2.pipeline.sentence_classifier.sentence_classifier import 
     SentenceClassifier,
 )
 
-from skills_taxonomy_v2.pipeline.sentence_classifier.utils import split_sentence
+from skills_taxonomy_v2.pipeline.sentence_classifier.utils import split_sentence, make_chunks, split_sentence_over_chunk
 
 from skills_taxonomy_v2 import PROJECT_DIR, BUCKET_NAME
 
@@ -84,7 +84,7 @@ def load_s3_text_data(file_name, s3):
     return data
 
 
-def load_model(config_name):  # change this to be in s3!
+def load_model(config_name, multi_process=None, batch_size=32):  # change this to be in s3!
 
     # Load sentence classifier trained model and config it came with
     # Be careful here if you change output locations in sentence_classifier.py
@@ -94,14 +94,18 @@ def load_model(config_name):  # change this to be in s3!
     with open(config_dir, "r") as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
 
+    if multi_process is None:
+        multi_process = config["flows"]["sentence_classifier_flow"]["params"][
+            "multi_process"
+        ]
+
     # Loading the model
     sent_classifier = SentenceClassifier(
         bert_model_name=config["flows"]["sentence_classifier_flow"]["params"][
             "bert_model_name"
         ],
-        multi_process=config["flows"]["sentence_classifier_flow"]["params"][
-            "multi_process"
-        ],
+        multi_process=multi_process,
+        batch_size=batch_size,
         max_depth=config["flows"]["sentence_classifier_flow"]["params"]["max_depth"],
         min_child_weight=config["flows"]["sentence_classifier_flow"]["params"][
             "min_child_weight"
@@ -338,7 +342,7 @@ def run_predict_sentence_class_presample(
     in get_tk_sample.py and save out for every relevant file in the dir.
     """
 
-    sent_classifier, _ = load_model(model_config_name)
+    sent_classifier, _ = load_model(model_config_name, multi_process=True, batch_size=64)
     nlp = spacy.load("en_core_web_sm")
 
     s3 = boto3.resource("s3")
@@ -367,22 +371,32 @@ def run_predict_sentence_class_presample(
             output_file_dir = get_output_name(
                 data_path, input_dir, output_dir, model_config_name
             )
+            # # If this file already exists don't re-run it (since you are using a different model to split sentences, you prob want to process all from the beginning)
+            # try:
+            #     exist_test = load_s3_data(s3, BUCKET_NAME, output_file_dir)
+            #     del exist_test
+            #     print("Already created")
+            # except:
+            #     print("Not created yet")
 
             logger.info(f"Splitting sentences ...")
             start_time = time.time()
             with Pool(4) as pool:  # 4 cpus
-                partial_split_sentence = partial(split_sentence, nlp=nlp, min_length=30)
-                split_sentence_pool_output = pool.map(partial_split_sentence, data)
+                chunks = make_chunks(data, 1000)  # chunks of 1000s sentences
+                partial_split_sentence = partial(split_sentence_over_chunk, min_length=30)
+                # NB the output will be a list of lists, so make sure to flatten after this!
+                split_sentence_pool_output = pool.map(partial_split_sentence, chunks)
             logger.info(f"Splitting sentences took {time.time() - start_time} seconds")
 
-            # Process output into one list of sentences for all documents
+            # Flatten and process output into one list of sentences for all documents
+            start_time = time.time()
             sentences = []
             job_ids = []
-            for i, (job_id, s) in enumerate(split_sentence_pool_output):
-                if s:
-                    sentences += s
-                    job_ids += [job_id] * len(s)
-
+            for chunk_split_sentence_pool_output in split_sentence_pool_output:
+                for job_id, s in chunk_split_sentence_pool_output:
+                    if s:
+                        sentences += s
+                        job_ids += [job_id] * len(s)
             logger.info(f"Processing sentences took {time.time() - start_time} seconds")
 
             if sentences:
@@ -444,7 +458,7 @@ def parse_arguments(parser):
     parser.add_argument(
         "--config_path",
         help="Path to config file",
-        default="skills_taxonomy_v2/config/predict_skill_sentences/2021.10.26.yaml",
+        default="skills_taxonomy_v2/config/predict_skill_sentences/2021.10.27.yaml",
     )
 
     args, unknown = parser.parse_known_args()
