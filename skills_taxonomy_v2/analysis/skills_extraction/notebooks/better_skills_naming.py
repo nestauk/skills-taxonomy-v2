@@ -647,7 +647,6 @@ def merge_skill_clusters(
     for sims in skill_name_sims:
         sims_indexes = np.where(sims > skill_name_sim_threshold)[0]
         if len(sims_indexes) > 1:
-            print([sims[inds] for inds in sims_indexes])
             sim_skill_ids = [list(named_skills.keys())[inds] for inds in sims_indexes]
             duplicate_skills.append(sim_skill_ids)
 
@@ -685,7 +684,7 @@ def merge_skill_clusters(
             == True
         ):
             merged_skills["_".join([str(skill_id) for skill_id in skill_ids])] = {
-                "Skills name": named_skills[skill_ids[0]]['Skills name'],
+                "Skills name": named_skills[skill_ids[0]]["Skills name"],
                 "Texts": list(
                     itertools.chain(
                         *[named_skills[skill_id]["Texts"] for skill_id in skill_ids]
