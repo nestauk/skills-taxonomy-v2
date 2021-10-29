@@ -4,6 +4,8 @@
 
 Functions to generate skill cluster names can be found in `skills_taxonomy_v2/pipeline/skills_extraction/skills_naming_utils.py`.
 
+Experiments with better naming can be found in `skills_taxonomy_v2/analysis/skills_extraction/notebooks/better_skills_naming.py`.
+
 In an effort to improve skill cluster naming and to lower the probability of duplicate skill cluster label names, the initial approach was improved by:
 
 1. More text cleaning - incl. getting rid of job specific language, singularising terms, getting rid of duplicate candidate ngram phrases i.e. 'day day'
