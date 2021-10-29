@@ -27,3 +27,4 @@ geopandas
 rtree
 urllib3
 shapely
+pattern
