@@ -14,9 +14,10 @@ An overview of the methodology, coloured by the three main steps to the pipeline
 
 More details of the steps included in this project, and running instructions, can be found in their respective READMEs:
 
-1. [sentence_classifier](skills_taxonomy_v2/pipeline/sentence_classifier/README.md) - Training a classifier to predict skill sentences.
-2. [skills_extraction](skills_taxonomy_v2/pipeline/skills_extraction/README.md) - Extracting skills from skill sentences.
-3. [skills_taxonomy](skills_taxonomy_v2/pipeline/skills_taxonomy/README.md) - Building the skills taxonomy from extracted skills.
+1. [tk_data_analysis](skills_taxonomy_v2/pipeline/tk_data_analysis/README.md) - Get a sample of the TextKernel job adverts.
+2. [sentence_classifier](skills_taxonomy_v2/pipeline/sentence_classifier/README.md) - Training a classifier to predict skill sentences.
+3. [skills_extraction](skills_taxonomy_v2/pipeline/skills_extraction/README.md) - Extracting skills from skill sentences.
+4. [skills_taxonomy](skills_taxonomy_v2/pipeline/skills_taxonomy/README.md) - Building the skills taxonomy from extracted skills.
 
 ### Analysis
 
