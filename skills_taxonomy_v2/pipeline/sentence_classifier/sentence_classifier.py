@@ -64,9 +64,11 @@ class BertVectorizer:
         self,
         bert_model_name="sentence-transformers/paraphrase-MiniLM-L6-v2",
         multi_process=True,
+        batch_size=32
     ):
         self.bert_model_name = bert_model_name
         self.multi_process = multi_process
+        self.batch_size = batch_size
 
     def fit(self, *_):
         self.bert_model = SentenceTransformer(self.bert_model_name)
@@ -79,7 +81,7 @@ class BertVectorizer:
         if self.multi_process:
             print(".. with multiprocessing")
             pool = self.bert_model.start_multi_process_pool()
-            self.embedded_x = self.bert_model.encode_multi_process(texts, pool)
+            self.embedded_x = self.bert_model.encode_multi_process(texts, pool, batch_size=self.batch_size)
             self.bert_model.stop_multi_process_pool(pool)
         else:
             self.embedded_x = self.bert_model.encode(texts, show_progress_bar=True)
@@ -126,6 +128,7 @@ class SentenceClassifier:
         test_size=0.15,
         bert_model_name="sentence-transformers/paraphrase-MiniLM-L6-v2",
         multi_process=True,
+        batch_size=32,
         max_depth=7,
         min_child_weight=1,
         gamma=0.0,
@@ -144,6 +147,7 @@ class SentenceClassifier:
         self.bert_model_name = bert_model_name
         self.bert_model_name = bert_model_name
         self.multi_process = multi_process
+        self.batch_size = batch_size
         self.max_depth = max_depth
         self.min_child_weight = min_child_weight
         self.gamma = gamma
@@ -195,7 +199,9 @@ class SentenceClassifier:
 
     def load_bert(self):
         self.bert_vectorizer = BertVectorizer(
-            bert_model_name=self.bert_model_name, multi_process=self.multi_process
+            bert_model_name=self.bert_model_name,
+            multi_process=self.multi_process,
+            batch_size=self.batch_size
         )
         self.bert_vectorizer.fit()
 

@@ -1,0 +1,9 @@
+flows:
+  predict_skill_sentences_flow:
+    params:
+      input_dir: "inputs/data/"
+      data_dir: "textkernel-files/"
+      model_config_name: "2021.08.16"
+      output_dir: "outputs/sentence_classifier/data/skill_sentences"
+      sampled_data_loc: "outputs/tk_sample_data/sample_file_locations.json"
+    run_id: 0

@@ -225,11 +225,19 @@ with the most recent config file will take in job adverts, split them into sente
 {'job_id_1': [('sentence1'), ('sentence2')], 'job_id_2': [('sentence1'), ('sentence2'}
 ```
 
-To predict on all job adverts in the TextKernel data on S3, on the EC2 instance I ran
+### `2021.10.27.yaml` config file:
+
+When using the `2021.10.27.yaml` config file skill sentences are predicted on a pre-determined sample of 5 million job adverts (found via running `get_tk_sample.py`). This was run using:
 
 ```
-python skills_taxonomy_v2/pipeline/sentence_classifier/predict_sentence_class.py --config_path 'skills_taxonomy_v2/config/predict_skill_sentences/2021.08.16.yaml'
+python skills_taxonomy_v2/pipeline/sentence_classifier/predict_sentence_class.py --config_path 'skills_taxonomy_v2/config/predict_skill_sentences/2021.10.27.yaml'
 ```
+
+Skill sentences for each job advert and file are stored in `outputs/sentence_classifier/data/skill_sentences/2021.10.27/`.
+
+Out of the 647 files of job adverts, 516 had skill sentences in. This is because the 'jobs_expired' files were included in the sample and these don't contain the job advert text. This leaves us with a sample of 4,312,285 job adverts.
+
+
 
 ### From `2021.07.09.yaml`:
 

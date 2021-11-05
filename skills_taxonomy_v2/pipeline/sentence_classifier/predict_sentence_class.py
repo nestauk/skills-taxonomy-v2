@@ -37,10 +37,11 @@ from skills_taxonomy_v2.pipeline.sentence_classifier.sentence_classifier import 
     SentenceClassifier,
 )
 
-from skills_taxonomy_v2.pipeline.sentence_classifier.utils import split_sentence
+from skills_taxonomy_v2.pipeline.sentence_classifier.utils import split_sentence, make_chunks, split_sentence_over_chunk
 
 from skills_taxonomy_v2 import PROJECT_DIR, BUCKET_NAME
 
+from skills_taxonomy_v2.getters.s3_data import load_s3_data, save_to_s3
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +69,7 @@ def load_local_data(file_name):
     return data
 
 
-def load_s3_data(file_name, s3):
+def load_s3_text_data(file_name, s3):
     """
     Load from S3 locations - jsonl.gz
     file_name: S3 key
@@ -83,7 +84,7 @@ def load_s3_data(file_name, s3):
     return data
 
 
-def load_model(config_name):  # change this to be in s3!
+def load_model(config_name, multi_process=None, batch_size=32):  # change this to be in s3!
 
     # Load sentence classifier trained model and config it came with
     # Be careful here if you change output locations in sentence_classifier.py
@@ -93,14 +94,18 @@ def load_model(config_name):  # change this to be in s3!
     with open(config_dir, "r") as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
 
+    if multi_process is None:
+        multi_process = config["flows"]["sentence_classifier_flow"]["params"][
+            "multi_process"
+        ]
+
     # Loading the model
     sent_classifier = SentenceClassifier(
         bert_model_name=config["flows"]["sentence_classifier_flow"]["params"][
             "bert_model_name"
         ],
-        multi_process=config["flows"]["sentence_classifier_flow"]["params"][
-            "multi_process"
-        ],
+        multi_process=multi_process,
+        batch_size=batch_size,
         max_depth=config["flows"]["sentence_classifier_flow"]["params"]["max_depth"],
         min_child_weight=config["flows"]["sentence_classifier_flow"]["params"][
             "min_child_weight"
@@ -248,7 +253,7 @@ def run_predict_sentence_class(
         if data_local:
             data = load_local_data(data_path)
         else:
-            data = load_s3_data(data_path, s3)
+            data = load_s3_text_data(data_path, s3)
 
         data = data[0:10000]
         if data:
@@ -329,12 +334,131 @@ def run_predict_sentence_class(
                     save_outputs_to_s3(s3, skill_sentences_dict, output_file_dir)
 
 
+def run_predict_sentence_class_presample(
+    input_dir, data_dir, model_config_name, output_dir, sampled_data_loc
+):
+    """
+    Get predictions from the sample of job adverts already found
+    in get_tk_sample.py and save out for every relevant file in the dir.
+    """
+
+    sent_classifier, _ = load_model(model_config_name, multi_process=True, batch_size=32)
+    nlp = spacy.load("en_core_web_sm")
+
+    s3 = boto3.resource("s3")
+
+    sample_dict = load_s3_data(s3, BUCKET_NAME, sampled_data_loc)
+
+    # Make predictions and save output for data path(s)
+    logger.info(f"Running predictions on {len(sample_dict)} data files ...")
+    for data_subpath, job_ids in sample_dict.items():
+        # Run predictions and save outputs iteratively
+        data_path = os.path.join(input_dir, data_dir, data_subpath)
+        logger.info(f"Loading data from {data_path} ...")
+        data = load_s3_data(s3, BUCKET_NAME, data_path)
+
+        job_ids_set = set(job_ids)
+
+        # Sample of job adverts used for this file
+        neccessary_fields = ["full_text", "job_id"]
+        data = [
+            {field: job_ad.get(field, None) for field in neccessary_fields}
+            for job_ad in data
+            if job_ad["job_id"] in job_ids_set
+        ]
+
+        if data:
+            output_file_dir = get_output_name(
+                data_path, input_dir, output_dir, model_config_name
+            )
+            # # If this file already exists don't re-run it (since you are using a different model to split sentences, you prob want to process all from the beginning)
+            # try:
+            #     exist_test = load_s3_data(s3, BUCKET_NAME, output_file_dir)
+            #     del exist_test
+            #     print("Already created")
+            # except:
+            #     print("Not created yet")
+
+            logger.info(f"Splitting sentences ...")
+            start_time = time.time()
+            with Pool(4) as pool:  # 4 cpus
+                chunks = make_chunks(data, 1000)  # chunks of 1000s sentences
+                partial_split_sentence = partial(split_sentence_over_chunk, min_length=30)
+                # NB the output will be a list of lists, so make sure to flatten after this!
+                split_sentence_pool_output = pool.map(partial_split_sentence, chunks)
+            logger.info(f"Splitting sentences took {time.time() - start_time} seconds")
+
+            # Flatten and process output into one list of sentences for all documents
+            start_time = time.time()
+            sentences = []
+            job_ids = []
+            for chunk_split_sentence_pool_output in split_sentence_pool_output:
+                for job_id, s in chunk_split_sentence_pool_output:
+                    if s:
+                        sentences += s
+                        job_ids += [job_id] * len(s)
+            logger.info(f"Processing sentences took {time.time() - start_time} seconds")
+
+            if sentences:
+                logger.info(f"Transforming skill sentences ...")
+                sentences_vec = sent_classifier.transform(sentences)
+                pool_sentences_vec = [
+                    (vec_ix, [vec]) for vec_ix, vec in enumerate(sentences_vec)
+                ]
+
+                logger.info(f"Chunking up sentences ...")
+                start_time = time.time()
+                # Manually chunk up the data to predict multiple in a pool
+                # This is because predict can't deal with massive vectors
+                pool_sentences_vecs = []
+                pool_sentences_vec = []
+                for vec_ix, vec in enumerate(sentences_vec):
+                    pool_sentences_vec.append((vec_ix, vec))
+                    if len(pool_sentences_vec) > 1000:
+                        pool_sentences_vecs.append(pool_sentences_vec)
+                        pool_sentences_vec = []
+                if len(pool_sentences_vec) != 0:
+                    # Add the final chunk if not empty
+                    pool_sentences_vecs.append(pool_sentences_vec)
+                logger.info(
+                    f"Chunking up sentences into {len(pool_sentences_vecs)} chunks took {time.time() - start_time} seconds"
+                )
+
+                logger.info(f"Predicting skill sentences ...")
+                start_time = time.time()
+                with Pool(4) as pool:  # 4 cpus
+                    partial_predict_sentences = partial(
+                        predict_sentences, sent_classifier=sent_classifier
+                    )
+                    predict_sentences_pool_output = pool.map(
+                        partial_predict_sentences, pool_sentences_vecs
+                    )
+                logger.info(
+                    f"Predicting on {len(sentences)} sentences took {time.time() - start_time} seconds"
+                )
+
+                # Process output into one list of sentences for all documents
+                logger.info(f"Combining data for output ...")
+                start_time = time.time()
+                skill_sentences_dict = defaultdict(list)
+                for chunk_output in predict_sentences_pool_output:
+                    for (sent_ix, pred) in chunk_output:
+                        if pred == 1:
+                            job_id = job_ids[sent_ix]
+                            sentence = sentences[sent_ix]
+                            skill_sentences_dict[job_id].append(sentence)
+                logger.info(f"Combining output took {time.time() - start_time} seconds")
+
+                logger.info(f"Saving data to {output_file_dir} ...")
+                save_to_s3(s3, BUCKET_NAME, skill_sentences_dict, output_file_dir)
+
+
 def parse_arguments(parser):
 
     parser.add_argument(
         "--config_path",
         help="Path to config file",
-        default="skills_taxonomy_v2/config/predict_skill_sentences/2021.08.16.local.sample.yaml",
+        default="skills_taxonomy_v2/config/predict_skill_sentences/2021.10.27.yaml",
     )
 
     args, unknown = parser.parse_known_args()
@@ -355,29 +479,47 @@ if __name__ == "__main__":
     flow_config = config["flows"][FLOW_ID]
     params = flow_config["params"]
 
-    if not params["sample_data_paths"]:
-        # If you don't want to sample the data you can set these to None
-        params["random_seed"] = None
-        params["sample_size"] = None
-
-    # Output data in a subfolder with the name of the model used to make the predictions
-    if params["data_local"]:
-        input_dir = os.path.join(PROJECT_DIR, params["input_dir"])
-        output_dir = os.path.join(
-            PROJECT_DIR, params["output_dir"], params["model_config_name"]
+    if params.get("sampled_data_loc"):
+        # >=26th October 2021 configs should have this
+        # where job advert sampling has already been done
+        # Previously the outputs were stored in a folder with the
+        # model version, now store in the config version.
+        run_predict_sentence_class_presample(
+            params["input_dir"],
+            params["data_dir"],
+            params["model_config_name"],
+            os.path.join(
+                params["output_dir"],
+                os.path.basename(args.config_path).split(".yaml")[0],
+            ),
+            params["sampled_data_loc"],
         )
-    else:
-        # If we are pulling the data from S3 we don't want the paths to join with our local project_dir
-        input_dir = params["input_dir"]
-        output_dir = os.path.join(params["output_dir"], params["model_config_name"])
 
-    run_predict_sentence_class(
-        input_dir,
-        params["data_dir"],
-        params["model_config_name"],
-        output_dir,
-        data_local=params["data_local"],
-        sample_data_paths=params["sample_data_paths"],
-        random_seed=params["random_seed"],
-        sample_size=params["sample_size"],
-    )
+    else:
+        # Old version
+        if not params.get("sample_data_paths"):
+            # If you don't want to sample the data you can set these to None
+            params["random_seed"] = None
+            params["sample_size"] = None
+
+        # Output data in a subfolder with the name of the model used to make the predictions
+        if params["data_local"]:
+            input_dir = os.path.join(PROJECT_DIR, params["input_dir"])
+            output_dir = os.path.join(
+                PROJECT_DIR, params["output_dir"], params["model_config_name"]
+            )
+        else:
+            # If we are pulling the data from S3 we don't want the paths to join with our local project_dir
+            input_dir = params["input_dir"]
+            output_dir = os.path.join(params["output_dir"], params["model_config_name"])
+
+        run_predict_sentence_class(
+            input_dir,
+            params["data_dir"],
+            params["model_config_name"],
+            output_dir,
+            data_local=params["data_local"],
+            sample_data_paths=params["sample_data_paths"],
+            random_seed=params["random_seed"],
+            sample_size=params["sample_size"],
+        )
