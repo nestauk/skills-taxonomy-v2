@@ -342,7 +342,7 @@ def run_predict_sentence_class_presample(
     in get_tk_sample.py and save out for every relevant file in the dir.
     """
 
-    sent_classifier, _ = load_model(model_config_name, multi_process=True, batch_size=64)
+    sent_classifier, _ = load_model(model_config_name, multi_process=True, batch_size=32)
     nlp = spacy.load("en_core_web_sm")
 
     s3 = boto3.resource("s3")
