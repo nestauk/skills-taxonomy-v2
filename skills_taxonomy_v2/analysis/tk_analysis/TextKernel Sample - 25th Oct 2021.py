@@ -65,11 +65,8 @@ for k, v in tqdm(tk_dates.items()):
     else:
         job_ads_date_count["No date given"] += 1
 
-# %%
-sum(job_ads_date_count.values()) == total_n_job_adverts
-
 # %% [markdown]
-# ### Dates for the sample
+# ### Import the sample and get some stats on it
 
 # %%
 sample_dict = load_s3_data(
@@ -77,10 +74,21 @@ sample_dict = load_s3_data(
 )
 
 # %%
-sample_dict["historical/2020/2020-03-11/jobs_0.0.jsonl.gz"][0:10]
+len(sample_dict)
 
 # %%
-sum([len(v) for v in sample_dict.values()])
+plt.hist([len(v) for k,v in sample_dict.items()], bins =30);
+plt.title("Number of job adverts in each file of sample");
+
+# %%
+plt.hist([len(v) for k,v in sample_dict.items() if "jobs_expired" not in k], bins =30);
+plt.title("Number of job adverts in each file of sample from not 'jobs_expired' files");
+
+# %%
+print(f"There are {sum([len(v) for k,v in sample_dict.items() if 'jobs_expired' not in k])} job adverts in the sample which aren't from the 'jobs_expired' files (which don't have full text available in the metadata)")
+
+# %% [markdown]
+# ### Dates for the sample
 
 # %%
 job_ads_date_count_sample = defaultdict(int)
@@ -135,5 +143,70 @@ plt.bar(
 plt.legend()
 plt.xlabel("Date of job advert (2014 = no date given)")
 plt.ylabel("Proportion")
+plt.savefig("../../../outputs/tk_analysis/tk_sample_dates.pdf")
+
+# %% [markdown]
+# ### In comparison to sample without the jobs expired
+
+# %%
+# All the job ids from the files with "jobs_expired" in their name
+jobs_expired_job_ids = set()
+for file_name in tqdm(range(0, 13)):
+    file_date_dict = load_s3_data(
+        s3, bucket_name, f"outputs/tk_data_analysis/metadata_file/{file_name}.json"
+    )
+    jobs_expired_job_ids.update(set({k for k, f in file_date_dict.items() if 'jobs_expired' in f}))
+
+print(len(jobs_expired_job_ids))
+
+# %%
+job_ads_date_count_notexpired = defaultdict(int)
+
+for k, v in tqdm(tk_dates.items()):
+    if k not in jobs_expired_job_ids:
+        if v:
+            date = v[0:7]
+            job_ads_date_count_notexpired[date] += 1
+        else:
+            job_ads_date_count_notexpired["No date given"] += 1
+
+# %%
+job_ads_date_count_sample_notexpired = defaultdict(int)
+for file_name, job_id_list in tqdm(sample_dict.items()):
+    for job_id in job_id_list:
+        if job_id not in jobs_expired_job_ids:
+            v = tk_dates.get(job_id)
+            if v:
+                date = v[0:7]
+                job_ads_date_count_sample_notexpired[date] += 1
+            else:
+                job_ads_date_count_sample_notexpired["No date given"] += 1
+
+# %%
+num_dates_notexpired = find_num_dates(job_ads_date_count_notexpired)
+num_dates_sample_notexpired = find_num_dates(job_ads_date_count_sample_notexpired)
+
+# %%
+plt.figure(figsize=(10, 4))
+plt.bar(
+    num_dates_notexpired.keys(),
+    [v / sum(num_dates_notexpired.values()) for v in num_dates_notexpired.values()],
+    width=0.1,
+    alpha=0.5,
+    label="All data",
+)
+plt.bar(
+    num_dates_sample_notexpired.keys(),
+    [v / sum(num_dates_sample_notexpired.values()) for v in num_dates_sample_notexpired.values()],
+    width=0.1,
+    color="red",
+    alpha=0.5,
+    label="Sample of data",
+)
+plt.legend()
+plt.title("Comparison not including the expired data files")
+plt.xlabel("Date of job advert (2014 = no date given)")
+plt.ylabel("Proportion")
+plt.savefig("../../../outputs/tk_analysis/tk_sample_dates_no_expired.pdf")
 
 # %%
