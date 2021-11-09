@@ -287,7 +287,6 @@ def rename_duplicate_named_skills(named_skills):
     Output: skills_data (dict), for each skill number:
         'Skills name' : closest ngram to the centroid per skill cluster. Count is added to name, if duplicate.
         'Name method': how the ngram was generated (i.e. verb chunking, spacy Phrases)
-        'Skills name embed': embedding of closest ngram to the centroid or shortest description embedding
         'Examples': Join the num_top_sent closest original sentences to the centroid
         'Texts': All the cleaned sentences for this cluster
     """
