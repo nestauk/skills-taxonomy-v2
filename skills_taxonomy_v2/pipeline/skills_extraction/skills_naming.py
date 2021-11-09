@@ -3,16 +3,23 @@ After extracting skills by clustering skill sentences, in this script names and
 examples are given to each skill.
 
 The skills_data outputed is a dictionary with the following fields for each skill number:
-    'Skills name' : The closest single ngram to the centroid of all the 
-        sentence embeddings which were clustered to create the skill using cosine similarity.
+    'Skills name' : The closest ngram to the centroid of all the
+        sentence embeddings which were clustered to create the skill using cosine similarity,
+        or the shortest skill cluster description.
     'Examples': The original sentences which are closest to the centroid of the skill cluster.
     'Texts': All the cleaned sentences that went into creating the skill cluster.
+
+Usage:
+
+    python -i skills_taxonomy_v2/pipeline/skills_extraction/skills_naming.py --config_path 'skills_taxonomy_v2/config/skills_extraction/2021.11.09.yaml'
+
 """
 
 from argparse import ArgumentParser
 import logging
 import yaml
 import itertools
+import pickle
 
 import numpy as np
 import pandas as pd
@@ -28,6 +35,7 @@ from skills_taxonomy_v2.pipeline.skills_extraction.skills_naming_utils import (
     clean_cluster_descriptions,
     get_clean_ngrams,
     get_skill_info,
+    rename_duplicate_named_skills,
 )
 from skills_taxonomy_v2.pipeline.skills_extraction.extract_skills_utils import (
     get_output_config_stamped,
@@ -41,7 +49,7 @@ def parse_arguments(parser):
     parser.add_argument(
         "--config_path",
         help="Path to config file",
-        default="skills_taxonomy_v2/config/skills_extraction/2021.08.02.yaml",
+        default="skills_taxonomy_v2/config/skills_extraction/2021.11.09.yaml",
     )
 
     return parser.parse_args()
@@ -68,21 +76,22 @@ if __name__ == "__main__":
     sentence_skills = sentence_skills[sentence_skills["Cluster number"] != -1]
     sentence_embs = load_s3_data(s3, BUCKET_NAME, params["embedding_sample_path"])
 
-    # Find n-grams and get skill information
-    clean_ngrams, cluster_descriptions = get_clean_ngrams(
-        sentence_skills, params["ngram"], params["min_count"], params["threshold"]
-    )
+    # generate skills names
     skills_data = get_skill_info(
-        clean_ngrams,
         sentence_skills,
         sentence_embs,
-        cluster_descriptions,
         params["num_top_sent"],
+        params["ngram"],
+        params["min_count"],
+        params["threshold"],
     )
+
+    # Rename duplicate skill names w/ counts
+    named_skills = rename_duplicate_named_skills(skills_data)
 
     # Save skill information
     skills_data_output_path = get_output_config_stamped(
         args.config_path, params["output_dir"], "skills_data.json"
     )
 
-    save_to_s3(s3, BUCKET_NAME, skills_data, skills_data_output_path)
+    save_to_s3(s3, BUCKET_NAME, named_skills, skills_data_output_path)
