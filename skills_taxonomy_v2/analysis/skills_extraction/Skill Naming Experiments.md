@@ -2,7 +2,9 @@
 
 # Naming skills 2.0
 
-Functions to generate skill cluster names can be found in `skills_taxonomy_v2/pipeline/skills_extraction/skills_naming_utils.py`.
+**As of 11-09-2021:**
+
+Functions to generate skill cluster names can be found in `skills_taxonomy_v2/pipeline/skills_extraction/skills_naming_utils.py.` We are now no longer merging similar skill clusters - instead, we are generating skill names with counters (i.e. project management 1, project management 2) for duplicate skill names, with the assumption that identical skill names should exist in different parts of the hierarchy. These names will then be manually renamed to capture the local context of the skill cluster name.
 
 Experiments with better naming can be found in `skills_taxonomy_v2/analysis/skills_extraction/notebooks/better_skills_naming.py`.
 
@@ -83,4 +85,6 @@ There needs to be some additional thinking on improving handling more than two s
 
 ## Duplicate names
 
-Hopefully, by generating candidate skill phrases per skill cluster AND merging skills that are similar both in label and in cluster centroid, the number of duplicate skill names decreases. In the event that there are identical skill cluster names, hopefully they sit in different parts of the skill hierarchy. More interrogation here is needed.
+Hopefully, by generating candidate skill phrases per skill cluster, the number of duplicate skill names decreases. In the event that there are identical skill cluster names, hopefully they sit in different parts of the skill hierarchy. We have now added numbers to identical skill cluster names that will hopefully be manually labelled as a result.
+
+## Skills
