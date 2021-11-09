@@ -6,12 +6,17 @@ import logging
 from collections import Counter
 import re
 import itertools
+import spacy
+from argparse import ArgumentParser
+import yaml
+import pandas as pd
+import boto3
 
 import numpy as np
 from tqdm import tqdm
 from sklearn.feature_extraction.text import TfidfVectorizer
 import nltk
-from nltk.util import ngrams  # function for making ngrams
+from nltk.util import ngrams
 from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
 from gensim.models.phrases import Phrases, Phraser, ENGLISH_CONNECTOR_WORDS
@@ -20,6 +25,11 @@ from sklearn.metrics.pairwise import cosine_similarity
 from skills_taxonomy_v2.pipeline.sentence_classifier.sentence_classifier import (
     BertVectorizer,
 )
+
+from pattern.text.en import singularize
+from collections import OrderedDict
+import random
+from collections import defaultdict
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +55,9 @@ def clean_cluster_descriptions(sentences_data):
     For each cluster normalise the texts for getting descriptions from
     - lemmatize
     - lower case
+    - remove work-related stopwords
     - remove duplicates
+    - singularise descriptions
     - n-grams
 
     Input:
@@ -63,6 +75,19 @@ def clean_cluster_descriptions(sentences_data):
     # How many times a n-gram has to occur in order for occurences of them
     # to be converted to a single dash separated word
     num_times_ngrams_thresh = 3
+    work_stopwords = [
+        "essential",
+        "requirement",
+        "degree",
+        "responsibility",
+        "duties",
+        "responsibilities",
+        "experienced",
+        "previous",
+        "andor",
+        "minimum",
+        "years",
+    ]
 
     sentences_data["description"] = sentences_data["description"].apply(
         lambda x: re.sub("\s+", " ", x)
@@ -74,6 +99,8 @@ def clean_cluster_descriptions(sentences_data):
         cluster_docs_cleaned = []
         for doc in cluster_docs:
             # Remove capitals, but not when it's an acronym
+            no_work_stopwords = [w for w in doc.split(" ") if w not in work_stopwords]
+
             acronyms = re.findall("[A-Z]{2,}", doc)
             # Lemmatize
             lemmatized_output = [
@@ -82,33 +109,38 @@ def clean_cluster_descriptions(sentences_data):
                 else lemmatizer.lemmatize(w.lower())
                 for w in doc.split(" ")
             ]
-            cluster_docs_cleaned.append(" ".join(lemmatized_output).strip())
+            # singularise
+            singularised_output = [singularize(w) for w in doc.split(" ")]
+
+            # remove work stopwords
+            cluster_docs_cleaned.append(" ".join(no_work_stopwords).strip())
+
         # Remove duplicates
         cluster_docs_cleaned = list(set(cluster_docs_cleaned))
-
         # Find the ngrams for this cluster
         all_cluster_docs = " ".join(cluster_docs_cleaned).split(" ")
-
         esBigrams = ngrams(all_cluster_docs, 3)
         ngram_words = [
             words
             for words, count in Counter(esBigrams).most_common()
             if count >= num_times_ngrams_thresh
         ]
-
         cluster_docs_clean = [
             replace_ngrams(sentence, ngram_words) for sentence in cluster_docs_cleaned
         ]
-
         cluster_descriptions[cluster_num] = cluster_docs_clean
+
     return cluster_descriptions
 
 
 def get_clean_ngrams(sentence_skills, ngram, min_count, threshold):
     """
     Using the sentences data where each sentence has been clustered into skills,
-    find a list of all cleaned n-grams 
+    find a list of all cleaned n-grams
     """
+
+    # Init the Wordnet Lemmatizer
+    lemmatizer = WordNetLemmatizer()
 
     # Clean sentences
     cluster_descriptions = clean_cluster_descriptions(sentence_skills)
@@ -148,29 +180,41 @@ def get_clean_ngrams(sentence_skills, ngram, min_count, threshold):
         )
     )
 
-    return clean_ngrams, cluster_descriptions
+    # get rid of duplicate terms in ngrams
+    clean_ngrams = [
+        " ".join(OrderedDict((w, w) for w in ngrm.split()).keys())
+        for ngrm in clean_ngrams
+    ]
+
+    # lemmatise ngrams
+    clean_ngrams = [
+        " ".join([lemmatizer.lemmatize(n) for n in ngram.split(" ")])
+        for ngram in clean_ngrams
+    ]
+
+    # only return ngrams that are more than 1 word long
+    return [
+        clean for clean in clean_ngrams if len(clean.split(" ")) > 1
+    ], cluster_descriptions
 
 
 def get_skill_info(
-    clean_ngrams, sentence_skills, sentence_embs, cluster_descriptions, num_top_sent=2
+    sentence_skills, sentence_embs, num_top_sent=2, ngram=3, min_count=1, threshold=0.15
 ):
     """
     Output: skills_data (dict), for each skill number:
-        'Skills name' : join the closest ngram to the centroid
+        'Skills name' : the closest ngram to the centroid or, if no ngrams generated, shortest description
+        'Name method': How the ngram was generated (i.e. chunking, Spacy Phrases)
+        'Skills name embed': embedding of closest ngram to the centroid or shortest description embedding
         'Examples': Join the num_top_sent closest original sentences to the centroid
         'Texts': All the cleaned sentences for this cluster
     """
-
     bert_vectorizer = BertVectorizer(
         bert_model_name="sentence-transformers/paraphrase-MiniLM-L6-v2",
         multi_process=True,
     )
     bert_vectorizer.fit()
 
-    # embed ngrams
-    ngram_embeddings = bert_vectorizer.transform(clean_ngrams)
-
-    # calculate similarities
     skills_data = {}
     for cluster_num, cluster_data in tqdm(sentence_skills.groupby("Cluster number")):
         # There may be the same sentence repeated
@@ -188,27 +232,76 @@ def get_skill_info(
             np.mean(cluster_coords, axis=0).reshape(1, -1), cluster_coords
         )
 
-        # calculate similarities between ngrams per cluster and cluster mean
-        ngram_similarities = cosine_similarity(
-            np.mean(cluster_embeds, axis=0).reshape(1, -1), ngram_embeddings
+        candidate_ngrams, cluster_descriptions = get_clean_ngrams(
+            cluster_data, ngram, min_count, threshold
         )
 
-        skills_data[cluster_num] = {
-            "Skills name": " ".join(
-                [
-                    clean_ngrams[i]
-                    for i in ngram_similarities.argsort()[0][::-1].tolist()[0:1]
-                ]
-            ),
-            "Examples": " ".join(
-                [
-                    cluster_text[i]
-                    for i in sent_similarities.argsort()[0][::-1].tolist()[
-                        0:num_top_sent
+        if (
+            len(candidate_ngrams) > 1
+        ):  # if there are more than 1 candidate ngrams, skill cluster is labelled as the closest ngram embedding to the cluster mean embedding
+            candidate_ngrams_embeds = bert_vectorizer.transform(candidate_ngrams)
+            # calculate similarities between ngrams per cluster and cluster mean
+            ngram_similarities = cosine_similarity(
+                np.mean(cluster_embeds, axis=0).reshape(1, -1), candidate_ngrams_embeds
+            )
+            closest_ngram = candidate_ngrams[
+                int(ngram_similarities.argsort()[0][::-1].tolist()[0:1][0])
+            ]
+
+            skills_data[cluster_num] = {
+                "Skills name": closest_ngram,
+                "Name method": "phrases_embedding",
+                "Examples": " ".join(
+                    [
+                        cluster_text[i]
+                        for i in sent_similarities.argsort()[0][::-1].tolist()[
+                            0:num_top_sent
+                        ]
                     ]
-                ]
-            ),
-            "Texts": cluster_descriptions[cluster_num],
-        }
+                ),
+                "Texts": cluster_descriptions[cluster_num],
+            }
+
+        else:  # if no candidate ngrams are generated, skill name is smallest skill description
+            skills_data[cluster_num] = {
+                "Skills name": min(cluster_descriptions[cluster_num], key=len),
+                "Name method": "minimum description",
+                "Examples": " ".join(
+                    [
+                        cluster_text[i]
+                        for i in sent_similarities.argsort()[0][::-1].tolist()[
+                            0:num_top_sent
+                        ]
+                    ]
+                ),
+                "Texts": cluster_descriptions[cluster_num],
+            }
 
     return skills_data
+
+
+def rename_duplicate_named_skills(named_skills):
+    """
+    If the skill name is a duplicate, add a count i.e. 'project management 1' to skill name.
+
+    Output: skills_data (dict), for each skill number:
+        'Skills name' : closest ngram to the centroid per skill cluster. Count is added to name, if duplicate.
+        'Name method': how the ngram was generated (i.e. verb chunking, spacy Phrases)
+        'Skills name embed': embedding of closest ngram to the centroid or shortest description embedding
+        'Examples': Join the num_top_sent closest original sentences to the centroid
+        'Texts': All the cleaned sentences for this cluster
+    """
+
+    skill_name_counts = Counter(
+        [skill_data["Skills name"] for skill, skill_data in named_skills.items()]
+    )
+
+    for skill_name, skill_name_count in skill_name_counts.items():
+        dup_name_counter = 0
+        if skill_name_count > 1:
+            for skill, skill_data in named_skills.items():
+                if skill_data["Skills name"] == skill_name:
+                    dup_name_counter += 1
+                    skill_data["Skills name"] = skill_name + " " + str(dup_name_counter)
+
+    return named_skills
