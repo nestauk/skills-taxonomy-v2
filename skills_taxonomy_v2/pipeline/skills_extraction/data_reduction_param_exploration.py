@@ -43,23 +43,44 @@ sentence_embeddings_dirs = get_s3_data_paths(s3, BUCKET_NAME, sentence_embedding
 # when sentence len <250 and 
 # No repeats
 
+original_sentences = {}
+for embedding_dir in sentence_embeddings_dirs:
+    if "original_sentences.json" in embedding_dir:
+        original_sentences.update(load_s3_data(s3, BUCKET_NAME, embedding_dir))
+
 n_each_file = 2000
+sent_thresh = 250
+
 n_all_each_file = {}
+n_in_sample_each_file = {}
 unique_sentences = set()
 embeddings_sample = []
+
+
 for embedding_dir in tqdm(sentence_embeddings_dirs):
 	if "embeddings.json" in embedding_dir:
 		sentence_embeddings = load_s3_data(s3, BUCKET_NAME, embedding_dir)
 		n_all_each_file[embedding_dir] = len(sentence_embeddings)
 		random.seed(42)
 		sentence_embeddings_sample = random.sample(sentence_embeddings, min(len(sentence_embeddings), n_each_file))
-		for _, _, words, embedding in sentence_embeddings_sample:
+		count = 0
+		for _, sent_id, words, embedding in sentence_embeddings_sample:
 			if words not in unique_sentences:
-				unique_sentences.add(words)
-				embeddings_sample.append(embedding)
+				original_sentence = original_sentences[str(sent_id)]
+				if len(original_sentence) < sent_thresh:
+					unique_sentences.add(words)
+					embeddings_sample.append(embedding)
+					count += 1
+		n_in_sample_each_file[embedding_dir] = count
 
 save_to_s3(
 		s3, BUCKET_NAME, embeddings_sample, "outputs/skills_extraction/word_embeddings/data/2021.11.05_sample.json",
+	)
+save_to_s3(
+		s3, BUCKET_NAME, n_in_sample_each_file, "outputs/skills_extraction/word_embeddings/data/2021.11.05_n_in_sample_each_file.json",
+	)
+save_to_s3(
+		s3, BUCKET_NAME, n_all_each_file, "outputs/skills_extraction/word_embeddings/data/2021.11.05_n_all_each_file.json",
 	)
 
 # # It's easier to manipulate this dataset as a dataframe
