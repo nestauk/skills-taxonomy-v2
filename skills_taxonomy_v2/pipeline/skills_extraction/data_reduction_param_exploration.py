@@ -44,15 +44,15 @@ sentence_embeddings_dirs = get_s3_data_paths(s3, BUCKET_NAME, sentence_embedding
 # No repeats
 
 n_each_file = 2000
-n_all_each_file = []
+n_all_each_file = {}
 unique_sentences = set()
 embeddings_sample = []
 for embedding_dir in tqdm(sentence_embeddings_dirs):
 	if "embeddings.json" in embedding_dir:
 		sentence_embeddings = load_s3_data(s3, BUCKET_NAME, embedding_dir)
-		n_all_each_file.append(len(sentence_embeddings))
+		n_all_each_file[embedding_dir] = len(sentence_embeddings)
 		random.seed(42)
-		sentence_embeddings_sample = random.sample(sentence_embeddings, n_each_file)
+		sentence_embeddings_sample = random.sample(sentence_embeddings, min(len(sentence_embeddings), n_each_file))
 		for _, _, words, embedding in sentence_embeddings_sample:
 			if words not in unique_sentences:
 				unique_sentences.add(words)
