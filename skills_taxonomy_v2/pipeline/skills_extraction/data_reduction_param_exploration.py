@@ -74,14 +74,27 @@ for embedding_dir in tqdm(sentence_embeddings_dirs):
 		n_in_sample_each_file[embedding_dir] = count
 
 save_to_s3(
-		s3, BUCKET_NAME, embeddings_sample, "outputs/skills_extraction/word_embeddings/data/2021.11.05_sample.json",
-	)
-save_to_s3(
 		s3, BUCKET_NAME, n_in_sample_each_file, "outputs/skills_extraction/word_embeddings/data/2021.11.05_n_in_sample_each_file.json",
 	)
 save_to_s3(
 		s3, BUCKET_NAME, n_all_each_file, "outputs/skills_extraction/word_embeddings/data/2021.11.05_n_all_each_file.json",
 	)
+
+save_to_s3(
+		s3, BUCKET_NAME, embeddings_sample[0:250000], "outputs/skills_extraction/word_embeddings/data/2021.11.05_sample_0.json",
+	)
+save_to_s3(
+		s3, BUCKET_NAME, embeddings_sample[250000:500000], "outputs/skills_extraction/word_embeddings/data/2021.11.05_sample_1.json",
+	)
+save_to_s3(
+		s3, BUCKET_NAME, embeddings_sample[500000:750000], "outputs/skills_extraction/word_embeddings/data/2021.11.05_sample_2.json",
+	)
+save_to_s3(
+		s3, BUCKET_NAME, embeddings_sample[750000:], "outputs/skills_extraction/word_embeddings/data/2021.11.05_sample_3.json",
+	)
+
+
+
 
 # # It's easier to manipulate this dataset as a dataframe
 # sentences_data = pd.DataFrame(sentences_data)
@@ -94,49 +107,3 @@ save_to_s3(
 # sentences_data_filt.head(2)
 # len(sentences_data_filt)
 
-
-# sentences_data_filt_split = sentences_data_filt.copy()
-# sentences_data_filt_split = sentences_data_filt_split.sample(frac=1)
-
-# hold_out_data = sentences_data_filt_split[0:5000]
-# rest_data = sentences_data_filt_split[5000:]
-
-
-# umap_n_neighbors= 10
-# umap_min_dist= 0.0
-# umap_random_state=42
-# umap_n_components=2
-
-
-# nneighs_holdout = {}
-# for samp_size in np.arange(1000, len(rest_data), 5000):
-#     print(samp_size)
-#     reducer_class = umap.UMAP(
-#         n_neighbors=umap_n_neighbors,
-#         min_dist=umap_min_dist,
-#         random_state=umap_random_state,
-#         n_components=umap_n_components,
-#     )
-#     reducer_class.fit(rest_data['embedding'].tolist()[0:samp_size])
-	
-#     hold_out_data_reduced = reducer_class.transform(hold_out_data['embedding'].tolist())
-	
-#     neigh = NearestNeighbors(n_neighbors=2)
-#     neigh.fit(hold_out_data_reduced)
-#     nearest = neigh.kneighbors(hold_out_data_reduced, 2, return_distance=False)
-
-#     # Which are the close neighbours?
-#     close_neighbours = set([tuple(i) for i in nearest])
-#     nneighs_holdout[samp_size] = close_neighbours
-
-
-# incremental_overlap = []
-
-# for i, (ss, set_nn) in enumerate(nneighs_holdout.items()):
-#     if i!=0:
-#         incremental_overlap.append((ss, len(nneighs_holdout[ss].intersection(nneighs_holdout[prev_ss]))))
-#     prev_ss = ss
-
-# with open('incremental_overlap.txt', 'w') as file:
-#     file.write('\n'.join([str(s) for s in incremental_overlap]))
-#     
