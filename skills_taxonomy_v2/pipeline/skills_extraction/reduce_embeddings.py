@@ -8,6 +8,7 @@ from argparse import ArgumentParser
 import yaml
 import random
 from tqdm import tqdm
+import logging
 
 import pandas as pd
 import boto3
@@ -21,6 +22,8 @@ from skills_taxonomy_v2.pipeline.skills_extraction.extract_skills_utils import (
 	load_sentences_embeddings,ExtractSkills
 	)
 from skills_taxonomy_v2 import BUCKET_NAME
+
+logger = logging.getLogger(__name__)
 
 def parse_arguments(parser):
 
@@ -49,7 +52,8 @@ if __name__ == "__main__":
 
 	s3 = boto3.resource("s3")
 
-	# Load the sample for fitting the reducer class to
+	logger.info("Load the sample of embeddings for fitting the reducer class to...")
+
 	embeddings_sample_0 = load_s3_data(
 		s3, BUCKET_NAME, params["embeddings_sample_0"]
 	)
@@ -59,6 +63,7 @@ if __name__ == "__main__":
 	embeddings_sample = embeddings_sample_0 + embeddings_sample_1
 	embeddings_sample_300k = embeddings_sample[0:params["fit_reducer_n"]]
 
+	logger.info(f"Fitting reducer class to {len(embeddings_sample_300k)} embeddings...")
 	# Fit reducer class
 	reducer_class = umap.UMAP(
 		n_neighbors=params["umap_n_neighbors"],
@@ -66,7 +71,6 @@ if __name__ == "__main__":
 		random_state=params["umap_random_state"],
 		n_components=params["umap_n_components"],
 	)
-
 	reducer_class.fit(embeddings_sample_300k)
 
 	sentence_embeddings_dirs = get_s3_data_paths(s3, BUCKET_NAME, sentence_embeddings_dir, file_types=["*.json"])
@@ -77,6 +81,8 @@ if __name__ == "__main__":
 	# Load a sample of the embeddings from each file
 	# when sentence len <250 and 
 	# No repeats
+
+	logger.info(f"Loading original sentences")
 
 	original_sentences = {}
 	for embedding_dir in sentence_embeddings_dirs:
@@ -93,15 +99,12 @@ if __name__ == "__main__":
 	sentid_list = []
 	sentence_embeddings_red = []
 
+	output_count = 0
+	logger.info(f"Reducing embeddings from {len(sentence_embeddings_dirs)/2} files")
 	for embedding_dir in tqdm(sentence_embeddings_dirs):
 		if "embeddings.json" in embedding_dir:
 			sentence_embeddings = load_s3_data(s3, BUCKET_NAME, embedding_dir)
-			print(
-				f"Loaded {len(sentence_embeddings)} sentences from file {embedding_dir}"
-			)
-
 			# Only get the reduced embeddings if length is under the threshold and no repeats
-			count_keep = 0
 			embedding_list = []
 			for job_id, sent_id, words, embedding in sentence_embeddings:
 				if words not in unique_sentences:
@@ -113,14 +116,35 @@ if __name__ == "__main__":
 						sentence_list.append(original_sentence)
 						jobid_list.append(job_id)
 						sentid_list.append(sent_id)
-						count_keep += 1
-						
 			# Reduce the embeddings
 			sentence_embeddings_red = sentence_embeddings_red + reducer_class.transform(embedding_list).tolist()
-			
-			logger.info(
-				f"{count_keep} sentences meet conditions out of {len(sentence_embeddings)}"
-			)
+
+			if len(sentence_embeddings_red) > 500000:
+
+				sentences_data =  {
+					"description": words_list,
+					"original sentence": sentence_list,
+					"job id": jobid_list,
+					"sentence id": sentid_list,
+					"embedding": sentence_embeddings_red,
+				}
+
+				logger.info(f"Saving reduced embeddings from {len(sentences_data)} sentences")
+				save_to_s3(
+					s3,
+					BUCKET_NAME,
+					sentences_data,
+					output_dir + f"sentences_data_{output_count}.json",
+				)
+
+				words_list = []
+				sentence_list = []
+				jobid_list = []
+				sentid_list = []
+				sentence_embeddings_red = []
+				output_count = output_count + 1
+
+
 	sentences_data =  {
 		"description": words_list,
 		"original sentence": sentence_list,
@@ -129,9 +153,10 @@ if __name__ == "__main__":
 		"embedding": sentence_embeddings_red,
 	}
 
+	logger.info(f"Saving reduced embeddings from {len(sentences_data)} sentences")
 	save_to_s3(
 		s3,
 		BUCKET_NAME,
 		sentences_data,
-		output_dir + "sentences_data.json",
+		output_dir + f"sentences_data_{output_count}.json",
 	)
