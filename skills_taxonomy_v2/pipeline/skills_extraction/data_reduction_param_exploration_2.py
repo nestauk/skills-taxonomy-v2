@@ -22,30 +22,26 @@ umap_random_state= 42
 umap_n_components = 2
 
 print(f"Reducing sample of {len(embeddings_sample)} embeddings with different parameters and saving ...")
-i = 0
-for umap_min_dist in tqdm([0,0.01,0.05,0.1,0.15]):
-    for umap_n_neighbors in [2,3,4,5,10]:
-        reducer_class = umap.UMAP(
-                n_neighbors=umap_n_neighbors,
-                min_dist=umap_min_dist,
-                random_state=umap_random_state,
-                n_components=umap_n_components,
-            )
-        reduced_points_umap_sample = reducer_class.fit_transform(embeddings_sample)
-        dict_obj = {
-            'umap_min_dist': umap_min_dist,
-            'umap_n_neighbors': umap_n_neighbors,
-            'umap_random_state': umap_random_state,
-            'umap_n_components': umap_n_components,
-            'reduced_points_umap_samp': reduced_points_umap_sample.tolist()
-            }
-        save_to_s3(
-            s3,
-            BUCKET_NAME,
-            dict_obj,
-            f"outputs/skills_extraction/word_embeddings/data/umap_param_experiments/{i}.json",
+umap_min_dist = 0.0
+for umap_n_neighbors in tqdm([3,4,5,6,7,8,9,10,15,20,30]):
+    reducer_class = umap.UMAP(
+            n_neighbors=umap_n_neighbors,
+            min_dist=umap_min_dist,
+            random_state=umap_random_state,
+            n_components=umap_n_components,
         )
-        i += 1
-        # with open('umap_params_mess.json', 'a') as f:
-        #     f.write(json.dumps(dict_obj))
-        #     f.write('\n')
+    reducer_class.fit(embeddings_sample)
+    reduced_points_umap_sample = reducer_class.transform(embeddings_sample)
+    dict_obj = {
+        'umap_min_dist': umap_min_dist,
+        'umap_n_neighbors': umap_n_neighbors,
+        'umap_random_state': umap_random_state,
+        'umap_n_components': umap_n_components,
+        'reduced_points_umap_samp': reduced_points_umap_sample.tolist()
+        }
+    save_to_s3(
+        s3,
+        BUCKET_NAME,
+        dict_obj,
+        f"outputs/skills_extraction/word_embeddings/data/umap_param_experiments/nneig_{umap_n_neighbors}.json",
+    )
