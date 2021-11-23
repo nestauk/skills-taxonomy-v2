@@ -17,6 +17,9 @@
 # %% [markdown]
 # ## Find a good sample size for data reduction
 # Using a sample of the embeddings, find a good number of data points where the overlap of closest neighbours plateaus.
+#
+# ### Findings
+# By 300,000 sentences the intersection of nearest neighbours in the hold-out set stabilised.
 
 # %%
 import yaml
