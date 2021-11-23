@@ -24,19 +24,6 @@
 #
 # - min_samples int, default=5 The number of samples (or total weight) in a neighborhood for a point to be considered as a core point. This includes the point itself.
 #
-# After some experimentation with them:
-#
-# |dbscan_min_samples|dbscan_eps| number of clusters | prop in one cluster (not -1)| prop in clusters |Average number of sentences per cluster|
-# |---|---|---|---|---|---|
-# |3|0.001|81039|0.92|0.08|---|
-# |3|0.01|9360|0.84|0.99|---|
-# |3|0.01|1735|0.90|1.00|---|
-# |30|0.01|6184|0.41|0.72|663|
-# |10|0.01|5569|0.59|0.94|736|
-# |20|0.01|6106|0.38|0.80|671|
-# |15|0.01|5687|0.56|0.88|720|
-# |60|0.01|1038|0.01|0.11|3947|
-#
 # We did 1231 parameter combinations to predict clusters in a random sample of 300k sentences.
 #
 # We decided on the following metrics to find good parameters:
@@ -45,7 +32,7 @@
 # - Shouldn't be too many small clusters - average size of clusters is >10
 # - Number of sentences not clustered (the "-1 cluster") < 200,000
 #
-# |dbscan_eps	| dbscan_min_samples | Number of clusters	| Number of really large clusters (>10000 sentences)|	Number of really small clusters (<5 sentences)	| Number of sentences not clustered	|Average size of clusters|
+# |dbscan_eps	| dbscan_min_samples | Number of clusters	| Number of really large clusters (>10000 sentences)|	Number of really small clusters (<10 sentences)	| Number of sentences not clustered	|Average size of clusters|
 # |---|---|---|---|---|---|---|
 # |	0.008|	4.0|	12205|	0|	9987|	164817|	11|
 # |	0.008|	5.0|    7422|	0|	5512|	198439|	14|
