@@ -27,15 +27,6 @@ s3 = boto3.resource("s3")
 
 sentence_embeddings_dirs = get_s3_data_paths(s3, BUCKET_NAME, sentence_embeddings_dir, file_types=["*.json"])
 
-# # Load just a sample
-# n_files_sample = 10
-
-# # If you want to just do this on a sample of the data:
-# indivs = set([s.split('_embeddings.json')[0].split('_original_sentences.json')[0] for s in sentence_embeddings_dirs])
-# indivs_sample = random.sample(indivs, n_files_sample)
-# sentence_embeddings_dirs = [i+'_embeddings.json' for i in indivs_sample]
-# sentence_embeddings_dirs += [i+'_original_sentences.json' for i in indivs_sample]
-
 # You want a sample of 1 million embeddings (which should be far more than we actually will need to use)
 # So get a random 2000 from each file
 
@@ -93,17 +84,10 @@ save_to_s3(
 		s3, BUCKET_NAME, embeddings_sample[750000:], "outputs/skills_extraction/word_embeddings/data/2021.11.05_sample_3.json",
 	)
 
-
-
-
-# # It's easier to manipulate this dataset as a dataframe
-# sentences_data = pd.DataFrame(sentences_data)
-
-
-# # Filter to just include sentences under a length threshold
-
-# sent_thresh = 250
-# sentences_data_filt = sentences_data[sentences_data["length original"]<sent_thresh].reset_index()
-# sentences_data_filt.head(2)
-# len(sentences_data_filt)
-
+# The order is random anyway so no need to resample
+save_to_s3(
+    s3,
+    BUCKET_NAME,
+    embeddings_sample[0:300000],
+    "outputs/skills_extraction/word_embeddings/data/2021.11.05_sample_300k.json",
+)
