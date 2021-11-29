@@ -17,19 +17,17 @@ flows:
       mask_seq: "[MASK]"
       sent_thresh: 250
       output_dir: "outputs/skills_extraction/reduced_embeddings/"
-  extract_skills:
+  cluster_embeddings:
     params:
-      sentence_embeddings_dir: "outputs/skills_extraction/word_embeddings/data/2021.11.05/"
-      mask_seq: "[MASK]"
-      dbscan_eps: 0.01
-      dbscan_min_samples: 3
-      dir_sample_size: 30
-      dir_sample_seed: 42
-      sent_emb_sample_seed: 42
-      sent_emb_sample_size:
-      sentence_lengths_lower: 50
-      sentence_lengths_upper: 100
-      output_dir: "outputs/skills_extraction/extracted_skills/"
+        dbscan_eps: 0.01
+        dbscan_min_samples: 4
+        max_length: 100
+        train_cluster_n: 300000
+        train_cluster_rand_seed: 42
+        small_cluster_size_threshold: 10
+        max_centroid_dist_before_merge: 0.05
+        reduced_embeddings_dir: "outputs/skills_extraction/reduced_embeddings/"
+        output_dir: "outputs/skills_extraction/extracted_skills/"
   name_skills:
     params:
       sentence_skills_path: 'outputs/skills_extraction/extracted_skills/2021.11.05_sentences_data.json'
