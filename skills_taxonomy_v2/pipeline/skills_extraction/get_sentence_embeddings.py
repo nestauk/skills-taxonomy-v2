@@ -18,6 +18,7 @@ python -i skills_taxonomy_v2/pipeline/skills_extraction/get_sentence_embeddings.
 import pickle
 import re
 import json
+import time
 import os
 from argparse import ArgumentParser
 import yaml
@@ -63,7 +64,7 @@ def parse_arguments(parser):
     parser.add_argument(
         "--config_path",
         help="Path to config file",
-        default="skills_taxonomy_v2/config/skills_extraction/2021.08.02.yaml",
+        default="skills_taxonomy_v2/config/skills_extraction/2021.11.05.yaml",
     )
     return parser.parse_args()
 
@@ -114,7 +115,7 @@ if __name__ == "__main__":
 
     nlp = spacy.load("en_core_web_sm")
     bert_vectorizer = BertVectorizer(
-        bert_model_name="sentence-transformers/paraphrase-MiniLM-L6-v2",
+        bert_model_name="sentence-transformers/all-MiniLM-L6-v2",
         multi_process=True,
     )
     bert_vectorizer.fit()
@@ -133,16 +134,16 @@ if __name__ == "__main__":
             f"Loading data for {data_path} ({data_path_i} of {len(data_paths)}) ..."
         )
         data = load_s3_data(s3, BUCKET_NAME, data_path)
-        logger.info(f"Predicting embeddings for {len(data)} sentences...")
 
-        first_job_ids = list(data.keys())[0:10000]
+        logger.info(f"Processing {len(data)} sentences...")
+        start_time = time.time()
         # For each sentence mask out stop words, proper nouns etc.
         masked_sentences = []
         sentence_job_ids = []
         sentence_hashes = []
         original_sentences = {}
-        for job_id in tqdm(first_job_ids):
-            sentences = data[job_id]
+
+        for job_id, sentences in tqdm(data.items()):
             for sentence in sentences:
                 masked_sentence = process_sentence_mask(
                     sentence,
@@ -160,7 +161,10 @@ if __name__ == "__main__":
                     original_sentence_id = hash(sentence)
                     sentence_hashes.append(original_sentence_id)
                     original_sentences[original_sentence_id] = sentence
+        logger.info(f"Processing sentences took {time.time() - start_time} seconds")
 
+        logger.info(f"Getting embeddings for {len(masked_sentences)} sentences...")
+        start_time = time.time()
         # Find sentence embeddings in bulk for all masked sentences
         masked_sentence_embeddings = bert_vectorizer.transform(masked_sentences)
         output_tuple_list = [
@@ -172,7 +176,8 @@ if __name__ == "__main__":
                 masked_sentence_embeddings,
             )
         ]
-
+        logger.info(f"Getting embeddings took {time.time() - start_time} seconds")
+        
         # Save the output in a folder with a similar naming structure to the input
         data_dir = os.path.relpath(data_path, skill_sentences_dir)
         output_file_dir = os.path.join(
@@ -188,4 +193,4 @@ if __name__ == "__main__":
         )
         save_to_s3(s3, BUCKET_NAME, original_sentences, sent_id_dir)
 
-        print(f"Saved output to {output_file_dir}")
+        logger.info(f"Saved output to {output_file_dir}")

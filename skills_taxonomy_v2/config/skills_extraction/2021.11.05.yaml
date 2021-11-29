@@ -1,0 +1,50 @@
+flows:
+  word_embeddings_flow:
+    params:
+      skill_sentences_dir: "outputs/sentence_classifier/data/skill_sentences/2021.10.27/textkernel-files/"
+      token_len_threshold: 20
+      output_dir: "outputs/skills_extraction/word_embeddings/data/"
+  reduce_embeddings:
+    params:
+      sentence_embeddings_dir: 'outputs/skills_extraction/word_embeddings/data/2021.11.05'
+      embeddings_sample_0: "outputs/skills_extraction/word_embeddings/data/2021.11.05_sample_0.json"
+      embeddings_sample_1: "outputs/skills_extraction/word_embeddings/data/2021.11.05_sample_1.json"
+      fit_reducer_n: 300000
+      umap_n_neighbors: 6
+      umap_min_dist: 0.0
+      umap_random_state: 42
+      umap_n_components: 2
+      mask_seq: "[MASK]"
+      sent_thresh: 250
+      output_dir: "outputs/skills_extraction/reduced_embeddings/"
+  cluster_embeddings:
+    params:
+        dbscan_eps: 0.01
+        dbscan_min_samples: 4
+        max_length: 100
+        train_cluster_n: 300000
+        train_cluster_rand_seed: 42
+        small_cluster_size_threshold: 10
+        max_centroid_dist_before_merge: 0.05
+        reduced_embeddings_dir: "outputs/skills_extraction/reduced_embeddings/"
+        output_dir: "outputs/skills_extraction/extracted_skills/"
+  name_skills:
+    params:
+      sentence_skills_path: 'outputs/skills_extraction/extracted_skills/2021.11.05_sentences_data.json'
+      embedding_sample_path: 'outputs/skills_extraction/extracted_skills/2021.11.05_sentence_id_2_embedding_dict.json.gz'
+      ngram: 3
+      min_count: 3
+      threshold: 0.25
+      num_top_sent: 3
+      output_dir: "outputs/skills_extraction/extracted_skills/"
+  esco_mapper:
+    params:
+      esco_data_dir: "inputs/ESCO/v1.0.8/"
+      esco_skills_file: "skills_en.csv"
+      esco_lang_skills_file: "languageSkillsCollection_en.csv"
+      esco_ict_esco_skills_file: "ictSkillsCollection_en.csv"
+      esco_trans_esco_skills_file: "transversalSkillsCollection_en.csv"
+      tk_skills_path: "outputs/skills_extraction/extracted_skills/2021.11.05_skills_data.json"
+      output_dir: "outputs/skills_extraction/esco_maps/"
+      map_similarity_score_threshold: 0.5
+    run_id: 0
