@@ -24,7 +24,7 @@
 # - 117,923 sentences not clustered
 # - Average size of cluster is 16 sentences
 #
-# Here we find a threshold of about 0.05 gives a good prediction of whether two clusters should be merged or not based off 108 labelled data points.
+# Here we find a threshold of about `0.05` gives a good prediction of whether two clusters should be merged or not based off 108 labelled data points.
 
 # %%
 import yaml
@@ -50,7 +50,7 @@ from skills_taxonomy_v2.pipeline.skills_extraction.extract_skills_utils import (
 from skills_taxonomy_v2 import BUCKET_NAME
 
 # %%
-test_merge_thresh_labelled = pd.read_csv("test_merge_thresh_manual_labels_IMAN.csv")
+test_merge_thresh_labelled = pd.read_csv("test_merge_thresh_manual_labels_IMAN2.csv")
 
 # %%
 test_merge_thresh_labelled = test_merge_thresh_labelled[test_merge_thresh_labelled["Should merge?"].notnull()]
@@ -68,6 +68,9 @@ test_merge_thresh_labelled["Should merge?"].value_counts()
 
 # %%
 test_merge_thresh_labelled.boxplot(column="Centroid distance", by="Should merge?")
+
+# %%
+# test_merge_thresh_labelled.boxplot(column="Centroid distance", by="Should merge?")
 
 # %%
 distances = test_merge_thresh_labelled["Centroid distance"].tolist()
@@ -101,8 +104,6 @@ print(f"When the truth is to merge {round(best_stats['prop_incorrect_truth_true'
 print(f"When the truth is to not merge {round(best_stats['prop_incorrect_truth_false'],2)} of the time we do merge")
 
 
-
-
 # %%
 fig,ax = plt.subplots()
 x = [k for k,v in dist_thresh_dict.items()]
@@ -112,8 +113,8 @@ yf = [v["prop_correct_truth_false"] for k,v in dist_thresh_dict.items()]
 y2 = [v["num_data"] for k,v in dist_thresh_dict.items()]
 
 ax.plot(x, y, color="black", label="Accuracy")
-# ax.plot(x, yt, color="red", label="TP rate")
-# ax.plot(x, yf, color="purple", label="TN rate")
+ax.plot(x, yt, color="red", label="TP rate")
+ax.plot(x, yf, color="purple", label="TN rate")
 ax.set_ylabel("Proportion of data points\ncorrectly predicted")
 ax.set_xlabel("Centroid distance threshold")
 plt.title("Finding a threshold distance to merge clusters\n(if distance between 2 clusters is < this then merge)")
@@ -123,9 +124,9 @@ ax2=ax.twinx()
 ax2.plot(x, y2, color="blue")
 ax2.set_ylabel("Number of data points with\ndistance greater than this", color="blue")
 
-plt.axvline(0.04, color="orange");
-plt.savefig("../figures/nov_2021/finding_good_merge_params.pdf")
-plt.savefig("../figures/nov_2021/finding_good_merge_params.png")
+plt.axvline(0.05, color="orange");
+plt.savefig("../figures/nov_2021/finding_good_merge_params2.pdf")
+plt.savefig("../figures/nov_2021/finding_good_merge_params2.png")
 
 
 # %%
