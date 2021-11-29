@@ -18,12 +18,47 @@ import umap.umap_ as umap
 from sklearn.neighbors import NearestNeighbors
 
 from skills_taxonomy_v2.getters.s3_data import get_s3_data_paths, save_to_s3, load_s3_data
-from skills_taxonomy_v2.pipeline.skills_extraction.extract_skills_utils import (
-	load_sentences_embeddings,ExtractSkills
-	)
 from skills_taxonomy_v2 import BUCKET_NAME
 
 logger = logging.getLogger(__name__)
+
+def fit_reducer_class(
+	s3,
+	data_paths_list,
+	fit_reducer_n,
+	umap_n_neighbors,
+	umap_min_dist,
+	umap_random_state,
+	umap_n_components
+	):
+	"""
+	Load a random sample of the embeddings, take the first fit_reducer_n
+	of them, and fit the reducer class with them.
+
+	data_paths_list will be a list of random embeddings so no need
+	to further randomise.
+	"""
+
+	logger.info("Load the sample of embeddings for fitting the reducer class to...")
+
+	embeddings_sample = []
+	for data_path in data_paths_list:
+		embeddings_sample += load_s3_data(
+			s3, BUCKET_NAME, data_path
+		)
+	embeddings_sample = embeddings_sample[0:fit_reducer_n]
+
+	logger.info(f"Fitting reducer class to {len(embeddings_sample)} embeddings...")
+	# Fit reducer class
+	reducer_class = umap.UMAP(
+		n_neighbors=umap_n_neighbors,
+		min_dist=umap_min_dist,
+		random_state=umap_random_state,
+		n_components=umap_n_components,
+	)
+	reducer_class.fit(embeddings_sample)
+
+	return reducer_class
 
 def parse_arguments(parser):
 
@@ -52,35 +87,17 @@ if __name__ == "__main__":
 
 	s3 = boto3.resource("s3")
 
-	logger.info("Load the sample of embeddings for fitting the reducer class to...")
-
-	embeddings_sample_0 = load_s3_data(
-		s3, BUCKET_NAME, params["embeddings_sample_0"]
-	)
-	embeddings_sample_1 = load_s3_data(
-		s3, BUCKET_NAME, params["embeddings_sample_1"]
-	)
-	embeddings_sample = embeddings_sample_0 + embeddings_sample_1
-	embeddings_sample_300k = embeddings_sample[0:params["fit_reducer_n"]]
-
-	logger.info(f"Fitting reducer class to {len(embeddings_sample_300k)} embeddings...")
-	# Fit reducer class
-	reducer_class = umap.UMAP(
-		n_neighbors=params["umap_n_neighbors"],
-		min_dist=params["umap_min_dist"],
-		random_state=params["umap_random_state"],
-		n_components=params["umap_n_components"],
-	)
-	reducer_class.fit(embeddings_sample_300k)
+	reducer_class = fit_reducer_class(
+		s3,
+		[params["embeddings_sample_0"], params["embeddings_sample_1"]],
+		params["fit_reducer_n"],
+		params["umap_n_neighbors"],
+		params["umap_min_dist"],
+		params["umap_random_state"],
+		params["umap_n_components"],
+		)
 
 	sentence_embeddings_dirs = get_s3_data_paths(s3, BUCKET_NAME, sentence_embeddings_dir, file_types=["*.json"])
-
-	# You want a sample of 1 million embeddings (which should be far more than we actually will need to use)
-	# So get a random 2000 from each file
-
-	# Load a sample of the embeddings from each file
-	# when sentence len <250 and 
-	# No repeats
 
 	logger.info(f"Loading original sentences")
 
@@ -90,6 +107,7 @@ if __name__ == "__main__":
 			original_sentences.update(load_s3_data(s3, BUCKET_NAME, embedding_dir))
 
 	sent_thresh = params["sent_thresh"]
+	output_dir = params["output_dir"]
 
 	unique_sentences = set()
 
@@ -118,9 +136,7 @@ if __name__ == "__main__":
 						sentid_list.append(sent_id)
 			# Reduce the embeddings
 			sentence_embeddings_red = sentence_embeddings_red + reducer_class.transform(embedding_list).tolist()
-
 			if len(sentence_embeddings_red) > 500000:
-
 				sentences_data =  {
 					"description": words_list,
 					"original sentence": sentence_list,
@@ -128,15 +144,13 @@ if __name__ == "__main__":
 					"sentence id": sentid_list,
 					"embedding": sentence_embeddings_red,
 				}
-
-				logger.info(f"Saving reduced embeddings from {len(sentences_data)} sentences")
+				logger.info(f"Saving reduced embeddings from {len(sentences_data['sentence id'])} sentences")
 				save_to_s3(
 					s3,
 					BUCKET_NAME,
 					sentences_data,
 					output_dir + f"sentences_data_{output_count}.json",
 				)
-
 				words_list = []
 				sentence_list = []
 				jobid_list = []
