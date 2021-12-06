@@ -16,6 +16,7 @@ from skills_taxonomy_v2 import BUCKET_NAME
 from skills_taxonomy_v2.pipeline.skills_extraction.extract_skills_utils import (
     get_output_config_stamped,
 )
+from skills_taxonomy_v2.pipeline.skills_taxonomy.build_taxonomy import load_manual_level_dict
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +46,7 @@ def parse_arguments(parser):
     parser.add_argument(
         "--config_path",
         help="Path to config file",
-        default="skills_taxonomy_v2/config/skills_taxonomy/2021.09.06.yaml",
+        default="skills_taxonomy_v2/config/skills_taxonomy/2021.11.30.yaml",
     )
 
     return parser.parse_args()
@@ -71,8 +72,11 @@ if __name__ == "__main__":
     original_hierarchy = load_s3_data(s3, BUCKET_NAME, hier_structure_file)
 
     # Manual level A names
-    with open("skills_taxonomy_v2/utils/2021.09.06_level_a_rename_dict.json", "r") as f:
-        level_a_rename_dict = json.load(f)
+    if params["level_a_manual_clusters_path"]:
+        level_a_rename_dict = load_manual_level_dict(params["level_a_manual_clusters_path"])
+        level_a_rename_dict = {k: v["Name"] for k, v in level_a_rename_dict.items()}
+    else:
+        level_a_rename_dict = load_manual_level_dict("skills_taxonomy_v2/utils/2021.09.06_level_a_rename_dict.json")
 
     hierarchy = {}
     for level_a_num, original_level_a in original_hierarchy.items():
@@ -80,21 +84,24 @@ if __name__ == "__main__":
         for level_b_num, original_level_b in original_level_a["Level B"].items():
             level_c = {}
             for level_c_num, original_level_c in original_level_b["Level C"].items():
-                level_d = {}
-                for level_d_num, original_level_d in original_level_c[
-                    "Level D"
-                ].items():
-                    skills = []
-                    for skill_num, original_skills in original_level_d[
-                        "Skills"
+                if "Skills" in original_level_c:
+                    level_c[rename_key_dict(level_c, original_level_c["Name"])] = list(original_level_c["Skills"].keys())
+                else:
+                    level_d = {}
+                    for level_d_num, original_level_d in original_level_c[
+                        "Level D"
                     ].items():
-                        skills.append(skill_num)
-                    level_d[original_level_d["Name"]] = skills
-                if len(level_d) != len(original_level_c["Level D"]):
-                    print(
-                        f"Not all level D names in this level C {level_c_num} are unique"
-                    )
-                level_c[rename_key_dict(level_c, original_level_c["Name"])] = level_d
+                        skills = []
+                        for skill_num, original_skills in original_level_d[
+                            "Skills"
+                        ].items():
+                            skills.append(skill_num)
+                        level_d[original_level_d["Name"]] = skills
+                    if len(level_d) != len(original_level_c["Level D"]):
+                        print(
+                            f"Not all level D names in this level C {level_c_num} are unique"
+                        )
+                    level_c[rename_key_dict(level_c, original_level_c["Name"])] = level_d
             if len(level_c) != len(original_level_b["Level C"]):
                 print(f"Not all level C names in this level B {level_b_num} are unique")
             level_b[rename_key_dict(level_b, original_level_b["Name"])] = level_c
