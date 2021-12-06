@@ -11,7 +11,6 @@ from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_samples
 from Levenshtein import distance
 
-
 def get_many_clusters(skill_nums, average_emb_clust, n_clusters, numclust_its=10):
 
     # - numclust_its iterations of clustering,
@@ -75,13 +74,13 @@ def get_top_tf_idf_words(vect, feature_names, top_n=2):
     return feature_names[vect.indices[sorted_nzs]].tolist()
 
 
-def get_level_names(sentence_embs, level_col_name, top_n):
+def get_level_names(sentence_embs, level_col_name, top_n, text_col_name="description"):
 
     # Merge all the texts within each subsection of this level
     hier_level_texts = []
     level_nums = []
     for level_num, level_data in sentence_embs.groupby(level_col_name):
-        hier_level_texts.append(" ".join(level_data["description"].tolist()))
+        hier_level_texts.append(" ".join(level_data[text_col_name].tolist()))
         level_nums.append(level_num)
 
     vectorizer = TfidfVectorizer()
@@ -104,11 +103,12 @@ def get_new_level(
     k_means_max_iter,
     check_low_siloutte=False,
     silhouette_threshold=0,
+    embedding_column_name="reduced_points_umap"
 ):
 
     # Mean sentence embedding for the previous level
     average_emb_dict = dict(
-        sentence_embs.groupby(previous_level_col)["reduced_points_umap"].apply(
+        sentence_embs.groupby(previous_level_col)[embedding_column_name].apply(
             lambda x: np.mean(x.tolist(), axis=0).tolist()
         )
     )
@@ -163,11 +163,11 @@ def cluster_level_mapper(
     return cluster_mapper
 
 
-def get_new_level_consensus(sentence_embs, previous_level_col, k_means_n, numclust_its):
+def get_new_level_consensus(sentence_embs, previous_level_col, k_means_n, numclust_its, embedding_column_name="reduced_points_umap"):
 
     # Mean sentence embedding for the previous level
     average_emb_dict = dict(
-        sentence_embs.groupby(previous_level_col)["reduced_points_umap"].apply(
+        sentence_embs.groupby(previous_level_col)[embedding_column_name].apply(
             lambda x: np.mean(x.tolist(), axis=0).tolist()
         )
     )
@@ -186,3 +186,35 @@ def get_new_level_consensus(sentence_embs, previous_level_col, k_means_n, numclu
     cluster_mapper = dict(zip(list(average_emb_dict.keys()), consensus_set_mappings))
 
     return cluster_mapper
+
+def amend_level_b_mapper(level_b_cluster_mapper, levela_manual, misc_name="Misc", level_c_list_name="Level c list"):
+    """
+    Some level B groups were too mixed and will be split up in order
+    to fit them into manual level A groups. If their level C group
+    would still be in the miscellaneous level A group, then no need
+    to split up anyway.
+    """
+
+    # Find all the level C's in the non-Misc catogories:
+    ungroup_levcs = [lev_c_num for v in levela_manual.values() if v.get(level_c_list_name) and v["Name"]!=misc_name for lev_c_num in v[level_c_list_name]]
+    # Give them brand new level B groups in the mapper:
+    level_b_cluster_mapper_manual = level_b_cluster_mapper.copy()
+    new_level_b_num = max(set(level_b_cluster_mapper_manual.values())) + 1
+    for level_c_num in ungroup_levcs:
+        level_b_cluster_mapper_manual[level_c_num] = new_level_b_num
+        new_level_b_num += 1
+
+    return level_b_cluster_mapper_manual
+
+def manual_cluster_level(levela_manual, level_b_cluster_mapper):
+
+    level_a_cluster_mapper = {}
+    for level_a_num, level_a_manual_edits in levela_manual.items():
+        for level_b_num in level_a_manual_edits["Level b list"]:
+            level_a_cluster_mapper[level_b_num] = int(level_a_num)
+        if level_a_manual_edits.get("Level c list"):
+            for lev_c in level_a_manual_edits["Level c list"]:
+                level_b_num = level_b_cluster_mapper[lev_c]
+                level_a_cluster_mapper[level_b_num] = int(level_a_num)
+
+    return level_a_cluster_mapper
