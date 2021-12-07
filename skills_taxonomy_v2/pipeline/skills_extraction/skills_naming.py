@@ -11,8 +11,7 @@ The skills_data outputed is a dictionary with the following fields for each skil
 
 Usage:
 
-    python -i skills_taxonomy_v2/pipeline/skills_extraction/skills_naming.py --config_path 'skills_taxonomy_v2/config/skills_extraction/2021.11.09.yaml'
-
+    python -i skills_taxonomy_v2/pipeline/skills_extraction/skills_naming.py --config_path 'skills_taxonomy_v2/config/skills_extraction/2021.12.07.yaml'
 """
 
 from argparse import ArgumentParser
@@ -32,10 +31,10 @@ from skills_taxonomy_v2.getters.s3_data import load_s3_data, save_to_s3
 from skills_taxonomy_v2 import BUCKET_NAME
 
 from skills_taxonomy_v2.pipeline.skills_extraction.skills_naming_utils import (
-    clean_cluster_descriptions,
+    get_new_skills_embeds,
+    clean_cluster_description,
     get_clean_ngrams,
     get_skill_info,
-    rename_duplicate_named_skills,
 )
 from skills_taxonomy_v2.pipeline.skills_extraction.extract_skills_utils import (
     get_output_config_stamped,
@@ -49,7 +48,7 @@ def parse_arguments(parser):
     parser.add_argument(
         "--config_path",
         help="Path to config file",
-        default="skills_taxonomy_v2/config/skills_extraction/2021.11.09.yaml",
+        default="skills_taxonomy_v2/config/skills_extraction/2021.12.07.yaml",
     )
 
     return parser.parse_args()
@@ -71,27 +70,45 @@ if __name__ == "__main__":
     s3 = boto3.resource("s3")
 
     # Load data
-    sentence_skills = load_s3_data(s3, BUCKET_NAME, params["sentence_skills_path"])
-    sentence_skills = pd.DataFrame(sentence_skills)
-    sentence_skills = sentence_skills[sentence_skills["Cluster number"] != -1]
-    sentence_embs = load_s3_data(s3, BUCKET_NAME, params["embedding_sample_path"])
+    skill_sentences = load_s3_data(s3, BUCKET_NAME, params["new_skill_sentences_path"])
+    skills_embeds = get_new_skills_embeds(params["new_skills_embeds_path"], BUCKET_NAME)
+    sent_cluster_embeds = load_s3_data(
+        s3, BUCKET_NAME, params["mean_skills_embeds_path"]
+    )
+    skills = load_s3_data(s3, BUCKET_NAME, params["new_skills_path"])
+
+    # wrangle data in the format needed
+    skills_embeds_df = pd.DataFrame(skills_embeds)[
+        ["original sentence", "sentence id", "embedding"]
+    ]
+    skill_sentences_df = pd.DataFrame(skill_sentences)[
+        ["sentence id", "Cluster number predicted"]
+    ]
+    merged_sents_embeds = pd.merge(
+        skills_embeds_df, skill_sentences_df, on="sentence id"
+    )
+    merged_sents_embeds = merged_sents_embeds[
+        merged_sents_embeds["Cluster number predicted"] != -2
+    ]
+
+    skills_df = pd.DataFrame(skills).T
+    skills_df["Mean embedding"] = sent_cluster_embeds.values()
+    skills_df["Sentence embeddings"] = list(
+        merged_sents_embeds.groupby("Cluster number predicted")["embedding"].apply(list)
+    )
 
     # generate skills names
     skills_data = get_skill_info(
-        sentence_skills,
-        sentence_embs,
+        skills_df.sample(5),
         params["num_top_sent"],
         params["ngram"],
         params["min_count"],
         params["threshold"],
     )
 
-    # Rename duplicate skill names w/ counts
-    named_skills = rename_duplicate_named_skills(skills_data)
-
     # Save skill information
     skills_data_output_path = get_output_config_stamped(
         args.config_path, params["output_dir"], "skills_data.json"
     )
 
-    save_to_s3(s3, BUCKET_NAME, named_skills, skills_data_output_path)
+    save_to_s3(s3, BUCKET_NAME, skills_data, skills_data_output_path)
