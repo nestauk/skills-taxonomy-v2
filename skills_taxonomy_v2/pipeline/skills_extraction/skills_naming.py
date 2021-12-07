@@ -99,7 +99,7 @@ if __name__ == "__main__":
 
     # generate skills names
     skills_data = get_skill_info(
-        skills_df.sample(5),
+        skills_df,
         params["num_top_sent"],
         params["ngram"],
         params["min_count"],
