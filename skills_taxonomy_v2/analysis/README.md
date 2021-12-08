@@ -39,8 +39,13 @@ Within `notebooks`, there's a number of `.ipynb` and `.py` files related to expe
 
 In this folder we have two scripts for various bits of analysis and figure plotting after extracting skills:
 
-1. `Effect of sample size.ipynb` - Investigate the effect of sample size of skill sentences and how many words are in the vocab.
-2. `Skills Extraction Analysis and Figures.ipynb` - Various analysis and figure generation of the skills extracted. Outputs are in `outputs/skills_extraction/figures/..`
+1. `Multi-skill sentences.pynb` - Analysis of multi-skill sentence - how long are sentences typically when they have multiple skills in.
+2. `Experiment - Data reduction sample size.ipynb` - Analysis of finding a good sample size of embeddings to fit the reducer class to.
+3. `Effect of sample size.ipynb` - Investigate the effect of sample size of skill sentences and how many words are in the vocab.
+4. `Experiment - Clustering parameters.ipynb` - Analysis of which are the optimal clustering parameters to extract skills from.
+5. `Effect of merging clusters distance threshold.ipynb` - Investigation of the distance threshold for which two skill clusters should be merged into one.
+6. `Skills Extraction Analysis and Figures.ipynb` - Various analysis and figure generation of the skills extracted. Outputs are in `outputs/skills_extraction/figures/..`
+7. `Extracted skills - 2021.11.05.py`
 
 In this folder we also have experimentation notebooks showing 4 approaches for skills extraction approaches, including:
 
