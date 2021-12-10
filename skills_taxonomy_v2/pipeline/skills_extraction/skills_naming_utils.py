@@ -3,6 +3,7 @@ Functions to name skills. Used in skills_naming.py.
 """
 import logging
 from collections import Counter
+from collections import defaultdict
 import re
 import itertools
 import spacy
@@ -22,7 +23,11 @@ from sklearn.metrics.pairwise import cosine_similarity
 from skills_taxonomy_v2.pipeline.sentence_classifier.sentence_classifier import (
     BertVectorizer,
 )
-from skills_taxonomy_v2.getters.s3_data import load_s3_data, save_to_s3
+from skills_taxonomy_v2.getters.s3_data import (
+    load_s3_data, 
+    save_to_s3,
+    get_s3_data_paths
+)
 from skills_taxonomy_v2 import BUCKET_NAME
 
 from pattern.text.en import singularize
@@ -46,23 +51,24 @@ def get_new_skills_embeds(new_skills_embeds_path, bucket_name):
 
     s3 = boto3.resource("s3")
 
-    sentence_embeds = {}
-    all_sentence_embeds = []
+    reduced_embeddings_paths = get_s3_data_paths(
+            s3,
+            bucket_name,
+            new_skills_embeds_path,
+            file_types=["*sentences_data_*.json"]
+            )
 
-    for i in tqdm(range(0, 8)):  # 8 files
-
+    sentence_embeds = defaultdict(list)
+    for reduced_embeddings_path in tqdm(reduced_embeddings_paths):
         new_sentences_dict = load_s3_data(
-            s3, bucket_name, new_skills_embeds_path + f"sentences_data_{i}.json"
-        )
-        all_sentence_embeds.append(new_sentences_dict)
+                    s3, bucket_name,
+                    reduced_embeddings_path 
+                )
+        for k, v in new_sentences_dict.items():
+            sentence_embeds[k].append(v)
 
-    # https://stackoverflow.com/questions/57340332/how-do-you-combine-lists-of-multiple-dictionaries-in-python
-    for k in all_sentence_embeds[0].keys():
-        sentence_embeds[k] = sum(
-            [skills_dict[k] for skills_dict in all_sentence_embeds], []
-        )
 
-    return sentence_embeds
+    return new_sentences_dict
 
 
 def replace_ngrams(sentence, ngram_words):
@@ -71,7 +77,7 @@ def replace_ngrams(sentence, ngram_words):
     return sentence
 
 
-def clean_cluster_description(sentences, cluster_number):
+def clean_cluster_description(sentences):
     """
     For each cluster normalise the texts for getting descriptions from
     - lemmatize
@@ -99,7 +105,8 @@ def clean_cluster_description(sentences, cluster_number):
     work_stopwords = [
         "essential",
         "requirement",
-        "required" "degree",
+        "required"
+        "degree",
         "responsibility",
         "duties",
         "responsibilities",
@@ -125,14 +132,12 @@ def clean_cluster_description(sentences, cluster_number):
         "work",
         "job",
         "description",
-        "ymy",
+        "ymy"
     ]
 
     all_stopwords = stopwords.words("english") + work_stopwords
-
-    cluster_descriptions = {}
+    
     cluster_docs_cleaned = []
-
     for sentence in sentences:
         acronyms = re.findall("[A-Z]{2,}", sentence)
         # Lemmatize
@@ -142,15 +147,13 @@ def clean_cluster_description(sentences, cluster_number):
             else lemmatizer.lemmatize(w.lower())
             for w in sentence.split(" ")
         ]
-        # singularise
+        # singularise  
         singularised_output = [singularize(w) for w in sentence.split(" ")]
-        no_stopwords = [
-            word for word in singularised_output if word not in all_stopwords
-        ]
+        no_stopwords = [word for word in singularised_output if word not in all_stopwords] 
         no_numbers = [word for word in no_stopwords if not word.isdigit()]
         cluster_docs_cleaned.append(" ".join(no_numbers))
 
-        # Remove duplicates
+       # Remove duplicates
         cluster_docs_cleaned = list(set(cluster_docs_cleaned))
 
         # Find the ngrams for this cluster
@@ -166,13 +169,10 @@ def clean_cluster_description(sentences, cluster_number):
         cluster_docs_clean = [
             replace_ngrams(sentence, ngram_words) for sentence in cluster_docs_cleaned
         ]
+    
+    return cluster_docs_clean
 
-        cluster_descriptions[cluster_number] = cluster_docs_clean
-
-    return cluster_descriptions
-
-
-def get_clean_ngrams(sents, cluster_number, ngram, min_count, threshold):
+def get_clean_ngrams(sents, ngram, min_count, threshold):
     """
     Using the sentences data where each sentence has been clustered into skills,
     find a list of all cleaned n-grams
@@ -180,15 +180,12 @@ def get_clean_ngrams(sents, cluster_number, ngram, min_count, threshold):
 
     # Init the Wordnet Lemmatizer
     lemmatizer = WordNetLemmatizer()
-
+    
     # Clean sentences
-    cluster_descriptions = clean_cluster_description(sents, cluster_number)
-
-    # get cluster texts
-    cluster_texts = [" ".join(sentences) for sentences in cluster_descriptions.values()]
-
+    cluster_descriptions = clean_cluster_description(sents)
+    
     # tokenise skills
-    tokenised_skills = [word_tokenize(skill) for skill in cluster_texts]
+    tokenised_skills = [word_tokenize(skill) for skill in cluster_descriptions]
 
     # generate ngrams
     t = 1
@@ -209,7 +206,7 @@ def get_clean_ngrams(sents, cluster_number, ngram, min_count, threshold):
         [skill.replace("_", " ").replace("-", " ") for skill in skills]
         for skills in list(tokenised_skills)
     ]
-
+    
     clean_ngrams = list(
         set(
             [
@@ -225,19 +222,14 @@ def get_clean_ngrams(sents, cluster_number, ngram, min_count, threshold):
         " ".join(OrderedDict((w, w) for w in ngrm.split()).keys())
         for ngrm in clean_ngrams
     ]
-
+    
     # lemmatise ngrams
-    clean_ngrams = [
-        " ".join([lemmatizer.lemmatize(n) for n in ngram.split(" ")])
-        for ngram in clean_ngrams
-    ]
+    clean_ngrams = [' '.join([lemmatizer.lemmatize(n) for n in ngram.split(" ")]) for ngram in clean_ngrams]
 
     # only return ngrams that are more than 1 word long
-    return (
-        [clean for clean in clean_ngrams if len(clean.split(" ")) > 1],
-        cluster_descriptions,
-    )
-
+    return [
+        clean for clean in clean_ngrams if len(clean.split(" ")) > 1
+    ], cluster_descriptions
 
 def get_skill_info(skills_df, num_top_sent, ngram, min_count, threshold):
     """
@@ -249,64 +241,61 @@ def get_skill_info(skills_df, num_top_sent, ngram, min_count, threshold):
         'Examples': Join the num_top_sent closest original sentences to the centroid
         'Texts': All the cleaned sentences for this cluster
     """
-
+    
     bert_vectorizer = BertVectorizer(
-        bert_model_name="sentence-transformers/all-MiniLM-L6-v2", multi_process=True,
+    bert_model_name="sentence-transformers/all-MiniLM-L6-v2",
+    multi_process=True,
     )
     bert_vectorizer.fit()
-
+    
     skill_data = {}
     for skills_num, skills_data in skills_df.iterrows():
         sents = skills_data["Sentences"]
         reduced_centroid_embeds = np.array(skills_data["Centroid"]).astype("float32")
         centroid_embeds = np.array(skills_data["Mean embedding"]).astype("float32")
-        sent_embeds = [
-            np.array(sent_embed).astype("float32")
-            for sent_embed in skills_data["Sentence embeddings"]
-        ]
+        sent_embeds = [np.array(sent_embed).astype("float32") for sent_embed in skills_data["Sentence embeddings"]]
 
-        sent_similarities = cosine_similarity(
-            reduced_centroid_embeds.reshape(1, -1), sent_embeds
-        )
+        sent_similarities = cosine_similarity(reduced_centroid_embeds.reshape(1, -1), sent_embeds) 
 
-        candidate_ngrams, cluster_descriptions = get_clean_ngrams(
-            sents, skills_num, ngram, min_count, threshold
-        )
+        candidate_ngrams, cluster_descriptions = get_clean_ngrams(sents, 
+                                                                  ngram, 
+                                                                  min_count, 
+                                                                  threshold)  
         if len(candidate_ngrams) > 1:
-            candidate_ngrams_embeds = bert_vectorizer.transform(candidate_ngrams)
-            ngram_similarities = cosine_similarity(
-                centroid_embeds.reshape(1, -1), candidate_ngrams_embeds
-            )
-            closest_ngram = candidate_ngrams[
-                int(ngram_similarities.argsort()[0][::-1].tolist()[0:1][0])
-            ]
-            skill_data[skills_num] = {
-                "Skills name": closest_ngram,
-                "Examples": " ".join(
-                    [
-                        sents[i]
-                        for i in sent_similarities.argsort()[0][::-1].tolist()[
-                            0:num_top_sent
+                candidate_ngrams_embeds = bert_vectorizer.transform(candidate_ngrams)
+                ngram_similarities = cosine_similarity(
+                    centroid_embeds.reshape(1, -1), candidate_ngrams_embeds
+                )
+                closest_ngram = candidate_ngrams[
+                    int(ngram_similarities.argsort()[0][::-1].tolist()[0:1][0]) 
+                ]
+                skill_data[skills_num] = {
+                    "Skills name": closest_ngram,
+                    "Examples": " ".join(
+                        [
+                            sents[i]
+                            for i in sent_similarities.argsort()[0][::-1].tolist()[
+                                0:num_top_sent
+                            ]
                         ]
-                    ]
-                ),
-                "Texts": cluster_descriptions[skills_num],
-            }
+                    ),
+                    "Texts": cluster_descriptions,
+                }
         else:
-            print(
-                "no candidate ngrams"
-            )  # if no candidate ngrams are generated, skill name is smallest skill description
-            skill_data[skills_num] = {
-                "Skills name": min(cluster_descriptions[skills_num], key=len),
-                "Examples": " ".join(
-                    [
-                        sents[i]
-                        for i in sent_similarities.argsort()[0][::-1].tolist()[
-                            0:num_top_sent
+                print(
+                    "no candidate ngrams"
+                )  # if no candidate ngrams are generated, skill name is smallest skill description
+                skill_data[skills_num] = {
+                    "Skills name": min(cluster_descriptions, key=len),
+                    "Examples": " ".join(
+                        [
+                            sents[i]
+                            for i in sent_similarities.argsort()[0][::-1].tolist()[
+                                0:num_top_sent
+                            ]
                         ]
-                    ]
-                ),
-                "Texts": cluster_descriptions[skills_num],
-            }
+                    ),
+                    "Texts": cluster_descriptions,
+                }    
 
     return skill_data
