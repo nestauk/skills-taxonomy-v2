@@ -48,7 +48,7 @@ def get_new_skills_embeds(new_skills_embeds_path, bucket_name):
     outputs:
         dictionary of new skills embeddings.
     """
-
+    
     s3 = boto3.resource("s3")
 
     reduced_embeddings_paths = get_s3_data_paths(
