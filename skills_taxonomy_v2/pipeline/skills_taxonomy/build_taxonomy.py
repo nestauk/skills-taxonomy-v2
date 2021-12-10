@@ -117,15 +117,8 @@ if __name__ == "__main__":
     else:
         levela_manual = None
 
-    if params["create_level_d"]:
-        create_level_d = params["create_level_d"]
-    else:
-        create_level_d = True
-
-    if params["skills_data_texts_name"]:
-        skills_data_texts_name = params["skills_data_texts_name"]
-    else:
-        skills_data_texts_name = "Texts"
+    create_level_d = params.get("create_level_d", True)
+    skills_data_texts_name = params.get("skills_data_texts_name", "Texts")
 
     # Build hierarchy
 

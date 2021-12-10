@@ -195,23 +195,35 @@ def amend_level_b_mapper(level_b_cluster_mapper, levela_manual, misc_name="Misc"
     to split up anyway.
     """
 
-    # Find all the level C's in the non-Misc catogories:
-    ungroup_levcs = [lev_c_num for v in levela_manual.values() if v.get(level_c_list_name) and v["Name"]!=misc_name for lev_c_num in v[level_c_list_name]]
-    # Give them brand new level B groups in the mapper:
     level_b_cluster_mapper_manual = level_b_cluster_mapper.copy()
+
+    # Give them brand new level B groups in the mapper:
     new_level_b_num = max(set(level_b_cluster_mapper_manual.values())) + 1
-    for level_c_num in ungroup_levcs:
-        level_b_cluster_mapper_manual[level_c_num] = new_level_b_num
-        new_level_b_num += 1
+    for v in levela_manual.values():
+        level_c_list = v.get("Level c list")
+        if level_c_list and v["Name"]!="Misc":
+            # If their original level B is the same, then group
+            grouped_levbc = defaultdict(list)
+            for lev_c in level_c_list:
+                grouped_levbc[level_b_cluster_mapper[lev_c]].append(lev_c)
+            for grouped_level_c_list in grouped_levbc.values():
+                for lev_c in grouped_level_c_list:
+                    level_b_cluster_mapper_manual[lev_c] = new_level_b_num
+                new_level_b_num += 1
 
     return level_b_cluster_mapper_manual
 
 def manual_cluster_level(levela_manual, level_b_cluster_mapper):
 
+    # Some of the level B indices are no longer in use
+    level_bs = set(level_b_cluster_mapper.values())
+    not_used_level_bs = set(range(0, max(level_bs)+1)).difference(level_bs)
+
     level_a_cluster_mapper = {}
     for level_a_num, level_a_manual_edits in levela_manual.items():
         for level_b_num in level_a_manual_edits["Level b list"]:
-            level_a_cluster_mapper[level_b_num] = int(level_a_num)
+            if level_b_num not in not_used_level_bs:
+                level_a_cluster_mapper[level_b_num] = int(level_a_num)
         if level_a_manual_edits.get("Level c list"):
             for lev_c in level_a_manual_edits["Level c list"]:
                 level_b_num = level_b_cluster_mapper[lev_c]
