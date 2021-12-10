@@ -24,9 +24,9 @@ flows:
       output_dir: "outputs/skills_extraction/extracted_skills/"
   name_skills:
     params:
-      new_skill_sentences_path: "outputs/skills_extraction/extracted_skills/2021.11.05_sentences_skills_data.json"
-      new_skills_path: "outputs/skills_extraction/extracted_skills/2021.11.05_skills_data.json"
-      new_skills_embeds_path: "outputs/skills_extraction/reduced_embeddings/"
+      skill_sentences_path: "outputs/skills_extraction/extracted_skills/2021.11.05_sentences_skills_data.json"
+      skills_path: "outputs/skills_extraction/extracted_skills/2021.11.05_skills_data.json"
+      skills_embeds_path: "outputs/skills_extraction/reduced_embeddings/"
       mean_skills_embeds_path: "outputs/skills_extraction/extracted_skills/2021.11.05_skill_mean_embeddings.json"
       ngram: 3
       min_count: 1
