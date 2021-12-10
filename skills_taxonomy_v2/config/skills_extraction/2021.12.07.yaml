@@ -29,8 +29,8 @@ flows:
       skills_embeds_path: "outputs/skills_extraction/reduced_embeddings/"
       mean_skills_embeds_path: "outputs/skills_extraction/extracted_skills/2021.11.05_skill_mean_embeddings.json"
       ngram: 3
-      min_count: 1
-      threshold: 0.15
+      min_count: 3
+      threshold: 0.25
       num_top_sent: 3
       output_dir: "outputs/skills_extraction/extracted_skills/"
   esco_mapper:
