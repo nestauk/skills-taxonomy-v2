@@ -86,16 +86,28 @@ if __name__ == "__main__":
         ["job id", "sentence id", "Cluster number predicted"]
     ]
 
-    skill_sentences_df = skill_sentences_df[skill_sentences_df["Cluster number predicted"] != -2]
+    skill_sentences_df = skill_sentences_df[
+        skill_sentences_df["Cluster number predicted"] != -2
+    ]
 
-    merged_sents_embeds = pd.merge(skills_embeds_df, skill_sentences_df, on=['job id', 'sentence id'])
+    merged_sents_embeds = pd.merge(
+        skills_embeds_df, skill_sentences_df, on=["job id", "sentence id"]
+    )
 
     skills_df = pd.DataFrame(skills).T
     skills_df["Skill number"] = skills_df.index
-    skills_df["Mean embedding"] = skills_df["Skill number"].apply(lambda x: sent_cluster_embeds[x])
+    skills_df["Mean embedding"] = skills_df["Skill number"].apply(
+        lambda x: sent_cluster_embeds[x]
+    )
 
-    skills_df['Skill number'] = skills_df['Skill number'].astype('int64')
-    skills_df["Sentence embeddings"] = skills_df["Skill number"].apply(lambda x: list(merged_sents_embeds.loc[merged_sents_embeds['Skill number'] == x]['embedding']))
+    skills_df["Skill number"] = skills_df["Skill number"].astype("int64")
+    skills_df["Sentence embeddings"] = skills_df["Skill number"].apply(
+        lambda x: list(
+            merged_sents_embeds.loc[merged_sents_embeds["Cluster number predicted"] == x][
+                "embedding"
+            ]
+        )
+    )
 
     # generate skills names
     skills_data = get_skill_info(
@@ -107,5 +119,5 @@ if __name__ == "__main__":
     )
 
     # Save skill information
-    skills_data_output_path = params["skills_path"].split('.json')[0] + '_named.json'
+    skills_data_output_path = params["skills_path"].split(".json")[0] + "_named.json"
     save_to_s3(s3, BUCKET_NAME, skills_data, skills_data_output_path)
