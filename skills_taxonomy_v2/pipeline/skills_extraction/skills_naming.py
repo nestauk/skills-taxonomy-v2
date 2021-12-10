@@ -103,9 +103,9 @@ if __name__ == "__main__":
     skills_df["Skill number"] = skills_df["Skill number"].astype("int64")
     skills_df["Sentence embeddings"] = skills_df["Skill number"].apply(
         lambda x: list(
-            merged_sents_embeds.loc[merged_sents_embeds["Cluster number predicted"] == x][
-                "embedding"
-            ]
+            merged_sents_embeds.loc[
+                merged_sents_embeds["Cluster number predicted"] == x
+            ]["embedding"]
         )
     )
 
