@@ -97,6 +97,16 @@ We thus fit our clustering algorithm on 300,000 random <100 character sentences 
 
 Out of the 4,097,008 sentences in our sample, 1,465,639 had under 100 characters - using these we then went about predicting clusters using the centroids from these 6784 clusters. We use the predicted clusters for all 1,465,639 sentences as our 6784 skills. Note that in 35% of the sentences which were used in the fitting of the clustering algorithm, the predicted cluster was different to the cluster it had been assigned in the fitting. Analysis a figure plotting of these clusters is given in `Extracted skills - 2021.11.05.ipynb` and creating these clusters was found by running `cluster_embeddings.py --config_path skills_taxonomy_v2/config/skills_extraction/2021.11.05.yaml`. This saves two files: `s3://skills-taxonomy-v2/outputs/skills_extraction/extracted_skills/2021.11.05_sentences_skills_data.json` (each sentences ID/file ID with which cluster it was predicted to be in, and if in the training set - also which cluster it was originally assigned to) and `s3://skills-taxonomy-v2/outputs/skills_extraction/extracted_skills/2021.11.05_skills_data.json` (a dictionary of skill numbers and the sentences in them, along with the skill centroid coordinate).
 
+### 4. Skills naming
+
+This has also been improved (see `skills_taxonomy_v2/analysis/skills_extraction/Skill Naming Experiments.md` for details).
+
+It can be run with:
+```
+python skills_taxonomy_v2/pipeline/skills_extraction/skills_naming.py --config_path 'skills_taxonomy_v2/config/skills_extraction/2021.11.05.yaml'
+```
+
+This will output `outputs/skills_extraction/extracted_skills/2021.11.05_skills_data_named.json`.
 
 ## `2021.08.31.yaml` summary
 

@@ -11,7 +11,7 @@ The skills_data outputed is a dictionary with the following fields for each skil
 
 Usage:
 
-    python -i skills_taxonomy_v2/pipeline/skills_extraction/skills_naming.py --config_path 'skills_taxonomy_v2/config/skills_extraction/2021.12.07.yaml'
+    python -i skills_taxonomy_v2/pipeline/skills_extraction/skills_naming.py --config_path 'skills_taxonomy_v2/config/skills_extraction/2021.11.05.yaml'
 """
 
 from argparse import ArgumentParser
@@ -109,6 +109,7 @@ if __name__ == "__main__":
         )
     )
 
+    logger.info(f"Generating skill names for {len(skills_df)} skills...")
     # generate skills names
     skills_data = get_skill_info(
         skills_df,
@@ -118,6 +119,7 @@ if __name__ == "__main__":
         params["threshold"],
     )
 
+    logger.info("Saving skill names...")
     # Save skill information
     skills_data_output_path = params["skills_path"].split(".json")[0] + "_named.json"
     save_to_s3(s3, BUCKET_NAME, skills_data, skills_data_output_path)

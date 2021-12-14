@@ -35,12 +35,47 @@ from collections import OrderedDict
 
 from nltk.corpus import stopwords
 
-nltk.download("stopwords")
+nltk.download("stopwords", quiet=True)
+nltk.download("wordnet", quiet=True)
 
 logger = logging.getLogger(__name__)
 
-nltk.download("wordnet")
+# Init the Wordnet Lemmatizer
+lemmatizer = WordNetLemmatizer()
 
+work_stopwords = [
+        "essential",
+        "requirement",
+        "required" "degree",
+        "responsibility",
+        "duties",
+        "responsibilities",
+        "experienced",
+        "previous",
+        "andor",
+        "minimum",
+        "year",
+        "skill",
+        "ideal",
+        "candidate",
+        "desirable",
+        "willing",
+        "prepared",
+        "knowledge",
+        "experience",
+        "skills",
+        "ideally",
+        "responsible",
+        "require",
+        "environment",
+        "role",
+        "work",
+        "job",
+        "description",
+        "ymy",
+    ]
+
+all_stopwords = stopwords.words("english") + work_stopwords
 
 def get_new_skills_embeds(new_skills_embeds_path, bucket_name):
     """
@@ -88,81 +123,44 @@ def clean_cluster_description(sentences):
         cluster_descriptions (dict): Cluster number : list of cleaned
             sentences in this cluster
     """
-    # Init the Wordnet Lemmatizer
-    lemmatizer = WordNetLemmatizer()
 
     # How many times a n-gram has to occur in order for occurences of them
     # to be converted to a single dash separated word
     num_times_ngrams_thresh = 3
 
-    work_stopwords = [
-        "essential",
-        "requirement",
-        "required" "degree",
-        "responsibility",
-        "duties",
-        "responsibilities",
-        "experienced",
-        "previous",
-        "andor",
-        "minimum",
-        "year",
-        "skill",
-        "ideal",
-        "candidate",
-        "desirable",
-        "willing",
-        "prepared",
-        "knowledge",
-        "experience",
-        "skills",
-        "ideally",
-        "responsible",
-        "require",
-        "environment",
-        "role",
-        "work",
-        "job",
-        "description",
-        "ymy",
-    ]
-
-    all_stopwords = stopwords.words("english") + work_stopwords
-
-    cluster_docs_cleaned = []
+    # Don't append duplicates, just use set
+    cluster_docs_cleaned = set()
     for sentence in sentences:
-        acronyms = re.findall("[A-Z]{2,}", sentence)
-        # Lemmatize
-        lemmatized_output = [
-            lemmatizer.lemmatize(w)
-            if w in acronyms
-            else lemmatizer.lemmatize(w.lower())
-            for w in sentence.split(" ")
-        ]
+        # acronyms = re.findall("[A-Z]{2,}", sentence)
+        # # Lemmatize - lemmatized_output not used
+        # lemmatized_output = [
+        #     lemmatizer.lemmatize(w)
+        #     if w in acronyms
+        #     else lemmatizer.lemmatize(w.lower())
+        #     for w in sentence.split(" ")
+        # ]
         # singularise
         singularised_output = [singularize(w) for w in sentence.split(" ")]
-        no_stopwords = [
-            word for word in singularised_output if word not in all_stopwords
+        no_numbers = [
+            word for word in singularised_output if ((word not in all_stopwords) and (not word.isdigit()))
         ]
-        no_numbers = [word for word in no_stopwords if not word.isdigit()]
-        cluster_docs_cleaned.append(" ".join(no_numbers))
+        cluster_docs_cleaned.add(" ".join(no_numbers))
 
-        # Remove duplicates
-        cluster_docs_cleaned = list(set(cluster_docs_cleaned))
+    cluster_docs_cleaned = list(cluster_docs_cleaned)
 
-        # Find the ngrams for this cluster
-        all_cluster_docs = " ".join(cluster_docs_cleaned).split(" ")
+    # Find the ngrams for this cluster
+    all_cluster_docs = " ".join(cluster_docs_cleaned).split(" ")
 
-        esBigrams = ngrams(all_cluster_docs, 3)
-        ngram_words = [
-            words
-            for words, count in Counter(esBigrams).most_common()
-            if count >= num_times_ngrams_thresh
-        ]
+    esBigrams = ngrams(all_cluster_docs, 3)
+    ngram_words = [
+        words
+        for words, count in Counter(esBigrams).most_common()
+        if count >= num_times_ngrams_thresh
+    ]
 
-        cluster_docs_clean = [
-            replace_ngrams(sentence, ngram_words) for sentence in cluster_docs_cleaned
-        ]
+    cluster_docs_clean = [
+        replace_ngrams(sentence, ngram_words) for sentence in cluster_docs_cleaned
+    ]
 
     return cluster_docs_clean
 
@@ -172,9 +170,6 @@ def get_clean_ngrams(sents, ngram, min_count, threshold):
     Using the sentences data where each sentence has been clustered into skills,
     find a list of all cleaned n-grams
     """
-
-    # Init the Wordnet Lemmatizer
-    lemmatizer = WordNetLemmatizer()
 
     # Clean sentences
     cluster_descriptions = clean_cluster_description(sents)
@@ -247,11 +242,14 @@ def get_skill_info(skills_df, num_top_sent, ngram, min_count, threshold):
     )
     bert_vectorizer.fit()
 
+    logger.info(f"Processing skill names ...")
     skill_data = {}
     for skills_num, skills_data in skills_df.iterrows():
+        logger.info(f"Skill {skills_num} of {len(skills_df)}")
         sents = skills_data["Sentences"]
         reduced_centroid_embeds = np.array(skills_data["Centroid"]).astype("float32")
         centroid_embeds = np.array(skills_data["Mean embedding"]).astype("float32")
+
         sent_embeds = [
             np.array(sent_embed).astype("float32")
             for sent_embed in skills_data["Sentence embeddings"]

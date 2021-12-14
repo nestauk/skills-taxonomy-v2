@@ -21,8 +21,8 @@ from functools import lru_cache, partial
 
 import nltk
 
-nltk.download("averaged_perceptron_tagger")
-nltk.download("punkt")
+nltk.download("averaged_perceptron_tagger", quiet=True)
+nltk.download("punkt", quiet=True)
 
 
 # ---------------------------------------------------------------------------------
