@@ -17,15 +17,10 @@ Usage:
 from argparse import ArgumentParser
 import logging
 import yaml
-import itertools
-import pickle
 
-import numpy as np
 import pandas as pd
 from tqdm import tqdm
 import boto3
-
-from sklearn.metrics.pairwise import cosine_similarity
 
 from skills_taxonomy_v2.getters.s3_data import load_s3_data, save_to_s3, get_s3_data_paths
 from skills_taxonomy_v2 import BUCKET_NAME

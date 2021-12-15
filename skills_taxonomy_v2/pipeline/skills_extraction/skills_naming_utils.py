@@ -3,16 +3,12 @@ Functions to name skills. Used in skills_naming.py.
 """
 import logging
 from collections import Counter
-from collections import defaultdict
 import re
 import itertools
-import spacy
 import pandas as pd
-from tqdm import tqdm
 import boto3
 
 import numpy as np
-from sklearn.feature_extraction.text import TfidfVectorizer
 import nltk
 from nltk.util import ngrams  # function for making ngrams
 from nltk.stem import WordNetLemmatizer
@@ -24,9 +20,7 @@ from skills_taxonomy_v2.pipeline.sentence_classifier.sentence_classifier import 
     BertVectorizer,
 )
 from skills_taxonomy_v2.getters.s3_data import (
-    load_s3_data,
-    save_to_s3,
-    get_s3_data_paths,
+    save_to_s3
 )
 from skills_taxonomy_v2 import BUCKET_NAME
 
