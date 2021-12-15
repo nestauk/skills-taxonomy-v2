@@ -26,8 +26,6 @@ from skills_taxonomy_v2.getters.s3_data import load_s3_data, save_to_s3, get_s3_
 from skills_taxonomy_v2 import BUCKET_NAME
 
 from skills_taxonomy_v2.pipeline.skills_extraction.skills_naming_utils import (
-    clean_cluster_description,
-    get_clean_ngrams,
     get_skill_info,
 )
 from skills_taxonomy_v2.pipeline.skills_extraction.extract_skills_utils import (
