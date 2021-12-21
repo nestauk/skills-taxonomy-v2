@@ -30,8 +30,10 @@ flows:
         output_dir: "outputs/skills_extraction/extracted_skills/"
   name_skills:
     params:
-      sentence_skills_path: 'outputs/skills_extraction/extracted_skills/2021.11.05_sentences_data.json'
-      embedding_sample_path: 'outputs/skills_extraction/extracted_skills/2021.11.05_sentence_id_2_embedding_dict.json.gz'
+      skill_sentences_path: "outputs/skills_extraction/extracted_skills/2021.11.05_sentences_skills_data.json"
+      skills_path: "outputs/skills_extraction/extracted_skills/2021.11.05_skills_data.json"
+      skills_embeds_path: "outputs/skills_extraction/reduced_embeddings/"
+      mean_skills_embeds_path: "outputs/skills_extraction/extracted_skills/2021.11.05_skill_mean_embeddings.json"
       ngram: 3
       min_count: 3
       threshold: 0.25

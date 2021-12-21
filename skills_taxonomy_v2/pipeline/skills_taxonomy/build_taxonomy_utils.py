@@ -75,13 +75,13 @@ def get_top_tf_idf_words(vect, feature_names, top_n=2):
     return feature_names[vect.indices[sorted_nzs]].tolist()
 
 
-def get_level_names(sentence_embs, level_col_name, top_n):
+def get_level_names(sentence_embs, level_col_name, top_n, text_col_name="description"):
 
     # Merge all the texts within each subsection of this level
     hier_level_texts = []
     level_nums = []
     for level_num, level_data in sentence_embs.groupby(level_col_name):
-        hier_level_texts.append(" ".join(level_data["description"].tolist()))
+        hier_level_texts.append(" ".join(level_data[text_col_name].tolist()))
         level_nums.append(level_num)
 
     vectorizer = TfidfVectorizer()
@@ -94,6 +94,22 @@ def get_level_names(sentence_embs, level_col_name, top_n):
         for level_num, doc_vec in zip(level_nums, vect)
     }
 
+    # If there are duplicates then add a number suffix
+    duplicated_names = [
+        lev_name
+        for lev_name, name_count in Counter(level_names.values()).items()
+        if name_count > 1
+    ]
+    if len(duplicated_names) != 0:
+        new_level_names = level_names.copy()
+        for duplicated_name in duplicated_names:
+            i = 0
+            for level_num, lev_name in level_names.items():
+                if lev_name == duplicated_name:
+                    new_level_names[level_num] = lev_name + "-" + str(i)
+                    i += 1
+        level_names = new_level_names
+
     return level_names
 
 
@@ -104,11 +120,12 @@ def get_new_level(
     k_means_max_iter,
     check_low_siloutte=False,
     silhouette_threshold=0,
+    embedding_column_name="reduced_points_umap",
 ):
 
     # Mean sentence embedding for the previous level
     average_emb_dict = dict(
-        sentence_embs.groupby(previous_level_col)["reduced_points_umap"].apply(
+        sentence_embs.groupby(previous_level_col)[embedding_column_name].apply(
             lambda x: np.mean(x.tolist(), axis=0).tolist()
         )
     )
@@ -132,7 +149,7 @@ def cluster_level_mapper(
     silhouette_threshold=0,
 ):
     """
-    Cluster the embeddings in embeddings_dict values to create a mapper dictionary 
+    Cluster the embeddings in embeddings_dict values to create a mapper dictionary
     from the embeddings_dict keys to the cluster number.
     e.g. embeddings_dict = {0: [1.23,5.67], 1: [4.56,7.8],...}
     prev2next_map = {0:5, 1:34, ...}
@@ -163,11 +180,17 @@ def cluster_level_mapper(
     return cluster_mapper
 
 
-def get_new_level_consensus(sentence_embs, previous_level_col, k_means_n, numclust_its):
+def get_new_level_consensus(
+    sentence_embs,
+    previous_level_col,
+    k_means_n,
+    numclust_its,
+    embedding_column_name="reduced_points_umap",
+):
 
     # Mean sentence embedding for the previous level
     average_emb_dict = dict(
-        sentence_embs.groupby(previous_level_col)["reduced_points_umap"].apply(
+        sentence_embs.groupby(previous_level_col)[embedding_column_name].apply(
             lambda x: np.mean(x.tolist(), axis=0).tolist()
         )
     )
@@ -186,3 +209,54 @@ def get_new_level_consensus(sentence_embs, previous_level_col, k_means_n, numclu
     cluster_mapper = dict(zip(list(average_emb_dict.keys()), consensus_set_mappings))
 
     return cluster_mapper
+
+
+def amend_level_b_mapper(
+    level_b_cluster_mapper,
+    levela_manual,
+    misc_name="Misc",
+    level_c_list_name="Level c list",
+):
+    """
+    Some level B groups were too mixed and will be split up in order
+    to fit them into manual level A groups. If their level C group
+    would still be in the miscellaneous level A group, then no need
+    to split up anyway.
+    """
+
+    level_b_cluster_mapper_manual = level_b_cluster_mapper.copy()
+
+    # Give them brand new level B groups in the mapper:
+    new_level_b_num = max(set(level_b_cluster_mapper_manual.values())) + 1
+    for v in levela_manual.values():
+        level_c_list = v.get("Level c list")
+        if level_c_list and v["Name"] != "Misc":
+            # If their original level B is the same, then group
+            grouped_levbc = defaultdict(list)
+            for lev_c in level_c_list:
+                grouped_levbc[level_b_cluster_mapper[lev_c]].append(lev_c)
+            for grouped_level_c_list in grouped_levbc.values():
+                for lev_c in grouped_level_c_list:
+                    level_b_cluster_mapper_manual[lev_c] = new_level_b_num
+                new_level_b_num += 1
+
+    return level_b_cluster_mapper_manual
+
+
+def manual_cluster_level(levela_manual, level_b_cluster_mapper):
+
+    # Some of the level B indices are no longer in use
+    level_bs = set(level_b_cluster_mapper.values())
+    not_used_level_bs = set(range(0, max(level_bs) + 1)).difference(level_bs)
+
+    level_a_cluster_mapper = {}
+    for level_a_num, level_a_manual_edits in levela_manual.items():
+        for level_b_num in level_a_manual_edits["Level b list"]:
+            if level_b_num not in not_used_level_bs:
+                level_a_cluster_mapper[level_b_num] = int(level_a_num)
+        if level_a_manual_edits.get("Level c list"):
+            for lev_c in level_a_manual_edits["Level c list"]:
+                level_b_num = level_b_cluster_mapper[lev_c]
+                level_a_cluster_mapper[level_b_num] = int(level_a_num)
+
+    return level_a_cluster_mapper

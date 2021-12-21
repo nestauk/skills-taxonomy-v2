@@ -251,6 +251,14 @@ if __name__ == '__main__':
 
     new_sentences_data = cluster_embeddings.predict_clusters(sentences_data)
 
+    # Create mapping of 'Cluster number predicted' to new index
+    # At the moment this isn't 0:num skills, its 0,1,2,5,10,11,12..
+    num_skills = new_sentences_data['Cluster number predicted'].nunique()
+    skill_nums = [n for n in new_sentences_data['Cluster number predicted'].unique() if n!=-2]
+    reindex_map = dict(zip(skill_nums, range(0, num_skills - 1)))
+    reindex_map[-2] = -2
+    new_sentences_data['Cluster number predicted'] = new_sentences_data['Cluster number predicted'].apply(lambda x: reindex_map[x])
+
     # Merge in the original cluster nums (for those in sample)
     clustered_sentences_data = pd.merge(
         new_sentences_data[['job id', 'sentence id', 'Cluster number predicted']],

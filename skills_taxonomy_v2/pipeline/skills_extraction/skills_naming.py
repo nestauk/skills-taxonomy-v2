@@ -11,29 +11,21 @@ The skills_data outputed is a dictionary with the following fields for each skil
 
 Usage:
 
-    python -i skills_taxonomy_v2/pipeline/skills_extraction/skills_naming.py --config_path 'skills_taxonomy_v2/config/skills_extraction/2021.12.07.yaml'
+    python -i skills_taxonomy_v2/pipeline/skills_extraction/skills_naming.py --config_path 'skills_taxonomy_v2/config/skills_extraction/2021.11.05.yaml'
 """
 
 from argparse import ArgumentParser
 import logging
 import yaml
-import itertools
-import pickle
 
-import numpy as np
 import pandas as pd
 from tqdm import tqdm
 import boto3
 
-from sklearn.metrics.pairwise import cosine_similarity
-
-from skills_taxonomy_v2.getters.s3_data import load_s3_data, save_to_s3
+from skills_taxonomy_v2.getters.s3_data import load_s3_data, save_to_s3, get_s3_data_paths
 from skills_taxonomy_v2 import BUCKET_NAME
 
 from skills_taxonomy_v2.pipeline.skills_extraction.skills_naming_utils import (
-    get_new_skills_embeds,
-    clean_cluster_description,
-    get_clean_ngrams,
     get_skill_info,
 )
 from skills_taxonomy_v2.pipeline.skills_extraction.extract_skills_utils import (
@@ -42,13 +34,26 @@ from skills_taxonomy_v2.pipeline.skills_extraction.extract_skills_utils import (
 
 logger = logging.getLogger(__name__)
 
+def load_process_sentence_data(s3, reduced_embeddings_paths):
+    sentences_data = pd.DataFrame()
+    for reduced_embeddings_path in tqdm(reduced_embeddings_paths):
+        sentences_data_i = load_s3_data(
+            s3, BUCKET_NAME,
+            reduced_embeddings_path
+        )
+        sentences_data = pd.concat([sentences_data, pd.DataFrame(sentences_data_i)])
+    sentences_data.reset_index(drop=True, inplace=True)
+    logger.info(f"{len(sentences_data)} sentences loaded")
+    return sentences_data
+
+
 
 def parse_arguments(parser):
 
     parser.add_argument(
         "--config_path",
         help="Path to config file",
-        default="skills_taxonomy_v2/config/skills_extraction/2021.12.07.yaml",
+        default="skills_taxonomy_v2/config/skills_extraction/2021.11.05.yaml",
     )
 
     return parser.parse_args()
@@ -71,28 +76,34 @@ if __name__ == "__main__":
 
     # Load data
     skill_sentences = load_s3_data(s3, BUCKET_NAME, params["skill_sentences_path"])
-    skills_embeds = get_new_skills_embeds(params["skills_embeds_path"], BUCKET_NAME)
+
+    reduced_embeddings_paths = get_s3_data_paths(
+            s3,
+            BUCKET_NAME,
+            params["skills_embeds_path"],
+            file_types=["*sentences_data_*.json"]
+            )
+
+    skills_embeds_df = load_process_sentence_data(s3, reduced_embeddings_paths)
+
     sent_cluster_embeds = load_s3_data(
         s3, BUCKET_NAME, params["mean_skills_embeds_path"]
     )
     skills = load_s3_data(s3, BUCKET_NAME, params["skills_path"])
 
     # wrangle data in the format needed
-    skills_embeds_df = pd.DataFrame(skills_embeds)[
-        ["original sentence", "job id", "sentence id", "embedding"]
-    ]
-
+   
     skill_sentences_df = pd.DataFrame(skill_sentences)[
         ["job id", "sentence id", "Cluster number predicted"]
     ]
 
-    skill_sentences_df = skill_sentences_df[
-        skill_sentences_df["Cluster number predicted"] != -2
-    ]
-
     merged_sents_embeds = pd.merge(
-        skills_embeds_df, skill_sentences_df, on=["job id", "sentence id"]
-    )
+        skills_embeds_df, skill_sentences_df, on=["job id", "sentence id"], how='left'
+    ) 
+
+    merged_sents_embeds = merged_sents_embeds[
+        merged_sents_embeds["Cluster number predicted"] != -2
+    ]
 
     skills_df = pd.DataFrame(skills).T
     skills_df["Skill number"] = skills_df.index
@@ -109,15 +120,22 @@ if __name__ == "__main__":
         )
     )
 
+    logger.info(f"Generating skill names for {len(skills_df)} skills...")
+
+    # Save skill information
+    skills_data_output_path = params["skills_path"].split(".json")[0] + "_named.json"
+    logger.info(f"Saving skill names to {skills_data_output_path}")
+
     # generate skills names
+    # and save iteratively
     skills_data = get_skill_info(
         skills_df,
         params["num_top_sent"],
         params["ngram"],
         params["min_count"],
         params["threshold"],
+        s3,
+        BUCKET_NAME,
+        skills_data_output_path,
     )
-
-    # Save skill information
-    skills_data_output_path = params["skills_path"].split(".json")[0] + "_named.json"
-    save_to_s3(s3, BUCKET_NAME, skills_data, skills_data_output_path)
+    logger.info(f"{len(skills_data)} skills names saved")
