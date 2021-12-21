@@ -29,10 +29,14 @@ from skills_taxonomy_v2.pipeline.skills_extraction.extract_skills_utils import (
 
 logger = logging.getLogger(__name__)
 
+
 def load_skills_data(s3, skills_data_path):
     return load_s3_data(s3, BUCKET_NAME, skills_data_path)
 
-def load_sentences_data(s3, cluster_column_name, clustered_sentences_path, reduced_embeddings_dir=None):
+
+def load_sentences_data(
+    s3, cluster_column_name, clustered_sentences_path, reduced_embeddings_dir=None
+):
 
     # The sentences ID + cluster num
     sentence_embs = load_s3_data(s3, BUCKET_NAME, clustered_sentences_path)
@@ -44,34 +48,34 @@ def load_sentences_data(s3, cluster_column_name, clustered_sentences_path, reduc
             s3,
             BUCKET_NAME,
             reduced_embeddings_dir,
-            file_types=["*sentences_data_*.json"]
-            )
+            file_types=["*sentences_data_*.json"],
+        )
 
         sentences_data = pd.DataFrame()
         for reduced_embeddings_path in tqdm(reduced_embeddings_paths):
-            sentences_data_i = load_s3_data(
-                s3, BUCKET_NAME,
-                reduced_embeddings_path
-            )
+            sentences_data_i = load_s3_data(s3, BUCKET_NAME, reduced_embeddings_path)
             sentences_data = pd.concat([sentences_data, pd.DataFrame(sentences_data_i)])
         sentences_data.reset_index(drop=True, inplace=True)
 
         # Merge the reduced embeddings + texts with the sentence ID+cluster number
         sentence_embs = pd.merge(
-                sentences_data,
-                sentence_embs,
-                how='left', on=['job id', 'sentence id'])
-        sentence_embs["description"] = sentence_embs["description"].apply(lambda x: " ".join(x) if isinstance(x, list) else x)
+            sentences_data, sentence_embs, how="left", on=["job id", "sentence id"]
+        )
+        sentence_embs["description"] = sentence_embs["description"].apply(
+            lambda x: " ".join(x) if isinstance(x, list) else x
+        )
 
     # Remove not clustered sentences
     sentence_embs = sentence_embs[sentence_embs[cluster_column_name] >= 0]
 
     return sentence_embs
 
+
 def load_manual_level_dict(level_a_manual_clusters_path):
     with open(level_a_manual_clusters_path, "r") as f:
         levela_manual = json.load(f)
     return levela_manual
+
 
 def parse_arguments(parser):
 
@@ -108,9 +112,22 @@ if __name__ == "__main__":
         s3,
         cluster_column_name,
         params["clustered_sentences_path"],
-        params["reduced_embeddings_dir"]
-        )
-    logger.info(f"Building hierarchy with {len(sentence_embs)} sentences and {len(skills_data)} skills")
+        params["reduced_embeddings_dir"],
+    )
+    logger.info(
+        f"Building hierarchy with {len(sentence_embs)} sentences and {len(skills_data)} skills"
+    )
+
+    # Join the skill names to the skills data
+    if params["skills_names_data_path"]:
+        skills_names = load_skills_data(s3, params["skills_names_data_path"])
+    for skill_num, skill_info in skills_data.items():
+        skills_data[skill_num]["Skills name"] = skills_names[skill_num]["Skills name"]
+
+    # If the skill name is given in the skills data then use it
+    sentence_embs["Skill name"] = sentence_embs[cluster_column_name].apply(
+        lambda x: skills_data[str(x)]["Skills name"]
+    )
 
     if params["level_a_manual_clusters_path"]:
         levela_manual = load_manual_level_dict(params["level_a_manual_clusters_path"])
@@ -128,7 +145,7 @@ if __name__ == "__main__":
         previous_level_col=cluster_column_name,
         k_means_n=params["level_c_n"],
         k_means_max_iter=params["k_means_max_iter"],
-        embedding_column_name=embedding_column_name
+        embedding_column_name=embedding_column_name,
     )
     sentence_embs["Level C"] = sentence_embs[cluster_column_name].apply(
         lambda x: level_c_cluster_mapper[x]
@@ -140,9 +157,9 @@ if __name__ == "__main__":
     logger.info("Getting mid level hierarchy ...")
     if params["check_low_siloutte_b"]:
         logger.info("Points with low siloutte scores are put in their own cluster")
-        silhouette_threshold=params["silhouette_threshold"]
+        silhouette_threshold = params["silhouette_threshold"]
     else:
-        silhouette_threshold=None
+        silhouette_threshold = None
     level_b_cluster_mapper = get_new_level(
         sentence_embs,
         previous_level_col="Level C",
@@ -150,14 +167,20 @@ if __name__ == "__main__":
         k_means_max_iter=params["k_means_max_iter"],
         check_low_siloutte=params["check_low_siloutte_b"],
         silhouette_threshold=silhouette_threshold,
-        embedding_column_name=embedding_column_name
+        embedding_column_name=embedding_column_name,
     )
 
     if levela_manual:
-        logger.info("Using a manually created mapper to regroup level C groups - if data/random seed has changed this mapper may be out of date.")
-        level_b_cluster_mapper = amend_level_b_mapper(level_b_cluster_mapper, levela_manual)
+        logger.info(
+            "Using a manually created mapper to regroup level C groups - if data/random seed has changed this mapper may be out of date."
+        )
+        level_b_cluster_mapper = amend_level_b_mapper(
+            level_b_cluster_mapper, levela_manual
+        )
 
-    print(f"Mid level hierarchy has {len(set(level_b_cluster_mapper.values()))} sections")
+    print(
+        f"Mid level hierarchy has {len(set(level_b_cluster_mapper.values()))} sections"
+    )
 
     sentence_embs["Level B"] = sentence_embs["Level C"].apply(
         lambda x: level_b_cluster_mapper[x]
@@ -168,8 +191,12 @@ if __name__ == "__main__":
 
     logger.info("Getting top level hierarchy ...")
     if levela_manual:
-        logger.info("Using a manually created mapper to group level B groups - if data/random seed has changed this mapper may be out of date.")
-        level_a_cluster_mapper = manual_cluster_level(levela_manual, level_b_cluster_mapper)
+        logger.info(
+            "Using a manually created mapper to group level B groups - if data/random seed has changed this mapper may be out of date."
+        )
+        level_a_cluster_mapper = manual_cluster_level(
+            levela_manual, level_b_cluster_mapper
+        )
     else:
         if params["use_level_a_consensus"]:
             logger.info("... using consensus clustering")
@@ -178,7 +205,7 @@ if __name__ == "__main__":
                 previous_level_col="Level B",
                 k_means_n=params["level_a_n"],
                 numclust_its=params["level_a_consensus_numclust_its"],
-                embedding_column_name=embedding_column_name
+                embedding_column_name=embedding_column_name,
             )
         else:
             level_a_cluster_mapper = get_new_level(
@@ -186,11 +213,11 @@ if __name__ == "__main__":
                 previous_level_col="Level B",
                 k_means_n=params["level_a_n"],
                 k_means_max_iter=params["k_means_max_iter"],
-                embedding_column_name=embedding_column_name
+                embedding_column_name=embedding_column_name,
             )
     sentence_embs["Level A"] = sentence_embs["Level B"].apply(
-            lambda x: level_a_cluster_mapper[x]
-        )
+        lambda x: level_a_cluster_mapper[x]
+    )
 
     logger.info(
         f"Top level hierarchy has {sentence_embs['Level A'].nunique()} sections"
@@ -199,20 +226,20 @@ if __name__ == "__main__":
     try:
         # If the skill name is given in the skills data then use it
         sentence_embs["Skill name"] = sentence_embs[cluster_column_name].apply(
-                lambda x: skills_data[str(x)]["Skills name"]
-            )
+            lambda x: skills_data[str(x)]["Skills name"]
+        )
     except KeyError:
         # Create a skill name using TF-IDF
         skill_tfidf = get_level_names(
-                sentence_embs, cluster_column_name, top_n=params["level_names_tfidif_n"]
-            )
+            sentence_embs, cluster_column_name, top_n=params["level_names_tfidif_n"]
+        )
         sentence_embs["Skill name"] = sentence_embs[cluster_column_name].apply(
-                lambda x: skill_tfidf[x]
-            )
+            lambda x: skill_tfidf[x]
+        )
 
     if create_level_d:
         # Level D is just a merging of level C skills which were given the same name (i.e. no clustering)
-        # If there are skills with the same name in level C then group these 
+        # If there are skills with the same name in level C then group these
         level_c_name_mapper = {}
         for level_c_num, level_c_data in sentence_embs.groupby("Level C"):
             level_c_skill_names = level_c_data["Skill name"].unique().tolist()
@@ -264,6 +291,7 @@ if __name__ == "__main__":
                 ]
             except NameError:
                 pass
+            hier_info["Skill centroid"] = skill_info["Centroid"]
             hier_info["Hierarchy level A name"] = level_a_names[level_a]
             hier_info["Hierarchy level B name"] = level_b_names[level_b]
             hier_info["Hierarchy level C name"] = level_c_names[level_c]
@@ -297,7 +325,9 @@ if __name__ == "__main__":
                     for level_d_num, level_d_num_data in level_c_num_data.groupby(
                         "Level D"
                     ):
-                        skill_nums = level_d_num_data[cluster_column_name].unique().tolist()
+                        skill_nums = (
+                            level_d_num_data[cluster_column_name].unique().tolist()
+                        )
                         # The name at this level is the skill names all these level Ds are grouped on
                         level_d_structure[level_d_num] = {
                             "Name": skill_hierarchy[skill_nums[0]]["Skill name"],
@@ -310,14 +340,16 @@ if __name__ == "__main__":
                                     ][
                                         "Number of sentences that created skill"
                                     ],
-                                    "Example sentences with skill in": skills_data[str(k)][
-                                        skills_data_texts_name
-                                    ][0:10],
+                                    "Example sentences with skill in": skills_data[
+                                        str(k)
+                                    ][skills_data_texts_name][0:10],
                                 }
                                 for k in skill_nums
                             },
                         }
-                    skill_nums_c = level_c_num_data[cluster_column_name].unique().tolist()
+                    skill_nums_c = (
+                        level_c_num_data[cluster_column_name].unique().tolist()
+                    )
                     level_c_structure[level_c_num] = {
                         "Name": level_c_names[level_c_num],
                         "Number of skills": len(skill_nums_c),
@@ -329,19 +361,19 @@ if __name__ == "__main__":
                         "Name": level_c_names[level_c_num],
                         "Number of skills": len(skill_nums),
                         "Skills": {
-                                k: {
-                                    "Skill name": skill_hierarchy[k]["Skill name"],
-                                    "Number of sentences that created skill": skill_hierarchy[
-                                        k
-                                    ][
-                                        "Number of sentences that created skill"
-                                    ],
-                                    "Example sentences with skill in": skills_data[str(k)][
-                                        skills_data_texts_name
-                                    ][0:10],
-                                }
-                                for k in skill_nums
-                            },
+                            k: {
+                                "Skill name": skill_hierarchy[k]["Skill name"],
+                                "Number of sentences that created skill": skill_hierarchy[
+                                    k
+                                ][
+                                    "Number of sentences that created skill"
+                                ],
+                                "Example sentences with skill in": skills_data[str(k)][
+                                    skills_data_texts_name
+                                ][0:10],
+                            }
+                            for k in skill_nums
+                        },
                     }
             skill_nums_b = level_b_num_data[cluster_column_name].unique().tolist()
             level_b_structure[level_b_num] = {
