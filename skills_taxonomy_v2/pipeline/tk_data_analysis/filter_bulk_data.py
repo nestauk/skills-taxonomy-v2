@@ -17,15 +17,9 @@ s3 = boto3.resource("s3")
 
 if __name__ == "__main__":
 
-    sentences_data_dir = (
-        "outputs/skills_extraction/extracted_skills/2021.11.05_sentences_skills_data.json"
-    )
-
-    sentence_data = load_s3_data(s3, BUCKET_NAME, sentences_data_dir)
-    sentence_data = pd.DataFrame(sentence_data)
-
-    # Job adverts in our sample
-    skill_job_ads = set(sentence_data["job id"].unique())
+    # All 5 million job adverts in the original sample
+    original_sample = load_s3_data(s3, BUCKET_NAME, "outputs/tk_sample_data/sample_file_locations.json")
+    skill_job_ads = [v for s in original_sample.values() for v in s]
 
     # Job titles
     job_titles = {}
@@ -65,4 +59,26 @@ if __name__ == "__main__":
         BUCKET_NAME,
         job_dates,
         "outputs/tk_data_analysis/metadata_date/sample_filtered_2021.11.05.json",
+    )
+
+    # Job location
+    job_locations = {}
+    for file_name in tqdm(range(0, 13)):
+        file_date_dict = load_s3_data(
+            s3, BUCKET_NAME, f"outputs/tk_data_analysis/metadata_location/{file_name}.json"
+        )
+        job_locations.update(
+            {
+                job_id: f[0]
+                for job_id, f in file_date_dict.items()
+                if job_id in skill_job_ads
+            }
+        )
+
+    print(len(job_locations))
+    save_to_s3(
+        s3,
+        BUCKET_NAME,
+        job_locations,
+        "outputs/tk_data_analysis/metadata_location/sample_filtered_2021.11.05.json",
     )
