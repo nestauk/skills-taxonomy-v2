@@ -19,7 +19,7 @@ if __name__ == "__main__":
 
     # All 5 million job adverts in the original sample
     original_sample = load_s3_data(s3, BUCKET_NAME, "outputs/tk_sample_data/sample_file_locations.json")
-    skill_job_ads = [v for s in original_sample.values() for v in s]
+    skill_job_ads = set([v for s in original_sample.values() for v in s])
 
     # Job titles
     job_titles = {}
