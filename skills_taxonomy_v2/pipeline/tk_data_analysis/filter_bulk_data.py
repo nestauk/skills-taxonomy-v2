@@ -30,13 +30,13 @@ if __name__ == "__main__":
         for job_ad in job_ad_data:
             if job_ad['job_id'] in job_ids:
                 job_dates.append(
-                    (job_ad['job_id']: job_ad['date'])
+                    (job_ad['job_id'], job_ad['date'])
                 )
                 job_titles.append(
-                    (job_ad['job_id']: job_ad['job_title'])
+                    (job_ad['job_id'], job_ad['job_title'])
                 )
                 job_locations.append(
-                    (job_ad['job_id']: (job_ad.get("region"), job_ad.get("subregion"), job_ad.get("location_name"), job_ad.get("location_coordinates")))
+                    (job_ad['job_id'], (job_ad.get("region"), job_ad.get("subregion"), job_ad.get("location_name"), job_ad.get("location_coordinates")))
                 )
 
     save_to_s3(
