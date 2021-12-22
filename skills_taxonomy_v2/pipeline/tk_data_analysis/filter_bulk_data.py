@@ -18,12 +18,11 @@ s3 = boto3.resource("s3")
 if __name__ == "__main__":
 
     sentences_data_dir = (
-        "outputs/skills_extraction/extracted_skills/2021.08.31_sentences_data.json"
+        "outputs/skills_extraction/extracted_skills/2021.11.05_sentences_skills_data.json"
     )
 
     sentence_data = load_s3_data(s3, BUCKET_NAME, sentences_data_dir)
     sentence_data = pd.DataFrame(sentence_data)
-    sentence_data = sentence_data[sentence_data["Cluster number"] != -1]
 
     # Job adverts in our sample
     skill_job_ads = set(sentence_data["job id"].unique())
@@ -43,7 +42,7 @@ if __name__ == "__main__":
         s3,
         BUCKET_NAME,
         job_titles,
-        "outputs/tk_data_analysis/metadata_job/sample_filtered.json",
+        "outputs/tk_data_analysis/metadata_job/sample_filtered_2021.11.05.json",
     )
 
     # Job dates
@@ -65,5 +64,5 @@ if __name__ == "__main__":
         s3,
         BUCKET_NAME,
         job_dates,
-        "outputs/tk_data_analysis/metadata_date/sample_filtered.json",
+        "outputs/tk_data_analysis/metadata_date/sample_filtered_2021.11.05.json",
     )
