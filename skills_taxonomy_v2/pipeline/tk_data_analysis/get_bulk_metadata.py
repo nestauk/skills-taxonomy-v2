@@ -16,7 +16,7 @@ from collections import defaultdict
 
 from skills_taxonomy_v2 import BUCKET_NAME
 
-from skills_taxonomy_v2.getters.s3_data import get_s3_data_paths, save_to_s3
+from skills_taxonomy_v2.getters.s3_data import get_s3_data_paths, save_to_s3, load_s3_data
 
 
 s3 = boto3.resource("s3")
@@ -32,11 +32,11 @@ if __name__ == "__main__":
 
     file_num = 0
     count_tk_files = 0
-    job_id_file_list = []
-    job_id_date_list = []
-    job_id_meta_list = []
-    job_id_job_list = []
-    job_id_location_list = []
+    job_id_file_list = defaultdict(list)
+    job_id_date_list = defaultdict(list)
+    job_id_meta_list = defaultdict(list)
+    job_id_job_list = defaultdict(list)
+    job_id_location_list = defaultdict(list)
     all_tk_date_count = defaultdict(int)
     all_tk_region_count = defaultdict(int)
     all_tk_subregion_count = defaultdict(int)
@@ -45,35 +45,32 @@ if __name__ == "__main__":
         data = load_s3_data(s3, BUCKET_NAME, file_name)
         for d in data:
             # Save out as little info as possible to make file smaller
-            job_id_file_list.append((d["job_id"], file_name.split(tk_data_path)[1]))
-            job_id_date_list.append((d["job_id"], [
-                d.get("date"),
-                d.get("expiration_date"),
-            ]))
+            job_id_file_list[d["job_id"]].append(file_name.split(tk_data_path)[1])
+            job_id_date_list[d["job_id"]].append(d.get("date"))
             if d.get("date"):
                 all_tk_date_count[d.get("date")] += 1
             else:
                 all_tk_date_count["Not given"] += 1
 
-            job_id_meta_list.append((d["job_id"], [
+            job_id_meta_list[d["job_id"]].append([
                 d.get("source_website"),
                 d.get("language"),
-            ]))
+            ])
             organization_industry = d.get("organization_industry")
-            job_id_job_list.append((d["job_id"], [
+            job_id_job_list[d["job_id"]].append([
                 d.get("job_title"),
                 organization_industry.get("label")
                 if organization_industry
                 else None,
-            ]))
+            ])
             region = d.get("region")
             subregion = d.get("subregion")
-            job_id_location_list.append((d["job_id"], [
+            job_id_location_list[d["job_id"]].append([
                 d.get("location_name"),
                 d.get("location_coordinates"),
                 region.get("label") if region else None,
                 subregion.get("label") if subregion else None,
-            ]))
+            ])
             if region:
                 all_tk_region_count[region.get("label")] += 1
             else:
@@ -118,11 +115,11 @@ if __name__ == "__main__":
             )
             file_num += 1
             count_tk_files = 0
-            job_id_file_list = []
-            job_id_date_list = []
-            job_id_meta_list = []
-            job_id_job_list = []
-            job_id_location_list = []
+            job_id_file_list = defaultdict(list)
+            job_id_date_list = defaultdict(list)
+            job_id_meta_list = defaultdict(list)
+            job_id_job_list = defaultdict(list)
+            job_id_location_list = defaultdict(list)
     
     save_to_s3(
         s3,
