@@ -21,22 +21,22 @@ if __name__ == "__main__":
     # All 5 million job adverts in the original sample
     original_sample = load_s3_data(s3, BUCKET_NAME, "outputs/tk_sample_data/sample_file_locations.json")
    
-    job_titles = {}
-    job_dates = {}
-    job_locations = {}
+    job_titles = []
+    job_dates = []
+    job_locations = []
     for file_name, job_ids in tqdm(original_sample.items()):
         job_ids = set(job_ids)
         job_ad_data = load_s3_data(s3, BUCKET_NAME, f'inputs/data/textkernel-files/{file_name}')
         for job_ad in job_ad_data:
             if job_ad['job_id'] in job_ids:
-                job_dates.update(
-                    {job_ad['job_id']: job_ad['date']}
+                job_dates.append(
+                    (job_ad['job_id']: job_ad['date'])
                 )
-                job_titles.update(
-                    {job_ad['job_id']: job_ad['job_title']}
+                job_titles.append(
+                    (job_ad['job_id']: job_ad['job_title'])
                 )
-                job_locations.update(
-                    {job_ad['job_id']: (job_ad.get("region"), job_ad.get("subregion"), job_ad.get("location_name"), job_ad.get("location_coordinates"))}
+                job_locations.append(
+                    (job_ad['job_id']: (job_ad.get("region"), job_ad.get("subregion"), job_ad.get("location_name"), job_ad.get("location_coordinates")))
                 )
 
     save_to_s3(
