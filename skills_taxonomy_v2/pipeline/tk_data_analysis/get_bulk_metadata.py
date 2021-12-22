@@ -120,6 +120,40 @@ if __name__ == "__main__":
             job_id_meta_list = defaultdict(list)
             job_id_job_list = defaultdict(list)
             job_id_location_list = defaultdict(list)
+
+    print("Saving remainder data ...")
+    save_to_s3(
+        s3,
+        BUCKET_NAME,
+        job_id_file_list,
+        os.path.join(output_dir, f"metadata_file/{file_num}.json"),
+    )
+    save_to_s3(
+        s3,
+        BUCKET_NAME,
+        job_id_date_list,
+        os.path.join(output_dir, f"metadata_date/{file_num}.json"),
+    )
+    save_to_s3(
+        s3,
+        BUCKET_NAME,
+        job_id_meta_list,
+        os.path.join(output_dir, f"metadata_meta/{file_num}.json"),
+    )
+    save_to_s3(
+        s3,
+        BUCKET_NAME,
+        job_id_job_list,
+        os.path.join(output_dir, f"metadata_job/{file_num}.json"),
+    )
+    save_to_s3(
+        s3,
+        BUCKET_NAME,
+        job_id_location_list,
+        os.path.join(output_dir, f"metadata_location/{file_num}.json"),
+    )
+
+    print("Saving counts data ...")
     
     save_to_s3(
         s3,
