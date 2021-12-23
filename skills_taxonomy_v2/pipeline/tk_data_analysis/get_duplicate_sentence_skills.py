@@ -41,12 +41,11 @@ print(f"{len(problem_sentence_dir)} problem_sentence_dir")
 
 
 words_id_list = []
-
 logger.info(f"Loading embeddings from {len(sentence_embeddings_dirs)/2} files")
 problem_embedding_dir = []
 output_i = 0
 count = 0
-for embedding_dir in tqdm(sentence_embeddings_dirs):
+for i, embedding_dir in tqdm(enumerate(sentence_embeddings_dirs)):
 	if "embeddings.json" in embedding_dir:
 		try:
 			sentence_embeddings = load_s3_data(s3, BUCKET_NAME, embedding_dir)
@@ -57,12 +56,14 @@ for embedding_dir in tqdm(sentence_embeddings_dirs):
 			if len(original_sentence) < sent_thresh:
 				words_id = hash(words)
 				words_id_list.append([words_id, job_id, sent_id])
-				count += 1
-		if count%100==0:
-			save_to_s3(
+	if i%200==0:
+		save_to_s3(
 				s3, BUCKET_NAME,words_id_list,
 				f"outputs/tk_data_analysis_new_method/2021.11.05_words_id_list_{output_i}.json",)
-			output_i += 1
+		output_i += 1
+		words_id_list = []
+
+
 
 print(f"{len(problem_embedding_dir)} problem_sentence_dir")
 
