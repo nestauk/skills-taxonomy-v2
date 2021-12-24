@@ -15,7 +15,7 @@ The parameters for all these steps can be found in the config path `skills_taxon
 
 ### 1. Finding sentence embeddings
 
-First we found embeddings for 4,312,285 job advert using the `all-MiniLM-L6-v2` model: `get_sentence_embeddings.py --config_path skills_taxonomy_v2/config/skills_extraction/2021.11.05.yaml`.
+First we found embeddings for 4,312,285 job advert (edit: this may be 3,572,140 job adverts with skill sentences) using the `all-MiniLM-L6-v2` model: `get_sentence_embeddings.py --config_path skills_taxonomy_v2/config/skills_extraction/2021.11.05.yaml`.
 
 We then had a look at whether sentence length can predict whether the sentence contains one skill or not, and whether the sentence is indeed one sentences or multiple sentences not split up well. This involved manually tagging a sample of sentences of different lengths. This analysis is discussed in `Multi-skill sentences.ipynb` and led us to believe that sentences over 250 characters, around 80% of sentences are less than 250 characters.
 

@@ -237,7 +237,7 @@ Skill sentences for each job advert and file are stored in `outputs/sentence_cla
 
 Out of the 647 files of job adverts, 516 had skill sentences in. This is because the 'jobs_expired' files were included in the sample and these don't contain the job advert text. This leaves us with a sample of 4,312,285 job adverts.
 
-
+Skill sentences were identified in 3,572,140 unique job adverts (i.e. some job adverts had no skill sentences at all/ some were under 30 characters).
 
 ### From `2021.07.09.yaml`:
 
