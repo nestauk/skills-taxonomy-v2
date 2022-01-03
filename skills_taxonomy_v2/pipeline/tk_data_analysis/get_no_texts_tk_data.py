@@ -28,6 +28,8 @@ all_tk_data_paths = get_s3_data_paths(
 
 job_dates_fulltext_count = defaultdict(int)
 job_region_fulltext_count = defaultdict(int)
+job_dates_nofulltext_count = defaultdict(int)
+job_dates_all_length = defaultdict(list)
 no_text_job_ids = []
 for file_name in tqdm(all_tk_data_paths):
     data = load_s3_data(s3, BUCKET_NAME, file_name)
@@ -35,8 +37,10 @@ for file_name in tqdm(all_tk_data_paths):
         if d.get('full_text'):
             if d.get("date"):
                 job_dates_fulltext_count[d.get("date")] += 1
+                job_dates_all_length[d.get("date")].append(len(d.get('full_text')))
             else:
                 job_dates_fulltext_count["Not given"] += 1
+                job_dates_all_length["Not given"].append(len(d.get('full_text')))
             region = d.get("region")
             if region:
                 region_label = region.get("label")
@@ -44,6 +48,12 @@ for file_name in tqdm(all_tk_data_paths):
                     job_region_fulltext_count[region_label] += 1
         else:
             no_text_job_ids.append(d.get('job_id'))
+            if d.get("date"):
+                job_dates_nofulltext_count[d.get("date")] += 1
+                job_dates_all_length[d.get("date")].append(0)
+            else:
+                job_dates_nofulltext_count["Not given"] += 1
+                job_dates_all_length["Not given"].append(0)
 
 save_to_s3(
         s3,
@@ -62,4 +72,16 @@ save_to_s3(
         BUCKET_NAME,
         no_text_job_ids,
         "outputs/tk_data_analysis_new_method/all_tk_no_full_text.json",
+    )
+save_to_s3(
+        s3,
+        BUCKET_NAME,
+        job_dates_nofulltext_count,
+        f"outputs/tk_data_analysis_new_method/metadata_date/tk_dates_count_no_full_text.json",
+    )
+save_to_s3(
+        s3,
+        BUCKET_NAME,
+        job_dates_all_length,
+        f"outputs/tk_data_analysis_new_method/metadata_date/tk_dates_all_length.json",
     )
