@@ -48,98 +48,105 @@ logger = logging.getLogger(__name__)
 
 
 def run_predict(
-        data_path, job_ids, sent_classifier
+        s3, data_path, job_ids, sent_classifier, done_job_ids
     ):
     """
     Get predictions from the sample of job adverts already found.
+    Don't re-run any of the job ids in done_job_ids.
     """
   
     # Run predictions and save outputs iteratively
     logger.info(f"Loading data from {data_path} ...")
     data = load_s3_data(s3, BUCKET_NAME, data_path)
 
-    job_ids_set = set(job_ids)
+    job_ids_set = set(job_ids).difference(done_job_ids)
 
-    # Sample of job adverts used for this file
-    neccessary_fields = ["full_text", "job_id"]
-    data = [
-        {field: job_ad.get(field, None) for field in neccessary_fields}
-        for job_ad in data
-        if job_ad["job_id"] in job_ids_set
-    ]
+    if len(job_ids_set) == 0:
+        logger.info(f"Already processed ...")
 
-    if data:
-        logger.info(f"Splitting sentences ...")
-        start_time = time.time()
-        with Pool(4) as pool:  # 4 cpus
-            chunks = make_chunks(data, 1000)  # chunks of 1000s sentences
-            partial_split_sentence = partial(split_sentence_over_chunk, min_length=30)
-            # NB the output will be a list of lists, so make sure to flatten after this!
-            split_sentence_pool_output = pool.map(partial_split_sentence, chunks)
-        logger.info(f"Splitting sentences took {time.time() - start_time} seconds")
+    # If the length is 0 you have already processed this file.
+    if len(job_ids_set) != 0:
 
-        # Flatten and process output into one list of sentences for all documents
-        start_time = time.time()
-        sentences = []
-        job_ids = []
-        for chunk_split_sentence_pool_output in split_sentence_pool_output:
-            for job_id, s in chunk_split_sentence_pool_output:
-                if s:
-                    sentences += s
-                    job_ids += [job_id] * len(s)
-        logger.info(f"Processing sentences took {time.time() - start_time} seconds")
+        # Sample of job adverts used for this file
+        neccessary_fields = ["full_text", "job_id"]
+        data = [
+            {field: job_ad.get(field, None) for field in neccessary_fields}
+            for job_ad in data
+            if job_ad["job_id"] in job_ids_set
+        ]
 
-        if sentences:
-            logger.info(f"Transforming skill sentences ...")
-            sentences_vec = sent_classifier.transform(sentences)
-            pool_sentences_vec = [
-                (vec_ix, [vec]) for vec_ix, vec in enumerate(sentences_vec)
-            ]
-
-            logger.info(f"Chunking up sentences ...")
-            start_time = time.time()
-            # Manually chunk up the data to predict multiple in a pool
-            # This is because predict can't deal with massive vectors
-            pool_sentences_vecs = []
-            pool_sentences_vec = []
-            for vec_ix, vec in enumerate(sentences_vec):
-                pool_sentences_vec.append((vec_ix, vec))
-                if len(pool_sentences_vec) > 1000:
-                    pool_sentences_vecs.append(pool_sentences_vec)
-                    pool_sentences_vec = []
-            if len(pool_sentences_vec) != 0:
-                # Add the final chunk if not empty
-                pool_sentences_vecs.append(pool_sentences_vec)
-            logger.info(
-                f"Chunking up sentences into {len(pool_sentences_vecs)} chunks took {time.time() - start_time} seconds"
-            )
-
-            logger.info(f"Predicting skill sentences ...")
+        if data:
+            logger.info(f"Splitting sentences ...")
             start_time = time.time()
             with Pool(4) as pool:  # 4 cpus
-                partial_predict_sentences = partial(
-                    predict_sentences, sent_classifier=sent_classifier
-                )
-                predict_sentences_pool_output = pool.map(
-                    partial_predict_sentences, pool_sentences_vecs
-                )
-            logger.info(
-                f"Predicting on {len(sentences)} sentences took {time.time() - start_time} seconds"
-            )
+                chunks = make_chunks(data, 1000)  # chunks of 1000s sentences
+                partial_split_sentence = partial(split_sentence_over_chunk, min_length=30)
+                # NB the output will be a list of lists, so make sure to flatten after this!
+                split_sentence_pool_output = pool.map(partial_split_sentence, chunks)
+            logger.info(f"Splitting sentences took {time.time() - start_time} seconds")
 
-            # Process output into one list of sentences for all documents
-            logger.info(f"Combining data for output ...")
+            # Flatten and process output into one list of sentences for all documents
             start_time = time.time()
-            skill_sentences_dict = defaultdict(list)
-            for chunk_output in predict_sentences_pool_output:
-                for (sent_ix, pred) in chunk_output:
-                    if pred == 1:
-                        job_id = job_ids[sent_ix]
-                        sentence = sentences[sent_ix]
-                        skill_sentences_dict[job_id].append(sentence)
-            logger.info(f"Combining output took {time.time() - start_time} seconds")
+            sentences = []
+            job_ids = []
+            for chunk_split_sentence_pool_output in split_sentence_pool_output:
+                for job_id, s in chunk_split_sentence_pool_output:
+                    if s:
+                        sentences += s
+                        job_ids += [job_id] * len(s)
+            logger.info(f"Processing sentences took {time.time() - start_time} seconds")
 
-            return skill_sentences_dict
+            if sentences:
+                logger.info(f"Transforming skill sentences ...")
+                sentences_vec = sent_classifier.transform(sentences)
+                pool_sentences_vec = [
+                    (vec_ix, [vec]) for vec_ix, vec in enumerate(sentences_vec)
+                ]
+
+                logger.info(f"Chunking up sentences ...")
+                start_time = time.time()
+                # Manually chunk up the data to predict multiple in a pool
+                # This is because predict can't deal with massive vectors
+                pool_sentences_vecs = []
+                pool_sentences_vec = []
+                for vec_ix, vec in enumerate(sentences_vec):
+                    pool_sentences_vec.append((vec_ix, vec))
+                    if len(pool_sentences_vec) > 1000:
+                        pool_sentences_vecs.append(pool_sentences_vec)
+                        pool_sentences_vec = []
+                if len(pool_sentences_vec) != 0:
+                    # Add the final chunk if not empty
+                    pool_sentences_vecs.append(pool_sentences_vec)
+                logger.info(
+                    f"Chunking up sentences into {len(pool_sentences_vecs)} chunks took {time.time() - start_time} seconds"
+                )
+
+                logger.info(f"Predicting skill sentences ...")
+                start_time = time.time()
+                with Pool(4) as pool:  # 4 cpus
+                    partial_predict_sentences = partial(
+                        predict_sentences, sent_classifier=sent_classifier
+                    )
+                    predict_sentences_pool_output = pool.map(
+                        partial_predict_sentences, pool_sentences_vecs
+                    )
+                logger.info(
+                    f"Predicting on {len(sentences)} sentences took {time.time() - start_time} seconds"
+                )
+
+                # Process output into one list of sentences for all documents
+                logger.info(f"Combining data for output ...")
+                start_time = time.time()
+                skill_sentences_dict = defaultdict(list)
+                for chunk_output in predict_sentences_pool_output:
+                    for (sent_ix, pred) in chunk_output:
+                        if pred == 1:
+                            job_id = job_ids[sent_ix]
+                            sentence = sentences[sent_ix]
+                            skill_sentences_dict[job_id].append(sentence)
+                logger.info(f"Combining output took {time.time() - start_time} seconds")
+
+                return skill_sentences_dict
 
 def parse_arguments(parser):
 
@@ -173,6 +180,9 @@ if __name__ == "__main__":
     sample_dict_additional = load_s3_data(
         s3, BUCKET_NAME, "outputs/tk_sample_data/sample_file_locations_expired_replacements.json"
     )
+    sample_dict_additional = [(k, v) for k, v in sample_dict_additional.items()]
+    # Reverse since the first ones are likely to already be processed
+    sample_dict_additional.reverse()
         
     sent_classifier, _ = load_model(params["model_config_name"], multi_process=True, batch_size=32)
 
@@ -180,13 +190,17 @@ if __name__ == "__main__":
 
     # Make predictions and save output for data path(s)
     logger.info(f"Running predictions on {len(sample_dict_additional)} data files ...")
-    for data_subpath, job_ids in tqdm(sample_dict_additional.items()):
+    for data_subpath, job_ids in tqdm(sample_dict_additional):
         data_path = os.path.join(params["input_dir"], params["data_dir"], data_subpath)
-        skill_sentences_dict = run_predict(data_path, job_ids, sent_classifier)
+
+        # Open up the original skill sentences for this file
+        output_file_dir = get_output_name(data_path, "inputs/data/", edit_dir, params["model_config_name"])
+        skill_sentences_dict_enhanced = load_s3_data(s3, BUCKET_NAME, output_file_dir)
+        done_job_ids = set(skill_sentences_dict_enhanced.keys())
+
+        skill_sentences_dict = run_predict(s3, data_path, job_ids, sent_classifier, done_job_ids)
         if skill_sentences_dict:
-            # Open up the original skill sentences for this file and append with new job ids
-            output_file_dir = get_output_name(data_path, "inputs/data/", edit_dir, params["model_config_name"])
-            skill_sentences_dict_enhanced = load_s3_data(s3, BUCKET_NAME, output_file_dir)
+            #  Append file with new job ids
             logger.info(f"Original number job adverts with skill sentences was {len(skill_sentences_dict_enhanced)}")
             skill_sentences_dict_enhanced.update(skill_sentences_dict)
             logger.info(f"Now number job adverts with skill sentences is {len(skill_sentences_dict_enhanced)}")
