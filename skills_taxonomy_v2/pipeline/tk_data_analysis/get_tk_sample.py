@@ -4,6 +4,10 @@ Take a sample of the TK job adverts to be used in the pipeline.
 Output is a dict of each tk file name and a list of the job ids
 within it which are included in the sample.
 e.g. {"historical/...0.json": ['6001f8701aeb4072a8eb0cca85535208', ...]}
+
+Note: this script isn't the most efficient since we wanted to utilise parts of the sample
+already processed through the pipeline, so needed to adapt the original sample
+rather than re-sampling everything without the expired files
 """
 
 from skills_taxonomy_v2.getters.s3_data import (
@@ -67,6 +71,10 @@ if __name__ == "__main__":
     random.seed(params["random_seed"])
     job_ids_sample = random.sample(job_ids, params["sample_size"])
 
+    # # Take another random sample (for replacements)
+    # random.seed(params["random_seed"]+1)
+    # job_ids_sample_replacements = random.sample(job_ids, 1000000)
+
     del job_ids
 
     # It's quicker to query a set than a list
@@ -97,3 +105,78 @@ if __name__ == "__main__":
         sample_locs,
         os.path.join(params["output_dir"], "sample_file_locations.json"),
     )
+
+# # 5. The 5 million sample (inc expired)
+# sample_locs = load_s3_data(
+#     s3, BUCKET_NAME, "outputs/tk_sample_data/sample_file_locations.json"
+# )
+
+    # Now with the job ids from the expired files, create another dict to get these
+    # job ids from not-expired files:
+    job_ids_expired = []
+    for sample_loc, job_ids in tqdm(sample_locs.items()):
+        if "jobs_expired" in sample_loc:
+            job_ids_expired += job_ids
+
+    job_ids_expired = set(job_ids_expired)
+
+    print(len(job_ids_expired))
+
+    # Get the same number of expired job ids from these location of files
+    expired_locs_nums = defaultdict(int)
+    for k, job_ids in sample_locs.items():
+        if "jobs_expired" in k:
+            expired_locs_nums["/".join(k.split('/')[0:3])] += len(job_ids)
+
+
+    def get_job_ids(expired_loc, num_job_ids, sample_job_ids):
+        job_ids_replacement = set()
+        for tk_metadata_path in tqdm(tk_metadata_paths):
+            file_dict = load_s3_data(s3, BUCKET_NAME, tk_metadata_path)
+            for job_id, file_name in file_dict.items():
+                if "jobs_expired" not in file_name:
+                    file_loc = "/".join(file_name.split('/')[0:3])
+                    if file_loc == expired_loc:
+                        job_ids_replacement.add(job_id)
+        # Remove any which are in the sample already
+        job_ids_replacement_unique = job_ids_replacement.difference(sample_job_ids)
+        random.seed(params["random_seed"])
+        job_ids_sample_replacement = set(random.sample(job_ids_replacement_unique, num_job_ids))
+        return job_ids_sample_replacement
+
+    sample_job_ids = []
+    for sample_loc, job_ids in tqdm(sample_locs.items()):
+        if "jobs_expired" not in sample_loc:
+            sample_job_ids += job_ids
+
+    sample_job_ids = set(sample_job_ids)
+    job_ids_sample_replacement = set()
+    for expired_loc, num_job_ids in expired_locs_nums.items():
+        print(expired_loc)
+        job_ids_sample_replacement.update(get_job_ids(expired_loc, num_job_ids, sample_job_ids))
+        sample_job_ids.update(job_ids_sample_replacement)
+
+    job_ids_seen = set()
+    sample_locs_reboot = defaultdict(list)
+    for tk_metadata_path in tqdm(tk_metadata_paths):
+        file_dict = load_s3_data(s3, BUCKET_NAME, tk_metadata_path)
+        for job_id, file_name in file_dict.items():
+            if "jobs_expired" not in file_name:
+                if (job_id in job_ids_sample_replacement) and (job_id not in job_ids_seen):
+                    sample_locs_reboot[file_name].append(job_id)
+                    job_ids_seen.add(job_id)
+
+
+    print(sum([len(v) for v in sample_locs_reboot.values()]) == len(job_ids_expired))
+    # all_used_job_ids = set(job_ids_not_expired + [vv for v in sample_locs_reboot.values() for vv in v])
+    print(len(sample_job_ids))
+    print(len(set(sample_job_ids)))
+
+    save_to_s3(
+            s3,
+            BUCKET_NAME,
+            sample_locs_reboot,
+            os.path.join(params["output_dir"], "sample_file_locations_expired_replacements.json"),
+        )
+
+        

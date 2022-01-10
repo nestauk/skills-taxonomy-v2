@@ -254,9 +254,12 @@ if __name__ == "__main__":
         sentence_embs["Level D"] = sentence_embs.apply(get_level_c_merged_names, axis=1)
 
     # Level names
-    level_a_names = get_level_names(
-        sentence_embs, "Level A", top_n=params["level_names_tfidif_n"]
-    )
+    if levela_manual:
+        level_a_names = {int(k):v['Name'] for k, v in levela_manual.items()}
+    else:
+        level_a_names = get_level_names(
+            sentence_embs, "Level A", top_n=params["level_names_tfidif_n"]
+        )
     level_b_names = get_level_names(
         sentence_embs, "Level B", top_n=params["level_names_tfidif_n"]
     )

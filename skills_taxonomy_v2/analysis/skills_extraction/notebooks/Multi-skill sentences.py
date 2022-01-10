@@ -53,6 +53,9 @@ len(tagged_sentences_data)
 # %%
 pd.notnull(tagged_sentences_data["Well split and formatted into single sentence?"][27])
 
+# %%
+tagged_sentences_data[tagged_sentences_data["Well split and formatted into single sentence?"]==False]["original sentence"].tolist()
+
 
 # %%
 def get_binary():
@@ -66,7 +69,7 @@ print(len(tagged_sentences_data))
 tagged_sentences_data.head(3)
 
 # %%
-tagged_sentences_data[["Well split and formatted into single sentence?", "One skill mentioned? (or at least very similar skills)"]].value_counts()
+tagged_sentences_data[["Well split and formatted into single sentence?", "One skill mentioned? (or at least very similar skills)"]].value_counts(dropna=False)
 
 # %%
 tagged_sentences_data.plot.scatter(x="length original", y = 'Well split binary')
@@ -98,7 +101,7 @@ for sent_thresh in range(50,1000):
         one_skill_accuracy.append(filt["One skill binary"].sum()/filt["One skill binary"].notnull().sum())
         well_split_accuracy.append(filt["Well split binary"].sum()/filt["Well split binary"].notnull().sum())
         num_data.append(len(filt))
-    
+
 
 # %%
 fig, ax1 = plt.subplots(figsize=(8,4))
@@ -113,9 +116,11 @@ ax2.legend(loc="upper right")
 
 fig.tight_layout()  # otherwise the right y-label is slightly clipped
 
-
+ax1.set_xlabel("Sentence length threshold")
 plt.axvline(x=250, c="red")
+plt.savefig("multiskill_sents_analysis.png")
 plt.show()
+
 
 # %%
 tagged_sentences_data.boxplot(by=[
