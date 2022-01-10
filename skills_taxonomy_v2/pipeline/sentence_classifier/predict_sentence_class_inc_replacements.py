@@ -180,7 +180,48 @@ if __name__ == "__main__":
     sample_dict_additional = load_s3_data(
         s3, BUCKET_NAME, "outputs/tk_sample_data/sample_file_locations_expired_replacements.json"
     )
-    sample_dict_additional = [(k, v) for k, v in sample_dict_additional.items()]
+    # sample_dict_additional = [(k, v) for k, v in sample_dict_additional.items()]
+
+    # CAN DELETE   
+    manual_to_do = ['semiannual/2020/2020-10-02/jobs_new.13.jsonl.gz',
+        'semiannual/2020/2020-10-02/jobs_new.24.jsonl.gz',
+        'semiannual/2020/2020-10-02/jobs_new.25.jsonl.gz',
+        'semiannual/2020/2020-10-02/jobs_new.26.jsonl.gz',
+        'semiannual/2020/2020-10-02/jobs_new.27.jsonl.gz',
+        'semiannual/2020/2020-10-02/jobs_new.28.jsonl.gz',
+        'semiannual/2020/2020-10-02/jobs_new.32.jsonl.gz',
+        'semiannual/2020/2020-10-02/jobs_new.33.jsonl.gz',
+        'semiannual/2020/2020-10-02/jobs_new.34.jsonl.gz',
+        'semiannual/2021/2021-04-01/jobs_new.16.jsonl.gz',
+        'semiannual/2021/2021-04-01/jobs_new.17.jsonl.gz',
+        'semiannual/2021/2021-04-01/jobs_new.18.jsonl.gz',
+        'semiannual/2021/2021-04-01/jobs_new.15.jsonl.gz',
+        'semiannual/2021/2021-04-01/jobs_new.12.jsonl.gz',
+        'semiannual/2021/2021-04-01/jobs_new.14.jsonl.gz',
+        'semiannual/2021/2021-04-01/jobs_new.13.jsonl.gz',
+        'semiannual/2021/2021-04-01/jobs_new.11.jsonl.gz',
+        'semiannual/2021/2021-04-01/jobs_new.0.jsonl.gz',
+        'semiannual/2021/2021-04-01/jobs_new.10.jsonl.gz',
+        'semiannual/2021/2021-04-01/jobs_new.1.jsonl.gz']
+    sample_dict_additional = {k:v for k,v in sample_dict_additional.items() if k in manual_to_do}
+    
+
+    # Chunk up the files since some have a lot of job ids in
+    max_size = 2000
+
+    def chunks(l, n):
+        chunked = []
+        for i in range(0, len(l), n):
+            chunked.append(l[i : i + n])
+        return chunked
+
+    sample_dict_additional_new = []
+    for file_name, job_id_list in sample_dict_additional.items():
+        chunked_job_id_list = chunks(job_id_list, max_size)
+        for chunk_job_id_list in chunked_job_id_list:
+            sample_dict_additional_new.append((file_name, chunk_job_id_list))
+    sample_dict_additional = sample_dict_additional_new
+
     # Reverse since the first ones are likely to already be processed
     sample_dict_additional.reverse()
         
