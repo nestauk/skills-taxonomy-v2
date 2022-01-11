@@ -28,5 +28,4 @@ geopandas
 rtree
 urllib3
 shapely
-pattern
 metaflow_extensions@git+https://github.com/nestauk/metaflow_extensions@25_fix_project_env

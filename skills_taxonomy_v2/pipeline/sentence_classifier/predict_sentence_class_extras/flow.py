@@ -58,8 +58,22 @@ class PredictSkillSentsExtra(FlowSpec):
         self.sample_dict_additional.reverse()
 
         # self.sample_dict_additional = self.sample_dict_additional[0:2] ## REMOVE THIS
-        self.sample_dict_additional = [i for i in self.sample_dict_additional if i[0]=='semiannual/2021/2021-04-01/jobs_new.10.jsonl.gz']## REMOVE THIS
-
+        files_left = [
+            'historical/2019/2019-11-14/jobs.38.jsonl.gz',
+            'semiannual/2020/2020-10-02/jobs_new.13.jsonl.gz',
+            'semiannual/2020/2020-10-02/jobs_new.24.jsonl.gz',
+            'semiannual/2020/2020-10-02/jobs_new.25.jsonl.gz',
+            'semiannual/2020/2020-10-02/jobs_new.26.jsonl.gz',
+            'semiannual/2020/2020-10-02/jobs_new.27.jsonl.gz',
+            'semiannual/2020/2020-10-02/jobs_new.28.jsonl.gz',
+            'semiannual/2020/2020-10-02/jobs_new.32.jsonl.gz',
+            'semiannual/2020/2020-10-02/jobs_new.33.jsonl.gz',
+            'semiannual/2020/2020-10-02/jobs_new.34.jsonl.gz',
+            'semiannual/2021/2021-04-01/jobs_new.16.jsonl.gz',
+            'semiannual/2021/2021-04-01/jobs_new.17.jsonl.gz',
+            'semiannual/2021/2021-04-01/jobs_new.18.jsonl.gz'
+        ]
+        self.sample_dict_additional = [i for i in self.sample_dict_additional if i[0] in files_left]## REMOVE THIS
 
         self.edit_dir = "outputs/sentence_classifier/data/skill_sentences/2022.01.04/"
 
@@ -98,11 +112,10 @@ class PredictSkillSentsExtra(FlowSpec):
         import yaml
 
         # In batch there will be the error "OSError: mysql_config not found", so do:
-        os.system('sudo apt-get install libmysqlclient-dev') 
+        # os.system('sudo apt-get install libmysqlclient-dev') 
 
         from skills_taxonomy_v2.pipeline.sentence_classifier.predict_sentence_class_extras.utils import run_predict
-        from skills_taxonomy_v2.pipeline.sentence_classifier.predict_sentence_class import get_output_name
-        from skills_taxonomy_v2.pipeline.sentence_classifier.predict_sentence_class import load_model
+        from skills_taxonomy_v2.pipeline.sentence_classifier.predict_sentence_class import get_output_name, load_model
 
         s3 = boto3.resource("s3")
 
