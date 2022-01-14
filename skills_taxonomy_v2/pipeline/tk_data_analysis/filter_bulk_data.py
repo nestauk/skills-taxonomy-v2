@@ -18,11 +18,10 @@ s3 = boto3.resource("s3")
 
 if __name__ == "__main__":
 
-    # All 5 million job adverts in the original sample
-    original_sample = load_s3_data(s3, BUCKET_NAME, "outputs/tk_sample_data/sample_file_locations.json")
-    replacements_sample = load_s3_data(s3, BUCKET_NAME, "outputs/tk_sample_data/sample_file_locations_expired_replacements.json")
+    # All 5 million job adverts in the sample
+    sample_dict = load_s3_data(s3, BUCKET_NAME, "outputs/tk_sample_data/14.01.22.sample_file_locations.json")
 
-    skill_job_ads = set([v for s in original_sample.values() for v in s] + [v for s in replacements_sample.values() for v in s])
+    skill_job_ads = set([v for s in sample_dict.values() for v in s])
 
     # Takes up a fair amount of memory, so do separately
     job_dates = defaultdict(list)
@@ -40,7 +39,7 @@ if __name__ == "__main__":
         s3,
         BUCKET_NAME,
         job_dates,
-        "outputs/tk_data_analysis_new_method/metadata_date/with_replacements/sample_filtered_2021.11.05_from_metadata.json",
+        "outputs/tk_data_analysis_new_method/metadata_date/14.01.22/sample_filtered.json",
     )
 
     job_locations = defaultdict(list)
@@ -57,7 +56,7 @@ if __name__ == "__main__":
         s3,
         BUCKET_NAME,
         job_locations,
-        "outputs/tk_data_analysis_new_method/metadata_location/with_replacements/sample_filtered_2021.11.05_from_metadata.json",
+        "outputs/tk_data_analysis_new_method/metadata_location/14.01.22/sample_filtered.json",
     )
 
     job_titles = defaultdict(list)
@@ -75,5 +74,5 @@ if __name__ == "__main__":
         s3,
         BUCKET_NAME,
         job_titles,
-        "outputs/tk_data_analysis_new_method/metadata_job/with_replacements/sample_filtered_2021.11.05_from_metadata.json",
+        "outputs/tk_data_analysis_new_method/metadata_job/14.01.22/sample_filtered.json",
     )
