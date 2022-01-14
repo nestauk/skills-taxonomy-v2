@@ -32,6 +32,8 @@ class SkillsSentenceEmbeddings(FlowSpec):
         import yaml
         import boto3
         from toolz.itertoolz import partition
+        import nltk
+        from nltk.corpus import stopwords
 
         s3 = boto3.resource("s3")
 
@@ -51,6 +53,7 @@ class SkillsSentenceEmbeddings(FlowSpec):
         )
 
         self.custom_stopwords = get_custom_stopwords_list()
+        self.stopwords = self.custom_stopwords + stopwords.words()
 
         # Get data paths in the location
         data_paths = get_s3_data_paths(
@@ -95,14 +98,12 @@ class SkillsSentenceEmbeddings(FlowSpec):
 
         import boto3
         import yaml
-        import nltk
-        from nltk.corpus import stopwords
         import numpy as np
         import spacy
         from torch import cuda
 
         from sentence_transformers import SentenceTransformer
-        from skills_taxonomy_v2.pipeline.skills_extraction.get_sentence_embeddings_utils import process_sentence_mask
+        from skills_taxonomy_v2.pipeline.skills_extraction.metaflow.utils import process_sentence_mask
         from skills_taxonomy_v2.pipeline.sentence_classifier.utils import verb_features
 
         s3 = boto3.resource("s3")
@@ -112,7 +113,7 @@ class SkillsSentenceEmbeddings(FlowSpec):
         bert_model.max_seq_length = 512
         
         os.system('python -m spacy download en_core_web_sm') 
-        nlp = spacy.load("en_core_web_sm")
+        nlp = spacy.load("en_core_web_sm", disable=["tok2vec", "ner"])
 
         print(f"Running sentence embeddings for {len(self.input)} files")
         for data_path_i, data_path in enumerate(self.input):
@@ -134,10 +135,8 @@ class SkillsSentenceEmbeddings(FlowSpec):
                     masked_sentence = process_sentence_mask(
                         sentence,
                         nlp,
-                        bert_model,
                         self.token_len_threshold,
-                        stopwords=stopwords.words(),
-                        custom_stopwords=self.custom_stopwords,
+                        stopwords=self.stopwords
                     )
                     if masked_sentence.replace("[MASK]", "").replace(" ", ""):
                         # Don't include sentence if it only consists of masked words
