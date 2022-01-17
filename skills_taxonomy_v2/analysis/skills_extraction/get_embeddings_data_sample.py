@@ -21,7 +21,9 @@ from skills_taxonomy_v2.pipeline.skills_extraction.extract_skills_utils import (
 	)
 from skills_taxonomy_v2 import BUCKET_NAME
 
-sentence_embeddings_dir = 'outputs/skills_extraction/word_embeddings/data/2021.11.05'
+output_date = '2022.01.14'
+
+sentence_embeddings_dir = f'outputs/skills_extraction/word_embeddings/data/{output_date}'
 
 s3 = boto3.resource("s3")
 
@@ -47,7 +49,7 @@ n_in_sample_each_file = {}
 unique_sentences = set()
 embeddings_sample = []
 
-
+count_too_long = 0
 for embedding_dir in tqdm(sentence_embeddings_dirs):
 	if "embeddings.json" in embedding_dir:
 		sentence_embeddings = load_s3_data(s3, BUCKET_NAME, embedding_dir)
@@ -62,26 +64,32 @@ for embedding_dir in tqdm(sentence_embeddings_dirs):
 					unique_sentences.add(words)
 					embeddings_sample.append(embedding)
 					count += 1
+				else:
+					count_too_long += 1
 		n_in_sample_each_file[embedding_dir] = count
 
+print(f"In total - there are {sum(n_all_each_file.values())} embeddings")
+print(f"In the sample - there are {len(unique_sentences)} unique sentences with embeddings where the sentences is <{sent_thresh} characters long")
+print(f"In the sample - there were {count_too_long} sentences which were too long to be included (>{sent_thresh} characters long)")
+
 save_to_s3(
-		s3, BUCKET_NAME, n_in_sample_each_file, "outputs/skills_extraction/word_embeddings/data/2021.11.05_n_in_sample_each_file.json",
+		s3, BUCKET_NAME, n_in_sample_each_file, f"outputs/skills_extraction/word_embeddings/data/{output_date}_n_in_sample_each_file.json",
 	)
 save_to_s3(
-		s3, BUCKET_NAME, n_all_each_file, "outputs/skills_extraction/word_embeddings/data/2021.11.05_n_all_each_file.json",
+		s3, BUCKET_NAME, n_all_each_file, f"outputs/skills_extraction/word_embeddings/data/{output_date}_n_all_each_file.json",
 	)
 
 save_to_s3(
-		s3, BUCKET_NAME, embeddings_sample[0:250000], "outputs/skills_extraction/word_embeddings/data/2021.11.05_sample_0.json",
+		s3, BUCKET_NAME, embeddings_sample[0:250000], f"outputs/skills_extraction/word_embeddings/data/{output_date}_sample_0.json",
 	)
 save_to_s3(
-		s3, BUCKET_NAME, embeddings_sample[250000:500000], "outputs/skills_extraction/word_embeddings/data/2021.11.05_sample_1.json",
+		s3, BUCKET_NAME, embeddings_sample[250000:500000], f"outputs/skills_extraction/word_embeddings/data/{output_date}_sample_1.json",
 	)
 save_to_s3(
-		s3, BUCKET_NAME, embeddings_sample[500000:750000], "outputs/skills_extraction/word_embeddings/data/2021.11.05_sample_2.json",
+		s3, BUCKET_NAME, embeddings_sample[500000:750000], f"outputs/skills_extraction/word_embeddings/data/{output_date}_sample_2.json",
 	)
 save_to_s3(
-		s3, BUCKET_NAME, embeddings_sample[750000:], "outputs/skills_extraction/word_embeddings/data/2021.11.05_sample_3.json",
+		s3, BUCKET_NAME, embeddings_sample[750000:], f"outputs/skills_extraction/word_embeddings/data/{output_date}_sample_3.json",
 	)
 
 # The order is random anyway so no need to resample
@@ -89,5 +97,5 @@ save_to_s3(
     s3,
     BUCKET_NAME,
     embeddings_sample[0:300000],
-    "outputs/skills_extraction/word_embeddings/data/2021.11.05_sample_300k.json",
+    f"outputs/skills_extraction/word_embeddings/data/{output_date}_sample_300k.json",
 )
