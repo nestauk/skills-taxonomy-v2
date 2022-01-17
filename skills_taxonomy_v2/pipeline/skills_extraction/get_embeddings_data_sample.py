@@ -1,7 +1,12 @@
 """
-Import the embeddings.
-Find a good sample number to train the reducer class on.
-Find a good number of dimensions to reduce the embeddings to.
+Get samples of the embeddings data.
+
+This is useful because the embeddings data is quite large, so by first taking a sample we can
+more quickly fit the reducer class in `reduce_embeddings.py`.
+
+It also always for some pieces of analysis, including:
+- Find a good sample number to train the reducer class on.
+- Find a good number of dimensions to reduce the embeddings to.
 """
 
 import yaml
