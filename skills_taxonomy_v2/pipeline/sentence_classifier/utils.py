@@ -27,9 +27,9 @@ nltk.download("punkt", quiet=True)
 
 # ---------------------------------------------------------------------------------
 
-skills_config = get_yaml_config(
-    Path(str(PROJECT_DIR) + "/skills_taxonomy_v2/config/base.yaml")
-)
+# skills_config = get_yaml_config(
+#     Path(str(PROJECT_DIR) + "/skills_taxonomy_v2/config/base.yaml")
+# )
 # training_data_path = str(PROJECT_DIR) + skills_config["TRAINING_DATA_PATH"] # I don't think this is needed and it causes problems in Metaflow
 S3_PATH = "inputs/labelled_data/"
 
