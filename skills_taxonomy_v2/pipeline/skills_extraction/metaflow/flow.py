@@ -15,14 +15,13 @@ except ImportError:
 
 from skills_taxonomy_v2 import BUCKET_NAME
 from skills_taxonomy_v2.getters.s3_data import load_s3_data, save_to_s3, get_s3_data_paths
-from skills_taxonomy_v2.pipeline.skills_extraction.metaflow.utils import get_custom_stopwords_list
 
 logger = logging.getLogger(__name__)
 
+
 @project(name="skill_sentence_embeddings")
 class SkillsSentenceEmbeddings(FlowSpec):
-
-    @pip(libraries={"pyyaml": "5.4.1", "boto3":"1.18.0"})
+    @pip(libraries={"pyyaml": "5.4.1", "boto3":"1.18.0", "spacy": "3.0.0"})
     @step
     def start(self):
 
@@ -34,6 +33,9 @@ class SkillsSentenceEmbeddings(FlowSpec):
         from toolz.itertoolz import partition
         import nltk
         from nltk.corpus import stopwords
+        import spacy
+
+        from skills_taxonomy_v2.pipeline.skills_extraction.metaflow.utils import get_custom_stopwords_list
 
         s3 = boto3.resource("s3")
 
@@ -113,7 +115,7 @@ class SkillsSentenceEmbeddings(FlowSpec):
         bert_model.max_seq_length = 512
         
         os.system('python -m spacy download en_core_web_sm') 
-        nlp = spacy.load("en_core_web_sm", disable=["tok2vec", "ner"])
+        nlp = spacy.load("en_core_web_sm", disable=["ner"])
 
         print(f"Running sentence embeddings for {len(self.input)} files")
         for data_path_i, data_path in enumerate(self.input):
