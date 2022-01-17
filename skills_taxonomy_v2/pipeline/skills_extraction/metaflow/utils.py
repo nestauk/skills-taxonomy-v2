@@ -57,7 +57,6 @@ def is_token_word(token, token_len_threshold, stopwords):
     - Isn't a proper noun/number/quite a few other word types
     - Isn't a word with numbers in (these are always garbage)
     """
-
     return (
         ("www" not in token.text)
         and (len(token) < token_len_threshold)

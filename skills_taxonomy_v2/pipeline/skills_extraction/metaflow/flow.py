@@ -61,13 +61,28 @@ class SkillsSentenceEmbeddings(FlowSpec):
         data_paths = get_s3_data_paths(
             s3, BUCKET_NAME, self.skill_sentences_dir, file_types=["*.json"]
         )
+        # Get data paths which have already been processed (if any)
+        processed_data_paths = get_s3_data_paths(
+            s3, BUCKET_NAME, self.output_dir, file_types=["*.json"]
+        )
+        processed_data_paths = [
+            os.path.join(
+                self.skill_sentences_dir,
+                processed_data_path.split(self.output_dir +'/')[1].replace('_embeddings','').replace('_original_sentences','')
+                )
+            for processed_data_path in processed_data_paths
+            ]
+
+        # Just leave the data paths which aren't processed yet
+        data_paths = list(set(data_paths).difference(set(processed_data_paths)))
+
         # Random shuffle, since the later ones might be bigger than the earlier ones
         # so chunks will be unequal
         random.seed(42)
         random.shuffle(data_paths)
 
         # Chunk up for Batch
-        self.data_paths_chunked = list(partition(50, data_paths))
+        self.data_paths_chunked = list(partition(20, data_paths))
 
         # For loop through each data path
         print(f"Running predictions on {len(data_paths)} data files in {len(self.data_paths_chunked)} batches ...")
