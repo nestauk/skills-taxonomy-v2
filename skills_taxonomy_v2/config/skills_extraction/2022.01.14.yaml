@@ -4,19 +4,19 @@ flows:
       skill_sentences_dir: "outputs/sentence_classifier/data/skill_sentences/2022.01.04/textkernel-files/"
       token_len_threshold: 20
       output_dir: "outputs/skills_extraction/word_embeddings/data/"
-  # reduce_embeddings:
-  #   params:
-  #     sentence_embeddings_dir: 'outputs/skills_extraction/word_embeddings/data/2021.11.05'
-  #     embeddings_sample_0: "outputs/skills_extraction/word_embeddings/data/2021.11.05_sample_0.json"
-  #     embeddings_sample_1: "outputs/skills_extraction/word_embeddings/data/2021.11.05_sample_1.json"
-  #     fit_reducer_n: 300000
-  #     umap_n_neighbors: 6
-  #     umap_min_dist: 0.0
-  #     umap_random_state: 42
-  #     umap_n_components: 2
-  #     mask_seq: "[MASK]"
-  #     sent_thresh: 250
-  #     output_dir: "outputs/skills_extraction/reduced_embeddings/"
+  reduce_embeddings:
+    params:
+      sentence_embeddings_dir: 'outputs/skills_extraction/word_embeddings/data/2022.01.14'
+      embeddings_sample_0: "outputs/skills_extraction/word_embeddings/data/2022.01.14_sample_0.json"
+      embeddings_sample_1: "outputs/skills_extraction/word_embeddings/data/2022.01.14_sample_1.json"
+      fit_reducer_n: 300000
+      umap_n_neighbors: 6
+      umap_min_dist: 0.0
+      umap_random_state: 42
+      umap_n_components: 2
+      mask_seq: "[MASK]"
+      sent_thresh: 250
+      output_dir: "outputs/skills_extraction/reduced_embeddings/"
   # cluster_embeddings:
   #   params:
   #       dbscan_eps: 0.01

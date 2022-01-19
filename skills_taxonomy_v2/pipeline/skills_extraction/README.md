@@ -11,6 +11,53 @@ The parameters for all these steps can be found in the config path `skills_taxon
 
 <img src="../../../outputs/reports/figures/extract_skill_methodology_overview.jpg" width="700">
 
+## January 2022
+
+This was run from the config file `skills_extraction/2022.01.14.yaml`.
+
+### 1. Finding sentence embeddings
+
+We found the embeddings using the same method as from Novemeber 2021 below, but to quicken things up this was done in Metaflow with Batch, running:
+```
+python skills_taxonomy_v2/pipeline/skills_extraction/metaflow/flow.py --environment=conda --datastore=s3 run
+```
+Embeddings for 19,755,486 skill sentences from 4,118,467 job adverts were found this way.
+
+A few things are filtered out, e.g. sentences over 20 tokens, if the sentences is all masked words, which left us with 15,831,780 sentences with embeddings.
+
+### 2. Reducing sentence embeddings
+
+We used our analysis findings as found before. Since only 14% of the data has changed, and we suspect the changes not to be too drastic. As such we carried over the findings that:
+- A sample size of 300k embeddings is enough to fit the reducer class to
+- Only using sentences less than 250 sentences (over this will be likely to be multi-skill)
+- Clusterable 2D reduced embeddings will be found with n_neighbors = 6, and min_dist = 0.0
+
+Thus, we get our new sample to fit on by running:
+`skills_taxonomy_v2/pipeline/skills_extraction/get_embeddings_data_sample.py` (note, this used to be in the analysis folder), but since its output is used in the `reduce_embeddings.py` script we moved it to the pipeline folder.
+This takes a random 2000 embeddings from each file, then filters out any where the original sentence was a repeat or over 250 characters.
+
+- In the sample - there are 613363 unique sentences with embeddings where the sentences is <250 characters long
+- In the sample - there were 165851 sentences which were too long to be included (>250 characters long)
+
+
+
+# You want a sample of 1 million embeddings (which should be far more than we actually will need to use)
+# So get a random 2000 from each file
+
+# Load a sample of the embeddings from each file
+# when sentence len <250 and 
+# No repeats
+
+
+
+and then ran:
+`reduce_embeddings.py --config_path skills_taxonomy_v2/config/skills_extraction/2022.01.14.yaml`
+
+### 3. Clustering reduced sentence embeddings
+
+### 4. Skills naming
+
+
 ## November 2021
 
 ### 1. Finding sentence embeddings
