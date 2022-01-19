@@ -14,6 +14,7 @@ import random
 from tqdm import tqdm
 
 import pandas as pd
+import numpy as np
 import boto3
 from sklearn import metrics
 import matplotlib.pyplot as plt
@@ -73,6 +74,9 @@ for embedding_dir in tqdm(sentence_embeddings_dirs):
 					count_too_long += 1
 		n_in_sample_each_file[embedding_dir] = count
 
+random.seed(42)
+random.shuffle(embeddings_sample)
+
 print(f"In total - there are {sum(n_all_each_file.values())} embeddings")
 print(f"In the sample - there are {len(unique_sentences)} unique sentences with embeddings where the sentences is <{sent_thresh} characters long")
 print(f"In the sample - there were {count_too_long} sentences which were too long to be included (>{sent_thresh} characters long)")
@@ -84,18 +88,16 @@ save_to_s3(
 		s3, BUCKET_NAME, n_all_each_file, f"outputs/skills_extraction/word_embeddings/data/{output_date}_n_all_each_file.json",
 	)
 
-save_to_s3(
-		s3, BUCKET_NAME, embeddings_sample[0:250000], f"outputs/skills_extraction/word_embeddings/data/{output_date}_sample_0.json",
-	)
-save_to_s3(
-		s3, BUCKET_NAME, embeddings_sample[250000:500000], f"outputs/skills_extraction/word_embeddings/data/{output_date}_sample_1.json",
-	)
-save_to_s3(
-		s3, BUCKET_NAME, embeddings_sample[500000:750000], f"outputs/skills_extraction/word_embeddings/data/{output_date}_sample_2.json",
-	)
-save_to_s3(
-		s3, BUCKET_NAME, embeddings_sample[750000:], f"outputs/skills_extraction/word_embeddings/data/{output_date}_sample_3.json",
-	)
+# Split into 3 files (otherwise a single one is too big to do much with)
+n_files = 3
+split_chunks = [round(n) for n in np.linspace(0, len(embeddings_sample), n_files+1)]
+for file_i, start_index in enumerate(split_chunks):
+	if file_i != n_files:
+		end_index = split_chunks[file_i+1]
+		print((start_index, end_index))
+		save_to_s3(
+			s3, BUCKET_NAME, embeddings_sample[start_index: end_index], f"outputs/skills_extraction/word_embeddings/data/{output_date}_sample_{file_i}.json",
+		)
 
 # The order is random anyway so no need to resample
 save_to_s3(
