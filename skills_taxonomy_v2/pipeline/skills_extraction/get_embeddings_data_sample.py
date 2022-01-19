@@ -77,7 +77,8 @@ for embedding_dir in tqdm(sentence_embeddings_dirs):
 random.seed(42)
 random.shuffle(embeddings_sample)
 
-print(f"In total - there are {sum(n_all_each_file.values())} embeddings")
+print(f"In total - there are {len(embeddings_sample)} embeddings [from embeddings_sample]")
+print(f"In total - there are {sum(n_all_each_file.values())} embeddings [from n_in_sample_each_file]")
 print(f"In the sample - there are {len(unique_sentences)} unique sentences with embeddings where the sentences is <{sent_thresh} characters long")
 print(f"In the sample - there were {count_too_long} sentences which were too long to be included (>{sent_thresh} characters long)")
 
