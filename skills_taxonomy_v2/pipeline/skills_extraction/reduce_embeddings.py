@@ -9,6 +9,7 @@ import yaml
 import random
 from tqdm import tqdm
 import logging
+import os
 
 import pandas as pd
 import boto3
