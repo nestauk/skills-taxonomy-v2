@@ -24,7 +24,6 @@ from skills_taxonomy_v2.getters.s3_data import (
 )
 from skills_taxonomy_v2 import BUCKET_NAME
 
-from pattern.text.en import singularize
 from collections import OrderedDict
 
 from nltk.corpus import stopwords
@@ -111,10 +110,12 @@ def clean_cluster_description(sentences):
         #     else lemmatizer.lemmatize(w.lower())
         #     for w in sentence.split(" ")
         # ]
+        sentence = sentence.lower()
+        singularised_output = [lemmatizer.lemmatize(word) for word in sentence.split(" ") if not word.isdigit()]
         # singularise
-        singularised_output = [singularize(w) for w in sentence.split(" ")]
+        # singularised_output = [singularize(w) for w in sentence.split(" ")]
         no_numbers = [
-            word for word in singularised_output if ((word not in all_stopwords) and (not word.isdigit()))
+            word for word in singularised_output if word not in all_stopwords
         ]
         cluster_docs_cleaned.add(" ".join(no_numbers))
 
