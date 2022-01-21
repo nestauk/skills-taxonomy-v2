@@ -16,12 +16,11 @@ from nltk.tokenize import word_tokenize
 from gensim.models.phrases import Phrases, Phraser, ENGLISH_CONNECTOR_WORDS
 from sklearn.metrics.pairwise import cosine_similarity
 
-from skills_taxonomy_v2.pipeline.sentence_classifier.sentence_classifier import (
-    BertVectorizer,
-)
+from sentence_transformers import SentenceTransformer
 from skills_taxonomy_v2.getters.s3_data import (
     save_to_s3
 )
+from skills_taxonomy_v2.pipeline.sentence_classifier.utils import verb_features
 from skills_taxonomy_v2 import BUCKET_NAME
 
 from collections import OrderedDict
@@ -30,6 +29,7 @@ from nltk.corpus import stopwords
 
 nltk.download("stopwords", quiet=True)
 nltk.download("wordnet", quiet=True)
+nltk.download('omw-1.4', quiet=True)
 
 logger = logging.getLogger(__name__)
 
@@ -210,10 +210,8 @@ def get_skill_info(skills_df, num_top_sent, ngram, min_count, threshold, s3, BUC
         'Texts': All the cleaned sentences for this cluster
     """
 
-    bert_vectorizer = BertVectorizer(
-        bert_model_name="sentence-transformers/all-MiniLM-L6-v2", multi_process=True,
-    )
-    bert_vectorizer.fit()
+    bert_model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
+    bert_model.max_seq_length = 512
 
     logger.info(f"Processing skill names ...")
     named_skill_data = {}
@@ -238,7 +236,9 @@ def get_skill_info(skills_df, num_top_sent, ngram, min_count, threshold, s3, BUC
                 sents, ngram, min_count, threshold
             )
             if len(candidate_ngrams) > 1:
-                candidate_ngrams_embeds = bert_vectorizer.transform(candidate_ngrams)
+                X_vec = bert_model.encode(candidate_ngrams, show_progress_bar=True)
+                candidate_ngrams_embeds = np.hstack((X_vec, verb_features(candidate_ngrams)))
+
                 ngram_similarities = cosine_similarity(
                     centroid_embeds.reshape(1, -1), candidate_ngrams_embeds
                 )
@@ -247,7 +247,7 @@ def get_skill_info(skills_df, num_top_sent, ngram, min_count, threshold, s3, BUC
                 ]
                 named_skill_data[skills_num] = {
                     "Skills name": closest_ngram,
-                    "Examples": " ".join(
+                    "Examples": ". ".join(
                         [
                             sents[i]
                             for i in sent_similarities.argsort()[0][::-1].tolist()[
