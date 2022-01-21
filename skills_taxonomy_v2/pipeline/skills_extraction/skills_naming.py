@@ -53,7 +53,7 @@ def parse_arguments(parser):
     parser.add_argument(
         "--config_path",
         help="Path to config file",
-        default="skills_taxonomy_v2/config/skills_extraction/2021.11.05.yaml",
+        default="skills_taxonomy_v2/config/skills_extraction/2022.01.14.yaml",
     )
 
     return parser.parse_args()
@@ -92,14 +92,20 @@ if __name__ == "__main__":
     skills = load_s3_data(s3, BUCKET_NAME, params["skills_path"])
 
     # wrangle data in the format needed
-   
-    skill_sentences_df = pd.DataFrame(skill_sentences)[
-        ["job id", "sentence id", "Cluster number predicted"]
-    ]
+
+    if "lightweight" in :
+        skill_sentences_df = pd.DataFrame(
+            skill_sentences,
+            columns=['job id', 'sentence id',  'Cluster number predicted']
+            )
+    else:
+        skill_sentences_df = pd.DataFrame(skill_sentences)[
+            ["job id", "sentence id", "Cluster number predicted"]
+        ]
 
     merged_sents_embeds = pd.merge(
         skills_embeds_df, skill_sentences_df, on=["job id", "sentence id"], how='left'
-    ) 
+    )
 
     merged_sents_embeds = merged_sents_embeds[
         merged_sents_embeds["Cluster number predicted"] != -2
