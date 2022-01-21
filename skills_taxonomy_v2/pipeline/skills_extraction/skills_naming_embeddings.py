@@ -44,7 +44,7 @@ for embedding_dir in tqdm(sentence_embeddings_dirs):
     sentence_embeddings = load_s3_data(s3, BUCKET_NAME, embedding_dir)
     for job_id, sent_id, _, embedding in sentence_embeddings:
         skill_num = sentence_embs_dict[job_id].get(sent_id)
-        if skill_num:
+        if skill_num != None:
             if skill_num in skill_embeddings_sum:
                 skill_embeddings_sum[skill_num] = np.sum(
                     [skill_embeddings_sum[skill_num], np.array(embedding)], axis=0
@@ -55,7 +55,7 @@ for embedding_dir in tqdm(sentence_embeddings_dirs):
 # Get mean embedding for each skill number
 print("Getting mean embeddings")
 mean_skill_embeddings = {}
-for skill_num, sum_embeddings in skill_embeddings.items():
+for skill_num, sum_embeddings in skill_embeddings_sum.items():
     mean_skill_embeddings[skill_num] = (sum_embeddings / len(sum_embeddings)).tolist()
 
 # Save out

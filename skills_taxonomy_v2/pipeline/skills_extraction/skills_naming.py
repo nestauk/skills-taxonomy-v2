@@ -93,7 +93,7 @@ if __name__ == "__main__":
 
     # wrangle data in the format needed
 
-    if "lightweight" in :
+    if "lightweight" in params["skill_sentences_path"]:
         skill_sentences_df = pd.DataFrame(
             skill_sentences,
             columns=['job id', 'sentence id',  'Cluster number predicted']
