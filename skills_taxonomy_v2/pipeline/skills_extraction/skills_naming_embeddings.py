@@ -13,15 +13,17 @@ from skills_taxonomy_v2 import BUCKET_NAME
 
 s3 = boto3.resource("s3")
 
+skills_date = '2022.01.14'
+
 # Load skills
 # The sentences ID + cluster num
-sentence_embs = load_s3_data(s3, BUCKET_NAME, "outputs/skills_extraction/extracted_skills/2021.11.05_sentences_skills_data.json")
+sentence_embs = load_s3_data(s3, BUCKET_NAME, f"outputs/skills_extraction/extracted_skills/{skills_date}_sentences_skills_data.json")
 sentence_embs = pd.DataFrame(sentence_embs)
 sentence_embs = sentence_embs[sentence_embs["Cluster number predicted"] >= 0]
 
 # Load embeddings
 sentence_embeddings_dirs = get_s3_data_paths(
-	s3, BUCKET_NAME, 'outputs/skills_extraction/word_embeddings/data/2021.11.05', file_types=["*embeddings.json"])
+	s3, BUCKET_NAME, f'outputs/skills_extraction/word_embeddings/data/{skills_date}', file_types=["*embeddings.json"])
 
 skill_embeddings = defaultdict(list)
 for embedding_dir in tqdm(sentence_embeddings_dirs):
@@ -39,4 +41,4 @@ for skill_num, embeddings_list in skill_embeddings.items():
 
 # Save out
 print("Saving mean embeddings")
-save_to_s3(s3, BUCKET_NAME, mean_skill_embeddings, 'outputs/skills_extraction/extracted_skills/2021.11.05_skill_mean_embeddings.json')
+save_to_s3(s3, BUCKET_NAME, mean_skill_embeddings, f'outputs/skills_extraction/extracted_skills/{skills_date}_skill_mean_embeddings.json')
