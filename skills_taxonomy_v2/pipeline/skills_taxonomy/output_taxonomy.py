@@ -72,7 +72,7 @@ def parse_arguments(parser):
     parser.add_argument(
         "--config_path",
         help="Path to config file",
-        default="skills_taxonomy_v2/config/skills_taxonomy/2021.11.30.yaml",
+        default="skills_taxonomy_v2/config/skills_taxonomy/2022.01.21.yaml",
     )
 
     return parser.parse_args()
@@ -104,6 +104,7 @@ if __name__ == "__main__":
         )
         level_a_rename_dict = {k: v["Name"] for k, v in level_a_rename_dict.items()}
     else:
+        print("No level A manual cluster dictionary given, defaulting to the 2021/12/20 dictionary")
         level_a_rename_dict = load_manual_level_dict(
             "skills_taxonomy_v2/utils/2021.12.20_level_a_rename_dict.json"
         )

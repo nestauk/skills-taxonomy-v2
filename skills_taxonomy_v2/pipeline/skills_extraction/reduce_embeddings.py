@@ -173,6 +173,7 @@ if __name__ == "__main__":
 	}
 
 	logger.info(f"Saving reduced embeddings from {len(sentences_data)} sentences")
+	logger.info(f"from {len(set(jobid_list))} unique job adverts")
 	save_to_s3(
 		s3,
 		BUCKET_NAME,
