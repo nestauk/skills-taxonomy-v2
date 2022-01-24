@@ -251,3 +251,12 @@ The skill sentences predicted are stored in "outputs/sentence_classifier/data/sk
 
 In each of the 87 files around 45,000 skill sentences were identified, thus we expect to have processed around 4,000,000 skill sentences. 
 
+### From `2021.08.16.yaml` with fixes to the sample taken:
+
+We noticed an issue where parts of the sample of job adverts came from expired files. These files had no full text field. Hence, we replaced the job adverts samples from expired files with job adverts sample from files from the same folder location (which is linked to date).
+
+After appending the skill sentences predictions using this new sample of 5 million job adverts (in `predict_sentence_class_inc_replacements.py`) we found there are 4,118,467 job ids (all unique) in our sample with skill sentences. And in total there are 19,755,486 skill sentences found.
+
+
+
+

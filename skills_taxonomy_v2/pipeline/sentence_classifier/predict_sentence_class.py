@@ -89,7 +89,7 @@ def load_model(config_name, multi_process=None, batch_size=32):  # change this t
     # Load sentence classifier trained model and config it came with
     # Be careful here if you change output locations in sentence_classifier.py
     model_dir = f"{config_name.replace('.', '_')}.pkl"
-    config_dir = f"skills_taxonomy_v2/config/sentence_classifier/{config_name}.yaml"
+    config_dir = f"{PROJECT_DIR}/skills_taxonomy_v2/config/sentence_classifier/{config_name}.yaml"
 
     with open(config_dir, "r") as f:
         config = yaml.load(f, Loader=yaml.FullLoader)

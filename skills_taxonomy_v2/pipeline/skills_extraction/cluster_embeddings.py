@@ -198,7 +198,7 @@ def parse_arguments(parser):
     parser.add_argument(
         "--config_path",
         help="Path to config file",
-        default="skills_taxonomy_v2/config/skills_extraction/2021.11.05.yaml",
+        default="skills_taxonomy_v2/config/skills_extraction/2022.01.14.yaml",
     )
 
     return parser.parse_args()
@@ -251,6 +251,15 @@ if __name__ == '__main__':
 
     new_sentences_data = cluster_embeddings.predict_clusters(sentences_data)
 
+    # How many merged cluster groups are the same as the predicted, for the sample fitted on.
+    test_pred_similarity = pd.merge(
+        cluster_embeddings.sentences_data_short_sample[['job id', 'sentence id', 'cluster_number', 'Merged clusters']],
+        new_sentences_data[['job id', 'sentence id', 'Cluster number predicted']],
+        how='left', on=['job id', 'sentence id'])
+    test_pred_similarity_clustered = test_pred_similarity[test_pred_similarity['Merged clusters'] >= 0]
+    num_pred_same = len(test_pred_similarity_clustered[test_pred_similarity_clustered['Merged clusters'] == test_pred_similarity_clustered['Cluster number predicted']])
+    logger.info(f"{num_pred_same} out of {len(test_pred_similarity_clustered)} ({round(num_pred_same*100/len(test_pred_similarity_clustered))}%) of predictions were the same as original clusters for sample clustering was fitted to")
+
     # Create mapping of 'Cluster number predicted' to new index
     # At the moment this isn't 0:num skills, its 0,1,2,5,10,11,12..
     num_skills = new_sentences_data['Cluster number predicted'].nunique()
@@ -301,3 +310,15 @@ if __name__ == '__main__':
         skills_data_output_path,
     )
 
+    # Save light-weight version, the sentences_skills_data file is big, so create a version of lists rather than dictionaries
+
+    extract_skills_output_path = get_output_config_stamped(
+        args.config_path, params["output_dir"], "sentences_skills_data_lightweight.json"
+    )
+
+    save_to_s3(
+        s3,
+        BUCKET_NAME,
+        clustered_sentences_data[['job id', 'sentence id',  'Cluster number predicted']].values.tolist(),
+        extract_skills_output_path,
+    )

@@ -9,6 +9,7 @@ import yaml
 import random
 from tqdm import tqdm
 import logging
+import os
 
 import pandas as pd
 import boto3
@@ -65,7 +66,7 @@ def parse_arguments(parser):
 	parser.add_argument(
 		"--config_path",
 		help="Path to config file",
-		default="skills_taxonomy_v2/config/skills_extraction/2021.11.05.yaml",
+		default="skills_taxonomy_v2/config/skills_extraction/2022.01.14.yaml",
 	)
 
 	return parser.parse_args()
@@ -107,7 +108,11 @@ if __name__ == "__main__":
 			original_sentences.update(load_s3_data(s3, BUCKET_NAME, embedding_dir))
 
 	sent_thresh = params["sent_thresh"]
-	output_dir = params["output_dir"]
+	output_dir = os.path.join(
+	                params["output_dir"],
+	                os.path.basename(args.config_path).split(".yaml")[0],
+	            )
+	logger.info(f"Will be saving outputs to {output_dir}")
 
 	unique_sentences = set()
 
@@ -168,6 +173,7 @@ if __name__ == "__main__":
 	}
 
 	logger.info(f"Saving reduced embeddings from {len(sentences_data)} sentences")
+	logger.info(f"from {len(set(jobid_list))} unique job adverts")
 	save_to_s3(
 		s3,
 		BUCKET_NAME,

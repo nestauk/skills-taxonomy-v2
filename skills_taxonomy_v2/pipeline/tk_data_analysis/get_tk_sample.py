@@ -30,6 +30,39 @@ from skills_taxonomy_v2 import BUCKET_NAME
 s3 = boto3.resource("s3")
 
 
+def save_final_sample_list(s3, BUCKET_NAME):
+    """
+    Combine the original sample without the jobs_expired files, 
+    with the replacements samples
+    to have a dict of {file_name: list of job ids} for the final sample
+    """
+        
+    # The 5 million sample (inc expired)
+    sample_locs = load_s3_data(
+        s3, BUCKET_NAME, "outputs/tk_sample_data/sample_file_locations.json"
+    )
+
+    final_sample_dict = defaultdict(list)
+    for file_name, job_ids in sample_locs.items():
+        if "jobs_expired" not in file_name:
+            for job_id in job_ids:
+                final_sample_dict[file_name].append(job_id)
+
+    sample_locs_reboot = load_s3_data(
+        s3, BUCKET_NAME, "outputs/tk_sample_data/sample_file_locations_expired_replacements.json"
+        )
+
+    for file_name, job_ids in sample_locs_reboot.items():
+        for job_id in job_ids:
+            final_sample_dict[file_name].append(job_id)
+
+    save_to_s3(
+            s3,
+            BUCKET_NAME,
+            final_sample_dict,
+            "outputs/tk_sample_data/14.01.22.sample_file_locations.json",
+        )
+
 def parse_arguments(parser):
 
     parser.add_argument(
@@ -71,10 +104,6 @@ if __name__ == "__main__":
     random.seed(params["random_seed"])
     job_ids_sample = random.sample(job_ids, params["sample_size"])
 
-    # # Take another random sample (for replacements)
-    # random.seed(params["random_seed"]+1)
-    # job_ids_sample_replacements = random.sample(job_ids, 1000000)
-
     del job_ids
 
     # It's quicker to query a set than a list
@@ -105,11 +134,6 @@ if __name__ == "__main__":
         sample_locs,
         os.path.join(params["output_dir"], "sample_file_locations.json"),
     )
-
-# # 5. The 5 million sample (inc expired)
-# sample_locs = load_s3_data(
-#     s3, BUCKET_NAME, "outputs/tk_sample_data/sample_file_locations.json"
-# )
 
     # Now with the job ids from the expired files, create another dict to get these
     # job ids from not-expired files:
@@ -168,7 +192,6 @@ if __name__ == "__main__":
 
 
     print(sum([len(v) for v in sample_locs_reboot.values()]) == len(job_ids_expired))
-    # all_used_job_ids = set(job_ids_not_expired + [vv for v in sample_locs_reboot.values() for vv in v])
     print(len(sample_job_ids))
     print(len(set(sample_job_ids)))
 
@@ -179,4 +202,5 @@ if __name__ == "__main__":
             os.path.join(params["output_dir"], "sample_file_locations_expired_replacements.json"),
         )
 
-        
+    # Get and save a final combined list of the sampled job adverts 
+    save_final_sample_list(s3, BUCKET_NAME)

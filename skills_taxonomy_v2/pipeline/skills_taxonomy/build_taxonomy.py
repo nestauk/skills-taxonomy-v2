@@ -40,7 +40,13 @@ def load_sentences_data(
 
     # The sentences ID + cluster num
     sentence_embs = load_s3_data(s3, BUCKET_NAME, clustered_sentences_path)
-    sentence_embs = pd.DataFrame(sentence_embs)
+    if "lightweight" in clustered_sentences_path:
+        sentence_embs = pd.DataFrame(
+            sentence_embs,
+            columns=['job id', 'sentence id',  'Cluster number predicted']
+            )
+    else:
+        sentence_embs = pd.DataFrame(sentence_embs)
 
     # (new) Get the reduced embeddings + sentence texts and the sentence IDs
     if reduced_embeddings_dir:
@@ -82,7 +88,7 @@ def parse_arguments(parser):
     parser.add_argument(
         "--config_path",
         help="Path to config file",
-        default="skills_taxonomy_v2/config/skills_taxonomy/2021.11.30.yaml",
+        default="skills_taxonomy_v2/config/skills_taxonomy/2022.01.21.yaml",
     )
 
     return parser.parse_args()
@@ -119,17 +125,12 @@ if __name__ == "__main__":
     )
 
     # Join the skill names to the skills data
-    if params["skills_names_data_path"]:
+    if params.get("skills_names_data_path"):
         skills_names = load_skills_data(s3, params["skills_names_data_path"])
-    for skill_num, skill_info in skills_data.items():
-        skills_data[skill_num]["Skills name"] = skills_names[skill_num]["Skills name"]
+        for skill_num, skill_info in skills_data.items():
+            skills_data[skill_num]["Skills name"] = skills_names[skill_num]["Skills name"]
 
-    # If the skill name is given in the skills data then use it
-    sentence_embs["Skill name"] = sentence_embs[cluster_column_name].apply(
-        lambda x: skills_data[str(x)]["Skills name"]
-    )
-
-    if params["level_a_manual_clusters_path"]:
+    if params.get("level_a_manual_clusters_path"):
         levela_manual = load_manual_level_dict(params["level_a_manual_clusters_path"])
     else:
         levela_manual = None
@@ -198,7 +199,7 @@ if __name__ == "__main__":
             levela_manual, level_b_cluster_mapper
         )
     else:
-        if params["use_level_a_consensus"]:
+        if params.get("use_level_a_consensus"):
             logger.info("... using consensus clustering")
             level_a_cluster_mapper = get_new_level_consensus(
                 sentence_embs,
