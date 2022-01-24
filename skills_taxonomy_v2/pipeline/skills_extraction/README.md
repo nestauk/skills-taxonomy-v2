@@ -23,7 +23,7 @@ python skills_taxonomy_v2/pipeline/skills_extraction/metaflow/flow.py --environm
 ```
 Embeddings for 19,755,486 skill sentences from 4,118,467 job adverts were found this way.
 
-A few things are filtered out, e.g. sentences over 20 tokens, if the sentences is all masked words, which left us with 15,831,780 sentences with embeddings.
+A few things are filtered out, e.g. sentences over 20 tokens, if the sentences is all masked words, which left us with 19,134,468 sentences with embeddings.
 
 ### 2. Reducing sentence embeddings
 
@@ -32,30 +32,61 @@ We used our analysis findings as found before. Since only 14% of the data has ch
 - Only using sentences less than 250 sentences (over this will be likely to be multi-skill)
 - Clusterable 2D reduced embeddings will be found with n_neighbors = 6, and min_dist = 0.0
 
-Thus, we get our new sample to fit on by running:
-`skills_taxonomy_v2/pipeline/skills_extraction/get_embeddings_data_sample.py` (note, this used to be in the analysis folder), but since its output is used in the `reduce_embeddings.py` script we moved it to the pipeline folder.
-This takes a random 2000 embeddings from each file, then filters out any where the original sentence was a repeat or over 250 characters.
+Thus, we get our new sample to fit on by running: `skills_taxonomy_v2/pipeline/skills_extraction/get_embeddings_data_sample.py` (note, this used to be in the analysis folder, but since its output is used in the `reduce_embeddings.py` script we moved it to the pipeline folder). This takes a random 2000 embeddings from each file, then filters out any where the original sentence was a repeat or over 250 characters.
 
-- In the sample - there are 613363 unique sentences with embeddings where the sentences is <250 characters long
-- In the sample - there were 165851 sentences which were too long to be included (>250 characters long)
+- In the sample - there are 723,657 embeddings [from embeddings_sample]
+- In the sample - there are 723,657 unique sentences with embeddings where the sentences is <250 characters long
+- In the sample - there were 197,366 sentences which were too long to be included (>250 characters long)
 
+We then run 
+```
+python skills_taxonomy_v2/pipeline/skills_extraction/reduce_embeddings.py --config_path skills_taxonomy_v2/config/skills_extraction/2022.01.14.yaml
+```
+This process left us with reduced embeddings for 10,378,654 sentences from 2,624,694 job adverts (filtered to only include sentences <250 characters and no repeated sentences).
 
-
-# You want a sample of 1 million embeddings (which should be far more than we actually will need to use)
-# So get a random 2000 from each file
-
-# Load a sample of the embeddings from each file
-# when sentence len <250 and 
-# No repeats
-
-
-
-and then ran:
-`reduce_embeddings.py --config_path skills_taxonomy_v2/config/skills_extraction/2022.01.14.yaml`
 
 ### 3. Clustering reduced sentence embeddings
 
+Again, we used the same parameters as in the Novemeber 2021 run to cluster our reduced embeddings into skills, namely:
+- Only use sentences <100 words
+- dbscan_eps = 0.01
+- dbscan_min_samples = 4
+- Fit our clustering algorithm on 300,000 random <100 character sentences - this created 11332 clusters. 
+- For the 8598 clusters found with less than 10 sentences in, we iteratively merged nearest neighbours when the Eucliean distance was less than 0.05. 
+- This resulted in us finding 6686 skill clusters. 
+
+```
+python skills_taxonomy_v2/pipeline/skills_extraction/cluster_embeddings.py --config_path skills_taxonomy_v2/config/skills_extraction/2022.01.14.yaml
+```
+
+Out of the 10,378,654 sentences in our sample, 3,633,001 had under 100 characters - using these we then went about predicting clusters using the centroids from these 6686 clusters. 
+
+We use the predicted clusters for all 3,633,001 sentences as our 6686 skills.
+
+- There are 10,378,654 unique sentences with skills in (inc -2 skill), these are from 2,624,694 unique job adverts
+- There are 3,633,001 unique sentences with skills in (not inc -2 skill), these are from 1,287,661 unique job adverts
+
+122696 out of 187576 (65%) of predictions were the same as original clusters for sample clustering was fitted to (only when merged cluster != -1).
+
+Outputs:
+- `s3://skills-taxonomy-v2/outputs/skills_extraction/extracted_skills/2022.01.14_sentences_skills_data.json` (each sentences ID/file ID with which cluster it was predicted to be in, and if in the training set - also which cluster it was originally assigned to) 
+- `s3://skills-taxonomy-v2/outputs/skills_extraction/extracted_skills/2022.01.14_sentences_skills_data_lightweight.json` (the same as above but in a list of list form (in order ['job id', 'sentence id',  'Cluster number predicted']), not a dictionary, to save memory)
+- `s3://skills-taxonomy-v2/outputs/skills_extraction/extracted_skills/2022.01.14_skills_data.json` (a dictionary of skill numbers and the sentences in them, along with the skill centroid coordinate).
+
+Some plots of the skills in 2D space are done in `Extracted skills - 2022.01.14.ipynb`.
+
 ### 4. Skills naming
+
+Need to first get the average embedding for each skill with:
+```
+python skills_taxonomy_v2/pipeline/skills_extraction/skills_naming_embeddings.py
+```
+Then:
+```
+python skills_taxonomy_v2/pipeline/skills_extraction/skills_naming.py --config_path 'skills_taxonomy_v2/config/skills_extraction/2022.01.14.yaml'
+```
+
+This will output `outputs/skills_extraction/extracted_skills/2022.01.14_skills_data_named.json`.
 
 
 ## November 2021
