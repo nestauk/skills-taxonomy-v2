@@ -65,6 +65,7 @@ class SkillsSentenceEmbeddings(FlowSpec):
         processed_data_paths = get_s3_data_paths(
             s3, BUCKET_NAME, self.output_dir, file_types=["*.json"]
         )
+
         processed_data_paths = [
             os.path.join(
                 self.skill_sentences_dir,
@@ -95,7 +96,7 @@ class SkillsSentenceEmbeddings(FlowSpec):
         image="metaflow-pytorch",
         # Queue gives p3.2xlarge, with:
         gpu=1,
-        memory=61000,
+        memory=60000,
         cpu=8,
     )
     @conda(
