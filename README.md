@@ -8,7 +8,7 @@ This repo contains the source code for this project. To read the full technical 
 
 An overview of the methodology, coloured by the three main steps to the pipeline, can be visualised below:
 
-![](./outputs/reports/figures/methodology_overview_pipeline.jpg)
+![](./outputs/reports/figures/Jan%202022/methodology_overview_pipeline.jpg)
 
 ### Pipeline steps
 
@@ -23,10 +23,10 @@ More details of the steps included in this project, and running instructions, ca
 
 This repository also contains various pieces of analysis of the taxonomy. These are discussed in the main analysis [README file](skills_taxonomy_v2/analysis/README.md).
 
-<img src="./outputs/reports/figures/hierarchy_numbers.jpg" width="700">
+<img src="./outputs/reports/figures/Jan 2022/hierarchy_numbers.jpg" width="700">
 
 #### Examples of the hierarchy
-<img src="./outputs/reports/figures/taxonomy_example.jpg" width="700">
+<img src="./outputs/reports/figures/Jan 2022/taxonomy_example.jpg" width="700">
 
 ## Setup
 
