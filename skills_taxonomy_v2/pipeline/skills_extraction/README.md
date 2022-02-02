@@ -75,6 +75,12 @@ Outputs:
 
 Some plots of the skills in 2D space are done in `Extracted skills - 2022.01.14.ipynb`.
 
+In `Skills Extraction Analysis and Figures.ipynb` we find:
+
+- The mean number of sentences for each skills is 543.4556469708302
+- The median number of sentences for each skills is 366.0
+- There are 6153 skills with more than 200 sentences
+
 ### 4. Skills naming
 
 Need to first get the average embedding for each skill with:
