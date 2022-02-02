@@ -75,8 +75,11 @@ def get_top_tf_idf_words(vect, feature_names, top_n=2):
     return feature_names[vect.indices[sorted_nzs]].tolist()
 
 
-def get_level_names(sentence_embs, level_col_name, top_n, text_col_name="description"):
+def get_level_names(sentence_embs, level_col_name, top_n, text_col_name="description", ngram_range=(1,1), max_df=1.0):
 
+    if sentence_embs[level_col_name].nunique() == 1:
+        # This parameter only works for >1 document in tf-idf
+        max_df = 1.0
     # Merge all the texts within each subsection of this level
     hier_level_texts = []
     level_nums = []
@@ -84,7 +87,7 @@ def get_level_names(sentence_embs, level_col_name, top_n, text_col_name="descrip
         hier_level_texts.append(" ".join(level_data[text_col_name].tolist()))
         level_nums.append(level_num)
 
-    vectorizer = TfidfVectorizer()
+    vectorizer = TfidfVectorizer(ngram_range=ngram_range, max_df=max_df)
     vect = vectorizer.fit_transform(hier_level_texts)
 
     feature_names = np.array(vectorizer.get_feature_names())
