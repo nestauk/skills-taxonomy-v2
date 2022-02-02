@@ -94,68 +94,69 @@ bucket_name = "skills-taxonomy-v2"
 s3 = boto3.resource("s3")
 
 # %%
-hier_structure_file = "outputs/skills_taxonomy/2021.09.06_hierarchy_structure.json"
+hier_date = '2022.01.21'
+skills_date = '2022.01.14'
+
+# %%
+hier_structure_file = f"outputs/skills_taxonomy/{hier_date}_hierarchy_structure.json"
 hier_structure = load_s3_data(s3, bucket_name, hier_structure_file)
 
 # %%
-skill_hierarchy_file = "outputs/skills_taxonomy/2021.09.06_skills_hierarchy.json"
+skill_hierarchy_file = f"outputs/skills_taxonomy/{hier_date}_skills_hierarchy_named.json"
 skill_hierarchy = load_s3_data(s3, bucket_name, skill_hierarchy_file)
 
 # %%
 sentence_data = load_s3_data(
     s3,
     bucket_name,
-    "outputs/skills_extraction/extracted_skills/2021.08.31_sentences_data.json",
+    f"outputs/skills_extraction/extracted_skills/{skills_date}_sentences_skills_data_lightweight.json",
 )
 
 # %%
 skills_data = load_s3_data(
     s3,
     bucket_name,
-    "outputs/skills_extraction/extracted_skills/2021.08.31_skills_data.json",
+    f"outputs/skills_extraction/extracted_skills/{skills_date}_skills_data.json",
 )
-
-# %%
-with open("skills_taxonomy_v2/utils/2021.09.06_level_a_rename_dict.json", "r") as f:
-    level_a_rename_dict = json.load(f)
 
 # %% [markdown]
 # ### Join the sentence data with hierarchy information
 
 # %%
-sentence_data = pd.DataFrame(sentence_data)
-sentence_data = sentence_data[sentence_data["Cluster number"] != -1]
+sentence_data_df = pd.DataFrame(sentence_data, columns=['job id', 'sentence id',  'Cluster number predicted'])
+sentence_data_df.head(2)
 
-sentence_data["Hierarchy level A"] = (
-    sentence_data["Cluster number"]
+# %%
+sentence_data_df = sentence_data_df[sentence_data_df["Cluster number predicted"] >= 0]
+
+sentence_data_df["Hierarchy level A"] = (
+    sentence_data_df["Cluster number predicted"]
     .astype(str)
     .apply(lambda x: skill_hierarchy[x]["Hierarchy level A"])
 )
-sentence_data["Hierarchy level A name"] = (
-    sentence_data["Hierarchy level A"]
+sentence_data_df["Hierarchy level A name"] = (
+    sentence_data_df["Cluster number predicted"]
     .astype(str)
-    .apply(lambda x: level_a_rename_dict[x])
+    .apply(lambda x: skill_hierarchy[x]["Hierarchy level A name"])
 )
-sentence_data["Hierarchy level B"] = (
-    sentence_data["Cluster number"]
+sentence_data_df["Hierarchy level B"] = (
+    sentence_data_df["Cluster number predicted"]
     .astype(str)
     .apply(lambda x: skill_hierarchy[x]["Hierarchy level B"])
 )
-sentence_data["Hierarchy level C"] = (
-    sentence_data["Cluster number"]
+sentence_data_df["Hierarchy level C"] = (
+    sentence_data_df["Cluster number predicted"]
     .astype(str)
     .apply(lambda x: skill_hierarchy[x]["Hierarchy level C"])
 )
-sentence_data["Hierarchy level D"] = (
-    sentence_data["Cluster number"]
-    .astype(str)
-    .apply(lambda x: skill_hierarchy[x]["Hierarchy level D"])
-)
-sentence_data["Hierarchy ID"] = (
-    sentence_data["Cluster number"]
+sentence_data_df["Hierarchy ID"] = (
+    sentence_data_df["Cluster number predicted"]
     .astype(str)
     .apply(lambda x: skill_hierarchy[x]["Hierarchy ID"])
 )
+
+# %%
+sentence_data_df.head(2)
 
 # %% [markdown]
 # ## Evaluate
@@ -166,7 +167,7 @@ sentence_data["Hierarchy ID"] = (
 nesta_orange = [255 / 255, 90 / 255, 0 / 255]
 
 # %%
-job_id_levels = sentence_data.groupby("job id").agg(
+job_id_levels = sentence_data_df.groupby("job id").agg(
     {
         "sentence id": "count",
         "Hierarchy level A": "nunique",
@@ -236,7 +237,7 @@ num_sent_with_filt.plot(
 plt.tight_layout()
 
 plt.savefig(
-    "outputs/skills_taxonomy/figures/2021.09.06/evaluate_mean_nums.pdf",
+    f"outputs/skills_taxonomy/figures/{hier_date}/evaluate_mean_nums.pdf",
     bbox_inches="tight",
 )
 
@@ -275,7 +276,7 @@ plt.tight_layout()
 
 
 plt.savefig(
-    "outputs/skills_taxonomy/figures/2021.09.06/evaluate_nums_normalised.pdf",
+    f"outputs/skills_taxonomy/figures/{hier_date}/evaluate_nums_normalised.pdf",
     bbox_inches="tight",
 )
 
@@ -314,7 +315,7 @@ job_id_levels[job_id_levels["sentence id"] >= min_num_sent][
 plt.tight_layout()
 
 plt.savefig(
-    "outputs/skills_taxonomy/figures/2021.09.06/evaluate_nums_raw.pdf",
+    f"outputs/skills_taxonomy/figures/{hier_date}/evaluate_nums_raw.pdf",
     bbox_inches="tight",
 )
 
@@ -323,7 +324,7 @@ plt.savefig(
 # ## Raw number for when number sentences==10
 
 # %%
-len(job_id_levels[job_id_levels["sentence id"] == 6])
+len(job_id_levels[job_id_levels["sentence id"] == 10])
 
 # %%
 min_num_sent = 6
@@ -358,7 +359,7 @@ job_id_levels[job_id_levels["sentence id"] == min_num_sent][
 plt.tight_layout()
 
 plt.savefig(
-    "outputs/skills_taxonomy/figures/2021.09.06/evaluate_nums_6.pdf",
+    f"outputs/skills_taxonomy/figures/{hier_date}/evaluate_nums_6.pdf",
     bbox_inches="tight",
 )
 
@@ -368,46 +369,86 @@ job_id_levels["sentence id"].plot.hist(bins=100)
 
 # %% [markdown]
 # ## Most common job titles for skills
+# October 21 results:
+# - There are 65219 unique job titles
+# - There are 23 unique organization industries
+# - 82.899% skill sentences have job title data
+# - 82.969% skill sentences have organization industry data
+#
+# January 22 results:
+#
+# - There are 746504 unique job titles
+# - There are 23 unique organization industries
+# - 99.965% skill sentences have job title data
+# - 99.965% skill sentences have organization industry data
+#
 
 # %%
-job_titles = load_s3_data(
-    s3, bucket_name, "outputs/tk_data_analysis/metadata_job/sample_filtered.json"
-)
+1780/65219
+
+# %%
+20000/746504
+
+# %%
+job_titles = load_s3_data(s3, bucket_name, "outputs/tk_data_analysis_new_method/metadata_job/14.01.22/sample_filtered.json")
 
 # %%
 len(job_titles)
 
 # %%
-sentence_data["Job title"] = sentence_data["job id"].apply(
-    lambda x: job_titles.get(x, [None])[0]
+# May need adjustment since there are multiple answer for duplicate job ids
+# e.g. of one:
+# [[['Telephone Sales Executive', 'Staffing / Employment Agencies']],
+#  [['Telephone Sales Executive', 'Staffing / Employment Agencies'],
+#   [None, None]],
+#  [['Telephone Sales Executive', 'Staffing / Employment Agencies']]]
+job_titles_one = {}
+for job_id, job_ad_jobs in job_titles.items():
+    job_title = [k[0] for j in job_ad_jobs for k in j if k[0]]
+    org_industry = [k[1] for j in job_ad_jobs for k in j if k[1]]
+    if len(job_title) !=0:
+        if len(org_industry) !=0:
+            job_titles_one[job_id] = [job_title[0], org_industry[0]]
+        else:
+            job_titles_one[job_id] = [job_title[0], None]
+
+# %%
+sentence_data_df["Job title"] = sentence_data_df["job id"].apply(
+    lambda x: job_titles_one.get(x, [None])[0]
 )
-sentence_data["Organization industry"] = sentence_data["job id"].apply(
-    lambda x: job_titles.get(x, [None, None])[1]
+sentence_data_df["Organization industry"] = sentence_data_df["job id"].apply(
+    lambda x: job_titles_one.get(x, [None, None])[1]
 )
 
 # %%
-print(f"There are {sentence_data['Job title'].nunique()} unique job titles")
-print(
-    f"There are {sentence_data['Organization industry'].nunique()} unique organization industries"
-)
+next(iter(job_titles_one.values()))
 
 # %%
-print(
-    f"{round(sum(sentence_data['Job title'].notnull())*100/len(sentence_data),3)}% skill sentences have job title data"
-)
-print(
-    f"{round(sum(sentence_data['Organization industry'].notnull())*100/len(sentence_data),3)}% skill sentences have organization industry data"
-)
 
+print(f"There are {sentence_data_df['Job title'].nunique()} unique job titles")
+print(
+    f"There are {sentence_data_df['Organization industry'].nunique()} unique organization industries"
+)
+print(
+    f"{round(sum(sentence_data_df['Job title'].notnull())*100/len(sentence_data_df),3)}% skill sentences have job title data"
+)
+print(
+    f"{round(sum(sentence_data_df['Organization industry'].notnull())*100/len(sentence_data_df),3)}% skill sentences have organization industry data"
+)
 
 # %% [markdown]
 # ### Which skill group levels does each job have the highest proportions in
 
 # %%
+from tqdm import tqdm
+
+# %%
+grouped_jobtitle = sentence_data_df.groupby(["Job title"])
+
 job_skill_leva_props = {}
 job_skill_levb_props = {}
 job_skill_levc_props = {}
-for job_name, job_group in sentence_data.groupby(["Job title"]):
+for job_name, job_group in tqdm(grouped_jobtitle):
     ## Level A
     levas = job_group["Hierarchy level A"].value_counts(sort=True)
     leva_props_dict = (levas / sum(levas)).to_dict()
@@ -431,10 +472,10 @@ job_skill_levb_props_df = pd.DataFrame(job_skill_levb_props).T
 job_skill_levc_props_df = pd.DataFrame(job_skill_levc_props).T
 
 # %%
-sentence_data["Job title"].nunique()
+sentence_data_df["Job title"].nunique()
 
 # %%
-sum(sentence_data["Job title"].value_counts() > 10)
+sum(sentence_data_df["Job title"].value_counts() > 10)
 
 # %%
 min_num_job_ids = 10
@@ -443,35 +484,24 @@ min_num_job_ids = 10
 # ### Level A skills
 
 # %%
-leve_a_group["Cluster number"].apply(
-    lambda x: skills_data[str(x)]["Skills name"]
-).value_counts()[0:5].index
-
-# %%
-leve_a_group["Cluster number"].nunique()
-
-# %%
-leve_a_group["job id"].nunique()
-
-# %%
 lev_a_top_jobs = []
-for level_a_name, leve_a_group in sentence_data.groupby(["Hierarchy level A"]):
+for level_a_name, leve_a_group in sentence_data_df.groupby(["Hierarchy level A"]):
     job_titles = leve_a_group["Job title"].value_counts(sort=True)
     org_inds = leve_a_group["Organization industry"].value_counts(sort=True)
 
     top_job_titles_by_prop = job_skill_leva_props_df[
         job_skill_leva_props_df["Number of unique job ids"] > min_num_job_ids
     ][level_a_name].sort_values(ascending=False)[0:10]
-
+    
     lev_a_top_jobs.append(
         {
-            "Level A name": level_a_rename_dict[str(level_a_name)],
-            "Number of unique skills": leve_a_group["Cluster number"].nunique(),
+            "Level A name": leve_a_group['Hierarchy level A name'].unique()[0],
+            "Number of unique skills": leve_a_group["Cluster number predicted"].nunique(),
             "Number of unique job ids": leve_a_group["job id"].nunique(),
             "Number of skill sentences": len(leve_a_group),
             "Top 5 most common skills": list(
-                leve_a_group["Cluster number"]
-                .apply(lambda x: skills_data[str(x)]["Skills name"])
+                leve_a_group["Cluster number predicted"]
+                .apply(lambda x: skill_hierarchy[str(x)]["Skill name"])
                 .value_counts()[0:5]
                 .index
             ),
@@ -493,7 +523,7 @@ for level_a_name, leve_a_group in sentence_data.groupby(["Hierarchy level A"]):
 
 # %%
 pd.DataFrame(lev_a_top_jobs).to_csv(
-    "outputs/skills_taxonomy/evaluation/top_10_jobs_levela.csv"
+    f"outputs/skills_taxonomy/evaluation/{hier_date}/top_10_jobs_levela_20.csv"
 )
 
 # %% [markdown]
@@ -510,12 +540,10 @@ for lev_a_id, lev_a in hier_structure.items():
         lev_b_name_dict[lev_b_id] = lev_b["Name"]
         for lev_c_id, lev_c in lev_b["Level C"].items():
             lev_c_name_dict[lev_c_id] = lev_c["Name"]
-            for lev_d_id, lev_d in lev_c["Level D"].items():
-                lev_d_name_dict[lev_d_id] = lev_d["Name"]
 
 # %%
 lev_b_top_jobs = []
-for level_b_name, leve_b_group in sentence_data.groupby(["Hierarchy level B"]):
+for level_b_name, leve_b_group in sentence_data_df.groupby(["Hierarchy level B"]):
     job_titles = leve_b_group["Job title"].value_counts(sort=True)
     org_inds = leve_b_group["Organization industry"].value_counts(sort=True)
 
@@ -526,12 +554,12 @@ for level_b_name, leve_b_group in sentence_data.groupby(["Hierarchy level B"]):
     lev_b_top_jobs.append(
         {
             "Level B name": lev_b_name_dict[str(level_b_name)],
-            "Number of unique skills": leve_b_group["Cluster number"].nunique(),
+            "Number of unique skills": leve_b_group["Cluster number predicted"].nunique(),
             "Number of unique job ids": leve_b_group["job id"].nunique(),
             "Number of skill sentences": len(leve_b_group),
             "Top 5 most common skills": list(
-                leve_b_group["Cluster number"]
-                .apply(lambda x: skills_data[str(x)]["Skills name"])
+                leve_b_group["Cluster number predicted"]
+                .apply(lambda x: skill_hierarchy[str(x)]["Skill name"])
                 .value_counts()[0:5]
                 .index
             ),
@@ -553,7 +581,7 @@ for level_b_name, leve_b_group in sentence_data.groupby(["Hierarchy level B"]):
 
 # %%
 pd.DataFrame(lev_b_top_jobs).to_csv(
-    "outputs/skills_taxonomy/evaluation/top_10_jobs_levelb.csv"
+    f"outputs/skills_taxonomy/evaluation/{hier_date}/top_10_jobs_levelb.csv"
 )
 
 # %% [markdown]
@@ -562,7 +590,7 @@ pd.DataFrame(lev_b_top_jobs).to_csv(
 
 # %%
 lev_c_top_jobs = []
-for level_c_name, leve_c_group in sentence_data.groupby(["Hierarchy level C"]):
+for level_c_name, leve_c_group in sentence_data_df.groupby(["Hierarchy level C"]):
     job_titles = leve_c_group["Job title"].value_counts(sort=True)
     org_inds = leve_c_group["Organization industry"].value_counts(sort=True)
 
@@ -573,12 +601,12 @@ for level_c_name, leve_c_group in sentence_data.groupby(["Hierarchy level C"]):
     lev_c_top_jobs.append(
         {
             "Level C name": lev_c_name_dict[str(level_c_name)],
-            "Number of unique skills": leve_c_group["Cluster number"].nunique(),
+            "Number of unique skills": leve_c_group["Cluster number predicted"].nunique(),
             "Number of unique job ids": leve_c_group["job id"].nunique(),
             "Number of skill sentences": len(leve_c_group),
             "Top 5 most common skills": list(
-                leve_c_group["Cluster number"]
-                .apply(lambda x: skills_data[str(x)]["Skills name"])
+                leve_c_group["Cluster number predicted"]
+                .apply(lambda x: skill_hierarchy[str(x)]["Skill name"])
                 .value_counts()[0:5]
                 .index
             ),
@@ -600,30 +628,33 @@ for level_c_name, leve_c_group in sentence_data.groupby(["Hierarchy level C"]):
 
 # %%
 pd.DataFrame(lev_c_top_jobs).to_csv(
-    "outputs/skills_taxonomy/evaluation/top_10_jobs_levelc.csv"
+    f"outputs/skills_taxonomy/evaluation/{hier_date}/top_10_jobs_levelc.csv"
 )
 
 # %% [markdown]
 # ## For each job, most common skill level C
 
 # %%
-top_jobs = sentence_data["Job title"].value_counts()[0:100].index.tolist()
+top_jobs = sentence_data_df["Job title"].value_counts()[0:100].index.tolist()
 
 # %%
-sentence_data["Skill name"] = sentence_data["Cluster number"].apply(
-    lambda x: skills_data[str(x)]["Skills name"]
+len(top_jobs)
+
+# %%
+sentence_data_df["Skill name"] = sentence_data_df["Cluster number predicted"].apply(
+    lambda x: skill_hierarchy[str(x)]["Skill name"]
 )
-sentence_data["Hierarchy level B name"] = sentence_data["Hierarchy level B"].apply(
+sentence_data_df["Hierarchy level B name"] = sentence_data_df["Hierarchy level B"].apply(
     lambda x: lev_b_name_dict[str(x)]
 )
-sentence_data["Hierarchy level C name"] = sentence_data["Hierarchy level C"].apply(
+sentence_data_df["Hierarchy level C name"] = sentence_data_df["Hierarchy level C"].apply(
     lambda x: lev_c_name_dict[str(x)]
 )
 
 # %%
 per_top_job_levels = []
 for job_title in top_jobs:
-    job_df = sentence_data[sentence_data["Job title"] == job_title]
+    job_df = sentence_data_df[sentence_data_df["Job title"] == job_title]
     levas = round(
         job_df["Hierarchy level A name"].value_counts(sort=True) * 100 / len(job_df)
     )
@@ -639,16 +670,16 @@ for job_title in top_jobs:
             "Job title": job_title,
             "Number of skill sentences": len(job_df),
             "Most common level A skill groups": [
-                f"{j} ({n})" for j, n in list(zip(levas.index[0:1], levas[0:1]))
+                f"{j} ({round(n)}%)" for j, n in list(zip(levas.index[0:1], levas[0:1]))
             ],
             "5 most common level B skill groups": [
-                f"{j} ({n})" for j, n in list(zip(levbs.index[0:5], levbs[0:5]))
+                f"{j} ({round(n)}%)" for j, n in list(zip(levbs.index[0:5], levbs[0:5]))
             ],
             "5 most common level C skill groups": [
-                f"{j} ({n})" for j, n in list(zip(levcs.index[0:5], levcs[0:5]))
+                f"{j} ({round(n)}%)" for j, n in list(zip(levcs.index[0:5], levcs[0:5]))
             ],
             "5 most common skills": [
-                f"{j} ({n})" for j, n in list(zip(skills_d.index[0:10], skills_d[0:5]))
+                f"{j} ({round(n)}%)" for j, n in list(zip(skills_d.index[0:10], skills_d[0:5]))
             ],
         }
     )
@@ -656,7 +687,7 @@ for job_title in top_jobs:
 
 # %%
 pd.DataFrame(per_top_job_levels).to_csv(
-    "outputs/skills_taxonomy/evaluation/jobs_top_skill_groups.csv"
+    f"outputs/skills_taxonomy/evaluation/{hier_date}/jobs_top_skill_groups.csv"
 )
 
 # %%

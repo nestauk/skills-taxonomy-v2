@@ -155,8 +155,7 @@ print(len(sentence_embs))
 # A sample of the sentences
 # The data is so big, so need to do most plots on a sample
 sentence_embs_sample = sentence_embs.sample(n=2000000, random_state=1)
-print(len(sentence_embs_sample))
-sample_sent_ids 
+print(len(sentence_embs_sample)) 
 
 # %%
 sample_sent_ids = set(sentence_embs_sample['sentence id'].unique())
@@ -372,7 +371,7 @@ p = figure(
 p.circle(
     x="x",
     y="y",
-    radius=0.01,
+    radius=0.02,
     alpha=0.1,
     source=source,
     color="black",
@@ -547,7 +546,7 @@ p = figure(
 p.circle(
     x="x",
     y="y",
-    radius=0.01,
+    radius=0.02,
     alpha=0.1,
     source=source,
     color={"field": "label", "transform": color_mapper},
@@ -609,12 +608,33 @@ p.ygrid.visible = False
 save(p)
 
 # %% [markdown]
-# ### By skill UP TO HERE WITH RERUNNING
+# ## Examples of skill names post hierarchy naming
+
+# %%
+skill_hierarchy_file_dup_name = "outputs/skills_taxonomy/2022.01.21_skills_hierarchy.json"
+skill_hierarchy_dup_name = load_s3_data(s3, bucket_name, skill_hierarchy_file_dup_name)
+
+# %%
+orig_skill_names = [s['Skill name'] for s in skill_hierarchy_dup_name.values()]
+len(set(orig_skill_names))
+
+# %%
+from collections import Counter
+
+# %%
+print([d[0] for d in Counter(orig_skill_names).most_common(100)])
+
+# %% [markdown]
+# # By skill
+# - Average embeddings for skills
 
 # %%
 # The new skill names are in here (since they are dependent on the hierarchy)
-skill_hierarchy_file = "outputs/skills_taxonomy/2022.01.14_skills_hierarchy_named.json"
+skill_hierarchy_file = "outputs/skills_taxonomy/2022.01.21_skills_hierarchy_named.json"
 skill_hierarchy = load_s3_data(s3, bucket_name, skill_hierarchy_file)
+
+# %%
+skill_hierarchy['0']
 
 # %%
 for k, v in skills_data.items():
@@ -678,111 +698,52 @@ p.ygrid.visible = False
 
 save(p)
 
+# %% [markdown]
+# ## Skills by level A/B/C
+
 # %%
-output_file(
-    filename=f"outputs/skills_extraction/figures/{file_name_date.replace('.','_')}/{file_name_date}_skill_clusters_average_labelled.html"
-)
+sentence_clusters_notnone['Level A'] = sentence_clusters_notnone['Cluster number predicted'].apply(lambda x: skill_hierarchy[str(x)]['Hierarchy level A name'])
+sentence_clusters_notnone['Level B'] = sentence_clusters_notnone['Cluster number predicted'].apply(lambda x: skill_hierarchy[str(x)]['Hierarchy level B name'])
+sentence_clusters_notnone['Level C'] = sentence_clusters_notnone['Cluster number predicted'].apply(lambda x: skill_hierarchy[str(x)]['Hierarchy level C name'])
+sentence_clusters_notnone.head(2)
 
+# %%
+small_skills = []
+for skill_num, skill_info in skill_hierarchy.items():
+    if skill_info['Number of sentences that created skill']<100:
+        small_skills.append(skill_num)
+small_skills
 
-colors_by_labels = skills_clusters["Cluster number"].astype(str).tolist()
-reduced_x = skills_clusters["reduced_points x"].tolist()
-reduced_y = skills_clusters["reduced_points y"].tolist()
-color_palette = viridis
+# %%
+skill_num = '6684'# 4404
+print(skill_hierarchy[skill_num]['Skill name'])
+print(skill_hierarchy[skill_num]['Number of sentences that created skill'])
+sentence_clusters_notnone[sentence_clusters_notnone['Cluster number predicted']==int(skill_num)]['original sentence'].tolist()
 
-ds_dict = dict(
-    x=reduced_x,
-    y=reduced_y,
-    texts=skills_clusters["Skills name"].tolist(),
-    examples=skills_clusters["Examples"].tolist(),
-    label=colors_by_labels,
-)
-hover = HoverTool(
-    tooltips=[
-        ("Skill name", "@texts"),
-        ("Examples", "@examples"),
-        ("Skill number", "@label"),
-    ]
-)
-source = ColumnDataSource(ds_dict)
+# %%
+empathy_skills = []
+for skill_num, skill_info in skill_hierarchy.items():
+    if "empathy" in skill_info['Skill name']:
+        empathy_skills.append(skill_num)
+empathy_skills
 
-p = figure(
-    plot_width=500,
-    plot_height=500,
-    tools=[hover, ResetTool(), WheelZoomTool(), BoxZoomTool(), SaveTool()],
-    title=f"Skills",
-    toolbar_location="below",
-)
+# %%
+skill_num = '2807'
+print(skill_hierarchy[skill_num])
+sentence_clusters_notnone[sentence_clusters_notnone['Cluster number predicted']==int(skill_num)]['original sentence'].tolist()[0:10]
 
-p.circle(x="x", y="y", radius=0.04, alpha=0.08, source=source, color="grey")
-
-skills_clusters_sample_n = [
-    13189,
-    9866,
-    1525,
-    5077,
-    6418,
-    192,
-    4235,
-    4566,
-    13536,
-    5183,
-    1556,
-    7613,
-    2744,
-    1768,
-    18415,
-    12386,
-    6760,
-    2970,
-    9588,
-    6213,
-    11451,
-    13347,
-    15905,
-    8898,
-    1674,
-    3876,
-    9296,
-    18040,
-    8253,
-    16692,
-    8584,
-    8556,
-    8888,
-    8497,
-    242,
-    11136,
-]
-skills_clusters_sample = skills_clusters.copy()[
-    skills_clusters["Cluster number"].isin(skills_clusters_sample_n)
-]
-ds_dict_text = dict(
-    x=skills_clusters_sample["reduced_points x"].tolist(),
-    y=skills_clusters_sample["reduced_points y"].tolist(),
-    texts=skills_clusters_sample["Skills name"].tolist(),
-    label=skills_clusters_sample["Cluster number"].tolist(),
-)
-source_text = ColumnDataSource(ds_dict_text)
-
-glyph = Text(
-    x="x", y="y", text="texts", angle=0, text_color="black", text_font_size="7pt"
-)
-p.add_glyph(source_text, glyph)
-
-
-p.xaxis.visible = False
-p.xgrid.visible = False
-p.yaxis.visible = False
-p.ygrid.visible = False
-
-save(p)
+# %%
+skill_num = '4240'
+print(skill_hierarchy[skill_num])
+sentence_clusters_notnone[sentence_clusters_notnone['Cluster number predicted']==int(skill_num)]['original sentence'].tolist()[0:10]
 
 # %% [markdown]
-# ## Skill examples
+# ## Skill examples - don't forget this is from a sample!
+#
 
 # %%
 skill_id = "-2"
-sentence_clusters[sentence_clusters["Cluster number"] == int(skill_id)][
+sample_sentence_clusters[sample_sentence_clusters["Cluster number"] == int(skill_id)][
     "original sentence"
 ].tolist()[100:110]
 
@@ -790,14 +751,18 @@ sentence_clusters[sentence_clusters["Cluster number"] == int(skill_id)][
 data_skills = []
 for k, v in skills_data.items():
     if ("excel" in v["Skills name"]) and ("microsoft" in v["Skills name"]):
-        data_skills.append(k)
-data_skills[0:10]
+        if skill_hierarchy[k]['Number of sentences that created skill']>1000:
+            print('---')
+            print(k)
+            print(v["Skills name"])
+            print(skill_hierarchy[k]['Number of sentences that created skill'])
 
 # %%
-skill_id = "136"
-# print(skills_data[skill_id])
+skill_id = "1107"
+print(skill_hierarchy[skill_id]['Skill name'])
+print(skill_hierarchy[skill_id]['Number of sentences that created skill'])
 print(
-    sentence_clusters[sentence_clusters["Cluster number"] == int(skill_id)][
+    sample_sentence_clusters[sample_sentence_clusters["Cluster number"] == int(skill_id)][
         "original sentence"
     ].tolist()[0:10]
 )
@@ -806,31 +771,19 @@ print(
 # %%
 data_skills = []
 for k, v in skills_data.items():
-    if ("unit" in v["Skills name"]):
-        data_skills.append(k)
-data_skills[0:10]
+    if ("python" in v["Skills name"]) and ("python" in v["Skills name"]):
+        if skill_hierarchy[k]['Number of sentences that created skill']>1000:
+            print('---')
+            print(k)
+            print(v["Skills name"])
+            print(skill_hierarchy[k]['Number of sentences that created skill'])
 
 # %%
-skill_id = "922"
-# print(skills_data[skill_id])
+skill_id = "1697"
+print(skill_hierarchy[skill_id]['Skill name'])
+print(skill_hierarchy[skill_id]['Number of sentences that created skill'])
 print(
-    sentence_clusters[sentence_clusters["Cluster number"] == int(skill_id)][
-        "original sentence"
-    ].tolist()[0:3]
-)
-
-# %%
-data_skills = []
-for k, v in skills_data.items():
-    if ("python" in v["Skills name"]) and ("progra" in v["Skills name"]):
-        data_skills.append(k)
-data_skills
-
-# %%
-skill_id = "1590"
-# print(skills_data[skill_id])
-print(
-    sentence_clusters[sentence_clusters["Cluster number"] == int(skill_id)][
+    sample_sentence_clusters[sample_sentence_clusters["Cluster number"] == int(skill_id)][
         "original sentence"
     ].tolist()[0:10]
 )
@@ -838,15 +791,19 @@ print(
 # %%
 data_skills = []
 for k, v in skills_data.items():
-    if ("teaching" in v["Skills name"]):
-        data_skills.append(k)
-data_skills[0:10]
+    if ("food" in v["Skills name"]) and ("food" in v["Skills name"]):
+        if skill_hierarchy[k]['Number of sentences that created skill']>1000:
+            print('---')
+            print(k)
+            print(v["Skills name"])
+            print(skill_hierarchy[k]['Number of sentences that created skill'])
 
 # %%
-skill_id = "23"
-print(skills_data[skill_id]["Skills name"])
+skill_id = "4326"
+print(skill_hierarchy[skill_id]['Skill name'])
+print(skill_hierarchy[skill_id]['Number of sentences that created skill'])
 print(
-    sentence_clusters[sentence_clusters["Cluster number"] == int(skill_id)][
+    sample_sentence_clusters[sample_sentence_clusters["Cluster number"] == int(skill_id)][
         "original sentence"
     ].tolist()[0:10]
 )
@@ -854,18 +811,34 @@ print(
 # %%
 data_skills = []
 for k, v in skills_data.items():
-    if ("food" in v["Skills name"]):
-        data_skills.append(k)
-data_skills[0:10]
+    if ("motivated" in v["Skills name"]) and ("motivated" in v["Skills name"]):
+        if skill_hierarchy[k]['Number of sentences that created skill']>1000:
+            print('---')
+            print(k)
+            print(v["Skills name"])
+            print(skill_hierarchy[k]['Number of sentences that created skill'])
 
 # %%
-skill_id = "288"
-print(skills_data[skill_id]["Skills name"])
+skill_id = "2696"
+print(skill_hierarchy[skill_id]['Skill name'])
+print(skill_hierarchy[skill_id]['Number of sentences that created skill'])
 print(
-    sentence_clusters[sentence_clusters["Cluster number"] == int(skill_id)][
+    sample_sentence_clusters[sample_sentence_clusters["Cluster number"] == int(skill_id)][
         "original sentence"
     ].tolist()[0:10]
 )
+
+# %% [markdown]
+# ## Sentence examples per level A
+
+# %%
+sentence_clusters_notnone.head(2)
+
+# %%
+for level_a_name, level_a_sents in sentence_clusters_notnone.groupby('Level A'):
+    print('---')
+    print(level_a_name)
+    print(level_a_sents["original sentence"].sample(5, random_state=0).tolist())
 
 # %% [markdown]
 # ## How many sentences in each skill?
@@ -890,8 +863,15 @@ print(
 )
 
 
+
 # %%
 plt.hist(skill_lengths.values(), bins=10);
+
+# %%
+len([s for s in skill_lengths.values() if s >=1000])/len(skill_lengths)
+
+# %%
+len([s for s in skill_lengths.values() if s <1000])/len(skill_lengths)
 
 # %%
 plt.hist(
@@ -944,5 +924,51 @@ n_max = 30
 print(
     f"There are {len([s for s in num_skills if s>n_max])} job adverts with more than {n_max} skills"
 )
+
+# %% [markdown]
+# ## Number of skills as number sentences increases
+
+# %%
+sentence_clusters_notnone_all_shuffle = sentence_clusters_notnone_all.copy()
+sentence_clusters_notnone_all_shuffle = sentence_clusters_notnone_all_shuffle.sample(frac=1) 
+
+# %%
+sentence_clusters_notnone_all_shuffle.head(2)
+
+# %%
+unique_skills = {}
+for k in tqdm(np.linspace(0, 400000, num=1000)):
+    k = int(k)
+    unique_skills[k] = sentence_clusters_notnone_all_shuffle.iloc[0:k]['Cluster number predicted'].nunique()
+
+# %%
+# This is vocab size as number of sentences increases, it's from older data, but I think it's still relevant
+num_sentences_and_vocab_size = load_s3_data(
+    s3,
+    BUCKET_NAME,
+    "outputs/skills_extraction/extracted_skills_sample_50k/2021.08.31_num_sentences_and_vocab_size.json",
+)
+
+# %%
+x_vocab = [v[0] for v in num_sentences_and_vocab_size]
+y_vocab = [v[1] for v in num_sentences_and_vocab_size]
+
+x_skills = list(unique_skills.keys())
+y_skills = list(unique_skills.values())
+
+# %%
+fig, axs = plt.subplots(1,2, figsize=(12,3))
+
+axs[0].plot(x_vocab, y_vocab, color='black');
+axs[0].axvline(300000, color="orange", ls='--')
+axs[0].set_xlabel('Number of sentences')
+axs[0].set_ylabel('Number of unique words in vocab')
+
+axs[1].plot(x_skills, y_skills, color='black');
+axs[1].set_xlabel('Number of sentences')
+axs[1].set_ylabel('Number of unique skills')
+
+plt.tight_layout()
+plt.savefig('outputs/skills_extraction/figures/2022_01_14/num_sent_num_skills_vocab_size.pdf',bbox_inches='tight')
 
 # %%
