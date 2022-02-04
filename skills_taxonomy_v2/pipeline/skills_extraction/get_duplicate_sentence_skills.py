@@ -1,5 +1,5 @@
 """
-In reduce_embeddings.py we don't filter out duplicated sentences.
+In reduce_embeddings.py we filter out duplicated sentences.
 However, for analysis with the TK data we need to make sure all the
 job ids are used.
 
@@ -22,7 +22,9 @@ logger = logging.getLogger(__name__)
 
 s3 = boto3.resource("s3")
 
-sentence_embeddings_dir = 'outputs/skills_extraction/word_embeddings/data/2021.11.05'
+file_date = "2022.01.14"
+
+sentence_embeddings_dir = f'outputs/skills_extraction/word_embeddings/data/{file_date}/'
 sent_thresh = 250
 
 sentence_embeddings_dirs = get_s3_data_paths(s3, BUCKET_NAME, sentence_embeddings_dir, file_types=["*.json"])
@@ -51,19 +53,19 @@ for i, embedding_dir in tqdm(enumerate(sentence_embeddings_dirs)):
 			sentence_embeddings = load_s3_data(s3, BUCKET_NAME, embedding_dir)
 		except:
 			problem_embedding_dir.append(embedding_dir)
+		job_words_id_dict = defaultdict(list)
 		for job_id, sent_id, words, _ in sentence_embeddings:
 			original_sentence = original_sentences[str(sent_id)]
 			if len(original_sentence) < sent_thresh:
 				words_id = hash(words)
-				words_id_list.append([words_id, job_id, sent_id])
-	if i%200==0:
+				job_words_id_dict[job_id].append([words_id, sent_id])
+		words_id_list.append(job_words_id_dict)
+	if i%300==0:
 		save_to_s3(
-				s3, BUCKET_NAME,words_id_list,
-				f"outputs/tk_data_analysis_new_method/2021.11.05_words_id_list_{output_i}.json",)
+				s3, BUCKET_NAME, words_id_list,
+				f"outputs/skills_extraction/word_embeddings/data/{file_date}_words_id_list_{output_i}.json",)
 		output_i += 1
 		words_id_list = []
-
-
 
 print(f"{len(problem_embedding_dir)} problem_sentence_dir")
 
@@ -72,5 +74,5 @@ save_to_s3(
         s3,
         BUCKET_NAME,
         words_id_list,
-        f"outputs/tk_data_analysis_new_method/2021.11.05_words_id_list_{output_i}.json",
+        f"outputs/skills_extraction/word_embeddings/data/{file_date}_words_id_list_{output_i}.json",
     )
