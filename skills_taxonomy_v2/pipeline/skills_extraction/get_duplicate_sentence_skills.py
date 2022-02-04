@@ -41,12 +41,12 @@ for sentence_dir in tqdm(sentence_embeddings_dirs):
 
 print(f"{len(problem_sentence_dir)} problem_sentence_dir")
 
-
+unique_word_ids = set()
+dup_word_ids = set()
 words_id_list = []
 logger.info(f"Loading embeddings from {len(sentence_embeddings_dirs)/2} files")
 problem_embedding_dir = []
 output_i = 0
-count = 0
 for i, embedding_dir in tqdm(enumerate(sentence_embeddings_dirs)):
 	if "embeddings.json" in embedding_dir:
 		try:
@@ -59,6 +59,10 @@ for i, embedding_dir in tqdm(enumerate(sentence_embeddings_dirs)):
 			if len(original_sentence) < sent_thresh:
 				words_id = hash(words)
 				job_words_id_dict[job_id].append([words_id, sent_id])
+				if words_id in unique_word_ids:
+					dup_word_ids.add(words_id)
+				else:
+					unique_word_ids.add(words_id)
 		words_id_list.append(job_words_id_dict)
 	if i%300==0:
 		save_to_s3(
@@ -76,3 +80,30 @@ save_to_s3(
         words_id_list,
         f"outputs/skills_extraction/word_embeddings/data/{file_date}_words_id_list_{output_i}.json",
     )
+
+print(f"There are {len(dup_word_ids)} unique word ids")
+# Only really care about duplicates, but these aren't
+# possible to find until all the data is processed
+# (hence two step)
+
+files = get_s3_data_paths(
+	s3,
+	BUCKET_NAME,
+	"outputs/skills_extraction/word_embeddings/data/", file_types=[f"*{file_date}_words_id_list_*.json"]
+	)
+
+unique_words_id_data = defaultdict(list)
+for file in files:
+	dup_data = load_s3_data(s3, BUCKET_NAME, file)
+	for job_id, word_sent_id_list in dup_data.items():
+		for word_id, sent_id in word_sent_id_list:
+			if word_id in dup_word_ids:
+				unique_words_id_data[job_id].append([word_id, sent_id])
+save_to_s3(
+	s3,
+	BUCKET_NAME,
+	unique_words_id_data,
+	f"outputs/skills_extraction/word_embeddings/data/{file_date}_unique_words_id_list.json",
+	)
+
+
