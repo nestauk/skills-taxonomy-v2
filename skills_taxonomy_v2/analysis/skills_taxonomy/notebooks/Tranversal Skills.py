@@ -122,12 +122,62 @@ skills_data = load_s3_data(
     f"outputs/skills_extraction/extracted_skills/{skills_date}_skills_data.json",
 )
 
-# %% [markdown]
-# ### Join the hierarchy data to the sentences
+# %%
+sentence_data_orig = sentence_data.copy()
 
 # %%
 sentence_data = pd.DataFrame(sentence_data, columns=['job id', 'sentence id',  'Cluster number predicted'])
 sentence_data = sentence_data[sentence_data["Cluster number predicted"] >=0]
+
+# %% [markdown]
+# ### Add the deduplicated sentences
+
+# %%
+dupe_words_id = load_s3_data(
+    s3,
+    bucket_name,
+    f"outputs/skills_extraction/word_embeddings/data/2022.01.14_unique_words_id_list.json",
+)
+
+# %%
+# The job ids in the skill sentences which have duplicates
+dupe_job_ids = set(sentence_data['job id'].tolist()).intersection(set(dupe_words_id.keys()))
+# What are the word ids for these?
+skill_job_ids_with_dupes_list = [(job_id, sent_id, word_id) for job_id, s_w_list in dupe_words_id.items() for (word_id, sent_id) in s_w_list if job_id in dupe_job_ids]
+skill_job_ids_with_dupes_df = pd.DataFrame(skill_job_ids_with_dupes_list, columns = ['job id', 'sentence id', 'words id'])
+# Get the words id for the existing deduplicated sentence data
+sentence_data_ehcd = sentence_data.merge(skill_job_ids_with_dupes_df, how='left', on=['job id', 'sentence id'])
+skill_sent_word_ids = set(sentence_data_ehcd['words id'].unique())
+len(skill_sent_word_ids)
+
+
+# %%
+# Get all the job id+sent id for the duplicates with these word ids
+dupe_sentence_data = []
+for job_id, s_w_list in tqdm(dupe_words_id.items()):
+    for (word_id, sent_id) in s_w_list:
+        if word_id in skill_sent_word_ids:
+            cluster_num = sentence_data_ehcd[sentence_data_ehcd['words id']==word_id].iloc[0]['Cluster number predicted']
+            dupe_sentence_data.append([job_id, sent_id, cluster_num])
+dupe_sentence_data_df = pd.DataFrame(dupe_sentence_data, columns = ['job id', 'sentence id', 'Cluster number predicted'])           
+
+
+# %%
+# Add new duplicates to sentence data
+sentence_data_all = pd.concat([sentence_data, dupe_sentence_data_df])
+sentence_data_all.drop_duplicates(inplace=True)
+sentence_data_all.reset_index(inplace=True)
+
+# %%
+print(len(sentence_data))
+print(len(dupe_sentence_data_df))
+print(len(sentence_data_all))
+
+# %%
+sentence_data = sentence_data_all.copy()
+
+# %% [markdown]
+# ### Add hierarchy info
 
 # %%
 sentence_data["Hierarchy level A"] = (
@@ -225,6 +275,16 @@ def get_cooccurence_network(sentence_data, level_skill_group):
 # - 1.6% of the edges have a weighting of 1
 # - 92.57% of the edges have a weighting of more than 10
 # - 51.3% of the edges have a weighting of more than 200
+#
+# January 2022 (add duplicate sentences):
+#
+# - 654087 job adverts had only one skill
+# - 8009860 skill pairs in job adverts
+# - 30422 unique skill pairs in job adverts
+# - 1.6% of the edges have a weighting of 1
+# - 92.6% of the edges have a weighting of more than 10
+# - 51.38% of the edges have a weighting of more than 200
+#
 
 # %%
 level_skill_group = "Hierarchy level C"  # Can be Cluster number
@@ -542,6 +602,49 @@ level_c_skill_group_scores[
     (level_c_skill_group_scores["centrality"] > cent_min)
     & (level_c_skill_group_scores["clustering_coeff"] < clust_max)
 ]
+
+# %% [markdown]
+# #### Get examples for the connections to a transversal skill
+
+# %%
+lev_c_name ="team-part-teams"
+lev_c_name_num = {v:k for k,v in lev_c_name_dict.items()}[lev_c_name]
+lev_c_name_num
+
+# %%
+all_skill_combinations = []
+num_one_skills = 0
+for _, job_skills in tqdm(sentence_data.groupby("job id")):
+    unique_skills = job_skills['Hierarchy level C'].unique().tolist()
+    if len(unique_skills) != 1:
+        all_skill_combinations += list(combinations(sorted(unique_skills), 2))
+    else:
+        num_one_skills += 1
+
+print(f"{num_one_skills} job adverts had only one skill")
+print(f"{len(all_skill_combinations)} skill pairs in job adverts")
+
+edge_list = pd.DataFrame(all_skill_combinations, columns=["source", "target"])
+edge_list["weight"] = 1
+edge_list_weighted = (
+    edge_list.groupby(["source", "target"])["weight"].sum().reset_index(drop=False)
+)
+
+# %%
+# Get random pairs of close neighbours and see how connected these are
+print(f"The highly transversal node {lev_c_name} has the quite unconnected neighbours..")
+
+high_connected = edge_list_weighted[(edge_list_weighted['source']==int(lev_c_name_num)) & (edge_list_weighted["weight"]>100)]['target'].tolist()
+for source, target in [random.sample(high_connected, 2) for i in range(100)]:
+    neighbours_weights = edge_list_weighted[(edge_list_weighted['source']==source) & (edge_list_weighted["target"]==target)]["weight"]
+    if len(neighbours_weights)!=0:
+        neighbours_weights = neighbours_weights.iloc[0]
+        if neighbours_weights < 100:
+            print(f"{lev_c_name_dict[str(source)]} to {lev_c_name_dict[str(target)]} has weight {neighbours_weights}")
+
+
+# %%
+random.sample(high_connected,2)
 
 # %% [markdown]
 # ## Level B

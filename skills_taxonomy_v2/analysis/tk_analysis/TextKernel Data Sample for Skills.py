@@ -68,6 +68,62 @@ skill_sents_data = load_s3_data(s3, BUCKET_NAME, "outputs/skills_extraction/extr
 skill_unclusteredtoo_job_ads = set([s[0] for s in skill_sents_data])
 skill_job_ads = set([s[0] for s in skill_sents_data if s[2]>=0])
 
+# %%
+len(skill_sents_data)
+
+# %%
+sentence_data = pd.DataFrame(skill_sents_data, columns=['job id', 'sentence id',  'Cluster number predicted'])
+sentence_data = sentence_data[sentence_data["Cluster number predicted"] >=0]
+
+# %% [markdown]
+# ### Add the duplicated sentences
+
+# %%
+dupe_words_id = load_s3_data(
+    s3,
+    BUCKET_NAME,
+    f"outputs/skills_extraction/word_embeddings/data/2022.01.14_unique_words_id_list.json",
+)
+
+# %%
+# The job ids in the skill sentences which have duplicates
+dupe_job_ids = set(skill_job_ads).intersection(set(dupe_words_id.keys()))
+# What are the word ids for these?
+skill_job_ids_with_dupes_list = [(job_id, sent_id, word_id) for job_id, s_w_list in dupe_words_id.items() for (word_id, sent_id) in s_w_list if job_id in dupe_job_ids]
+skill_job_ids_with_dupes_df = pd.DataFrame(skill_job_ids_with_dupes_list, columns = ['job id', 'sentence id', 'words id'])
+
+# %%
+# Get the words id for the existing deduplicated sentence data
+sentence_data_ehcd = sentence_data.merge(skill_job_ids_with_dupes_df, how='left', on=['job id', 'sentence id'])
+skill_sent_word_ids = set(sentence_data_ehcd['words id'].unique())
+len(skill_sent_word_ids)
+
+
+# %%
+# Get all the job id+sent id for the duplicates with these word ids
+dupe_sentence_data = []
+for job_id, s_w_list in tqdm(dupe_words_id.items()):
+    for (word_id, sent_id) in s_w_list:
+        if word_id in skill_sent_word_ids:
+            cluster_num = sentence_data_ehcd[sentence_data_ehcd['words id']==word_id].iloc[0]['Cluster number predicted']
+            dupe_sentence_data.append([job_id, sent_id, cluster_num])
+dupe_sentence_data_df = pd.DataFrame(dupe_sentence_data, columns = ['job id', 'sentence id', 'Cluster number predicted'])           
+
+
+# %%
+# The additional job ids 
+sentence_data_all = pd.concat([sentence_data, dupe_sentence_data_df])
+sentence_data_all.drop_duplicates(inplace=True)
+sentence_data_all.reset_index(inplace=True)
+skill_job_ads_dupes = set(sentence_data_all['job id'].unique())
+
+# %%
+del dupe_words_id, skill_job_ids_with_dupes_list, skill_job_ids_with_dupes_df
+del dupe_sentence_data, dupe_sentence_data_df, sentence_data_all
+
+# %%
+len(skill_job_ads_dupes)
+
 # %% [markdown]
 # ## How many job adverts
 
@@ -87,6 +143,12 @@ print(
 print(f"Sentences that make up skills (plus unclustered sentences) are from {len(skill_unclusteredtoo_job_ads)} job adverts")
 print(
     f"This is {round(len(skill_unclusteredtoo_job_ads)*100/total_number_jobadvs,2)}% of all job adverts"
+)
+
+# %%
+print(f"Sentences that make up skills (plus the duplicated sentences) are from {len(skill_job_ads_dupes)} job adverts")
+print(
+    f"This is {round(len(skill_job_ads_dupes)*100/total_number_jobadvs,2)}% of all job adverts"
 )
 
 # %% [markdown]
@@ -142,6 +204,16 @@ for job_id in all_sample_job_ids:
 skill_job_ads_dates_count = defaultdict(int)
 for job_id in skill_job_ads:
     skill_job_ads_dates_count[sample_job_dates[job_id]] += 1
+
+# %%
+print(len(skill_job_ads_dupes.difference(skill_job_ads)))
+print(len(skill_job_ads.difference(skill_job_ads_dupes)))
+print(len(skill_job_ads_dupes.intersection(skill_job_ads)))
+
+# %%
+skill_job_ads_dupes_dates_count = defaultdict(int)
+for job_id in skill_job_ads_dupes:
+    skill_job_ads_dupes_dates_count[sample_job_dates[job_id]] += 1
 
 # %%
 skill_unclusteredtoo_job_ads_dates_count = defaultdict(int)
@@ -216,7 +288,8 @@ def plot_prop_data(dates, no_none, plt, label, color, alpha=0.5,width=0.1,positi
 plt.figure(figsize=(10, 4))
 no_none=True
 plot_prop_data(count_year_month(all_tk_year_month_counts), no_none, plt, label="All TK job adverts", color="black", alpha=0.3)
-plot_prop_data(count_year_month(skill_job_ads_dates_count), no_none, plt, label="TK job adverts in sample", color=nesta_orange, alpha=0.4)
+plot_prop_data(count_year_month(skill_job_ads_dupes_dates_count), no_none, plt, label="TK job adverts in sample", color=nesta_orange, alpha=0.4)
+
 plt.legend()
 plt.xlabel("Date of job advert")
 plt.ylabel("Proportion")
@@ -252,7 +325,7 @@ plt.figure(figsize=(10, 5))
 no_none=True
 plot_prop_data(count_year(all_tk_year_month_counts), no_none, plt,
                label="All TK job adverts", color="black", alpha=0.3, width=0.4,position=0.4)
-plot_prop_data(count_year(skill_job_ads_dates_count), no_none, plt,
+plot_prop_data(count_year(skill_job_ads_dupes_dates_count), no_none, plt,
                label="TK job adverts in sample", color=nesta_orange, alpha=0.7, width=0.4,position=0)
 plt.legend(loc = 'lower left')
 plt.xlabel("Date of job advert")
@@ -268,7 +341,7 @@ plot_prop_data(count_year(all_tk_year_month_counts), no_none, plt,
                label="All TK job adverts", color="black", alpha=0.3, width=0.2,position=0.4)
 plot_prop_data(count_year(all_sample_dates_count), no_none, plt,
                label="Original TK sample job adverts", color="blue", alpha=0.3, width=0.2,position=0.2)
-plot_prop_data(count_year(skill_job_ads_dates_count), no_none, plt,
+plot_prop_data(count_year(skill_job_ads_dupes_dates_count), no_none, plt,
                label="TK job adverts in sample", color=nesta_orange, alpha=0.7, width=0.2,position=0)
 plt.legend(loc = 'lower left')
 plt.xlabel("Date of job advert")
@@ -325,6 +398,11 @@ for job_id in skill_job_ads:
     skill_job_ads_locs_count[sample_job_locs[job_id]] += 1
 
 # %%
+skill_job_ads_dupes_locs_count = defaultdict(int)
+for job_id in skill_job_ads_dupes:
+    skill_job_ads_dupes_locs_count[sample_job_locs[job_id]] += 1
+
+# %%
 skill_unclusteredtoo_job_ads_locs_count = defaultdict(int)
 for job_id in skill_unclusteredtoo_job_ads:
     skill_unclusteredtoo_job_ads_locs_count[sample_job_locs[job_id]] += 1
@@ -358,8 +436,11 @@ plt.figure(figsize=(10, 5))
 no_none=True
 plot_prop_data_locs(all_tk_region_counts, no_none, plt,
                label="All TK job adverts", color="black", alpha=0.3, width=0.4,position=0.4)
-plot_prop_data_locs(skill_job_ads_locs_count, no_none, plt,
+# plot_prop_data_locs(skill_job_ads_locs_count, no_none, plt,
+#                label="TK job adverts in sample", color=nesta_orange, alpha=0.7, width=0.4,position=0)
+plot_prop_data_locs(skill_job_ads_dupes_locs_count, no_none, plt,
                label="TK job adverts in sample", color=nesta_orange, alpha=0.7, width=0.4,position=0)
+
 plt.legend(loc = 'upper right')
 plt.xlabel("Date of job advert")
 plt.ylabel("Proportion")
@@ -378,7 +459,7 @@ plt.figure(figsize=(12, 8))
 ax1 = plt.subplot(221)
 no_none=True
 plot_prop_data(count_year_month(all_tk_year_month_counts), no_none, plt, label="All TK job adverts", color="black", alpha=0.3)
-plot_prop_data(count_year_month(skill_job_ads_dates_count), no_none, plt, label="TK job adverts in sample", color=nesta_orange, alpha=0.4)
+plot_prop_data(count_year_month(skill_job_ads_dupes_dates_count), no_none, plt, label="TK job adverts in sample", color=nesta_orange, alpha=0.4)
 plt.legend()
 plt.xlabel("Date of job advert")
 plt.ylabel("Proportion")
@@ -390,7 +471,7 @@ ax2 = plt.subplot(222)
 no_none=True
 plot_prop_data_locs(all_tk_region_counts, no_none, plt,
                label="All TK job adverts", color="black", alpha=0.3, width=0.4,position=0.4)
-plot_prop_data_locs(skill_job_ads_locs_count, no_none, plt,
+plot_prop_data_locs(skill_job_ads_dupes_locs_count, no_none, plt,
                label="TK job adverts in sample", color=nesta_orange, alpha=0.7, width=0.4,position=0)
 plt.legend(loc = 'upper right')
 plt.xlabel("Date of job advert")

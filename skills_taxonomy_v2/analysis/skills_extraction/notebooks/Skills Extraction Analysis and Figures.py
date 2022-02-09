@@ -506,6 +506,8 @@ sentence_clusters_notnone_sample  = sentence_clusters_notnone_sample[sentence_cl
 sentence_clusters_notnone_sample.reset_index(inplace=True)
 
 # %%
+
+# %%
 output_file(
     filename=f"outputs/skills_extraction/figures/{file_name_date.replace('.','_')}/{file_name_date}_skill_clusters.html"
 )
@@ -705,7 +707,76 @@ save(p)
 sentence_clusters_notnone['Level A'] = sentence_clusters_notnone['Cluster number predicted'].apply(lambda x: skill_hierarchy[str(x)]['Hierarchy level A name'])
 sentence_clusters_notnone['Level B'] = sentence_clusters_notnone['Cluster number predicted'].apply(lambda x: skill_hierarchy[str(x)]['Hierarchy level B name'])
 sentence_clusters_notnone['Level C'] = sentence_clusters_notnone['Cluster number predicted'].apply(lambda x: skill_hierarchy[str(x)]['Hierarchy level C name'])
+sentence_clusters_notnone['Level A num'] = sentence_clusters_notnone['Cluster number predicted'].apply(lambda x: skill_hierarchy[str(x)]['Hierarchy level A'])
+sentence_clusters_notnone['Level B num'] = sentence_clusters_notnone['Cluster number predicted'].apply(lambda x: skill_hierarchy[str(x)]['Hierarchy level B'])
+sentence_clusters_notnone['Level C num'] = sentence_clusters_notnone['Cluster number predicted'].apply(lambda x: skill_hierarchy[str(x)]['Hierarchy level C'])
+
 sentence_clusters_notnone.head(2)
+
+# %%
+sentence_clusters_notnone_100k = sentence_clusters_notnone.sample(100000, random_state=42).reset_index()
+sentence_clusters_notnone_100k  = sentence_clusters_notnone_100k[sentence_clusters_notnone_100k["reduced_points x"]<10]
+sentence_clusters_notnone_100k.reset_index(inplace=True)
+
+
+# %%
+def plot_sample_sentences_coloured(colour_by_col):
+    if colour_by_col=="Cluster number":
+        output_name="skill"
+    elif colour_by_col=="Level A num":
+        output_name="levela"
+    elif colour_by_col=="Level B num":
+        output_name="levelb"
+    elif colour_by_col=="Level C num":
+        output_name="levelc"
+        
+    output_file(
+        filename=f"outputs/skills_extraction/figures/{file_name_date.replace('.','_')}/{file_name_date}_sentences_sample_{output_name}.html"
+    )
+
+    colors_by_labels = sentence_clusters_notnone_100k[colour_by_col].astype(str).tolist()
+    reduced_x = sentence_clusters_notnone_100k["reduced_points x"].tolist()
+    reduced_y = sentence_clusters_notnone_100k["reduced_points y"].tolist()
+    color_palette = viridis
+
+    ds_dict = dict(
+        x=reduced_x,
+        y=reduced_y,
+        texts=sentence_clusters_notnone_100k["original sentence"].tolist(),
+        label=colors_by_labels,
+    )
+    hover = HoverTool(
+        tooltips=[
+            ("Sentence", "@texts"),
+            ("Skill number", "@label"),
+        ]
+    )
+    source = ColumnDataSource(ds_dict)
+    unique_colors = list(set(colors_by_labels))
+    color_mapper = LinearColorMapper(palette="Turbo256", low=0, high=len(unique_colors) + 1)
+
+    p = figure(
+        plot_width=500,
+        plot_height=500,
+        tools=[hover, ResetTool(), WheelZoomTool(), BoxZoomTool(), SaveTool()],
+        title=f"Samples of skill sentences coloured by {output_name} number",
+        toolbar_location="below",
+    )
+    p.circle(x="x", y="y", radius=0.04, alpha=0.2, source=source,
+             color={"field": "label", "transform": color_mapper})
+    p.xaxis.visible = False
+    p.xgrid.visible = False
+    p.yaxis.visible = False
+    p.ygrid.visible = False
+
+    save(p)
+
+
+# %%
+plot_sample_sentences_coloured("Cluster number")
+plot_sample_sentences_coloured("Level A num")
+plot_sample_sentences_coloured("Level B num")
+plot_sample_sentences_coloured("Level C num")
 
 # %%
 small_skills = []

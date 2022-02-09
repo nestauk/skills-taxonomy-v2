@@ -112,8 +112,53 @@ sentence_data = sentence_data[sentence_data["Cluster number"] >= 0]
 # %%
 sentence_data["Cluster number"].nunique()
 
+# %% [markdown]
+# ### Add the duplicated sentences
+
 # %%
-# Add hierarchy information to this df
+dupe_words_id = load_s3_data(
+    s3,
+    bucket_name,
+    f"outputs/skills_extraction/word_embeddings/data/2022.01.14_unique_words_id_list.json",
+)
+
+# %%
+# The job ids in the skill sentences which have duplicates
+dupe_job_ids = set(sentence_data['job id'].tolist()).intersection(set(dupe_words_id.keys()))
+# What are the word ids for these?
+skill_job_ids_with_dupes_list = [(job_id, sent_id, word_id) for job_id, s_w_list in dupe_words_id.items() for (word_id, sent_id) in s_w_list if job_id in dupe_job_ids]
+skill_job_ids_with_dupes_df = pd.DataFrame(skill_job_ids_with_dupes_list, columns = ['job id', 'sentence id', 'words id'])
+del dupe_job_ids, skill_job_ids_with_dupes_list
+# Get the words id for the existing deduplicated sentence data
+sentence_data_ehcd = sentence_data.merge(skill_job_ids_with_dupes_df, how='left', on=['job id', 'sentence id'])
+skill_sent_word_ids = set(sentence_data_ehcd['words id'].unique())
+len(skill_sent_word_ids)
+del skill_job_ids_with_dupes_df
+
+# %%
+# Get all the job id+sent id for the duplicates with these word ids
+dupe_sentence_data = []
+for job_id, s_w_list in tqdm(dupe_words_id.items()):
+    for (word_id, sent_id) in s_w_list:
+        if word_id in skill_sent_word_ids:
+            cluster_num = sentence_data_ehcd[sentence_data_ehcd['words id']==word_id].iloc[0]['Cluster number']
+            dupe_sentence_data.append([job_id, sent_id, cluster_num])
+dupe_sentence_data_df = pd.DataFrame(dupe_sentence_data, columns = ['job id', 'sentence id', 'Cluster number'])           
+del sentence_data_ehcd, dupe_sentence_data
+
+# %%
+# Add new duplicates to sentence data
+print(len(sentence_data))
+sentence_data = pd.concat([sentence_data, dupe_sentence_data_df])
+sentence_data.drop_duplicates(inplace=True)
+sentence_data.reset_index(inplace=True)
+print(len(sentence_data))
+
+# %% [markdown]
+# ### Add hierarchy information to this df
+
+# %%
+
 sentence_data["Hierarchy level A name"] = sentence_data["Cluster number"].apply(
     lambda x: skill_hierarchy[str(x)]["Hierarchy level A name"]
 )
@@ -145,6 +190,12 @@ sentence_data["Hierarchy level B name"].nunique()
 
 # %%
 sentence_data["Hierarchy level C name"].nunique()
+
+# %% [markdown]
+# ## Job title data
+
+# %%
+job_titles = load_s3_data(s3, bucket_name, "outputs/tk_data_analysis_new_method/metadata_job/14.01.22/sample_filtered.json")
 
 # %% [markdown]
 # ## Import locations for jobs in this data
@@ -266,6 +317,9 @@ sentence_data_with_meta["NUTs region"].value_counts().plot.bar(
     title="Number of data points by NUTs region",
     color=nesta_orange,
 )
+
+# %%
+len(sentence_data_with_meta)
 
 # %%
 sentence_data_with_meta["NUTs region"].value_counts()
@@ -560,7 +614,7 @@ gdf_polygon['geometry'] = gdf_polygon.index.map(nuts2polygons_dict)
 # %%
 world = gpd.read_file(gpd.datasets.get_path("naturalearth_lowres"))
 
-fig, ax_map = plt.subplots(3, 4, figsize=(20, 15))
+fig, ax_map = plt.subplots(4, 3, figsize=(10, 15))
 ax_map[-1, -1].axis('off')
 
 coli = 0
@@ -569,27 +623,17 @@ for i, col_name in enumerate(plot_level_a_order):
     
     gdf_polygon["temp_col"] = gdf_polygon[f"{col_name} - normalised"]/ max(gdf_polygon[f"{col_name} - normalised"])
     
-    if i != 0 and i % 4 == 0:
+    if i != 0 and i % 3 == 0:
         rowi += 1
         coli = 0
 
-    if i==len(plot_level_a_order)-1:
-        gdf_polygon.plot(
-            ax=ax_map[rowi, coli],
-            cmap='autumn_r',
-            column='temp_col',
-#             legend=True,
-#             legend_kwds={'label': "Comparative proportion of skills"}
-        )
-        
-    else:
-        gdf_polygon.plot(
-            ax=ax_map[rowi, coli],
-            cmap='autumn_r',
-            column='temp_col',
-        )
+    gdf_polygon.plot(
+        ax=ax_map[rowi, coli],
+        cmap='autumn_r',
+        column='temp_col',
+    )
 
-    ax_map[rowi, coli].set_title(f"{col_name}")
+    ax_map[rowi, coli].set_title(col_name.replace('and','\n and'))
     ax_map[rowi, coli].set_axis_off()
 
     coli += 1

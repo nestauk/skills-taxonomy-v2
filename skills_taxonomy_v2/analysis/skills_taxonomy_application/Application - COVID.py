@@ -58,8 +58,56 @@ sentence_data = load_s3_data(
 sentence_data = pd.DataFrame(sentence_data, columns=['job id', 'sentence id',  'Cluster number predicted'])
 sentence_data = sentence_data[sentence_data["Cluster number predicted"] >=0]
 
+# %% [markdown]
+# ### Add duplicated sentences
+
 # %%
-# Add hierarchy information to this df
+dupe_words_id = load_s3_data(
+    s3,
+    bucket_name,
+    f"outputs/skills_extraction/word_embeddings/data/2022.01.14_unique_words_id_list.json",
+)
+
+# %%
+# The job ids in the skill sentences which have duplicates
+dupe_job_ids = set(sentence_data['job id'].tolist()).intersection(set(dupe_words_id.keys()))
+# What are the word ids for these?
+skill_job_ids_with_dupes_list = [(job_id, sent_id, word_id) for job_id, s_w_list in dupe_words_id.items() for (word_id, sent_id) in s_w_list if job_id in dupe_job_ids]
+skill_job_ids_with_dupes_df = pd.DataFrame(skill_job_ids_with_dupes_list, columns = ['job id', 'sentence id', 'words id'])
+del skill_job_ids_with_dupes_list
+# Get the words id for the existing deduplicated sentence data
+sentence_data_ehcd = sentence_data.merge(skill_job_ids_with_dupes_df, how='left', on=['job id', 'sentence id'])
+del skill_job_ids_with_dupes_df
+skill_sent_word_ids = set(sentence_data_ehcd['words id'].unique())
+len(skill_sent_word_ids)
+
+
+# %%
+# Get all the job id+sent id for the duplicates with these word ids
+dupe_sentence_data = []
+for job_id, s_w_list in tqdm(dupe_words_id.items()):
+    for (word_id, sent_id) in s_w_list:
+        if word_id in skill_sent_word_ids:
+            cluster_num = sentence_data_ehcd[sentence_data_ehcd['words id']==word_id].iloc[0]['Cluster number predicted']
+            dupe_sentence_data.append([job_id, sent_id, cluster_num])
+dupe_sentence_data_df = pd.DataFrame(dupe_sentence_data, columns = ['job id', 'sentence id', 'Cluster number predicted'])           
+del sentence_data_ehcd, dupe_sentence_data
+
+
+# %%
+# Add new duplicates to sentence data
+print(len(sentence_data))
+sentence_data = pd.concat([sentence_data, dupe_sentence_data_df])
+sentence_data.drop_duplicates(inplace=True)
+sentence_data.reset_index(inplace=True)
+print(len(sentence_data))
+del dupe_sentence_data_df
+
+# %% [markdown]
+# ### Add hierarchy information to this df
+
+# %%
+
 sentence_data["Hierarchy level A name"] = sentence_data["Cluster number predicted"].apply(
     lambda x: skill_hierarchy[str(x)]["Hierarchy level A name"]
 )
@@ -508,5 +556,92 @@ df.round(2).to_csv(
 
 # %%
 df.round(2)
+
+# %% [markdown]
+# ## Most common job titles pre and post COVID
+
+# %%
+job_dates = load_s3_data(s3, bucket_name, "outputs/tk_data_analysis_new_method/metadata_date/14.01.22/sample_filtered.json")
+
+# %%
+job_dates_job_ids = set(job_dates.keys())
+
+# %%
+from collections import defaultdict
+# Each job id's dates found
+unique_dates_lists = defaultdict(list)
+for job_id, dates_lists in job_dates.items():
+    for date_list in dates_lists:
+        for date in date_list:
+            unique_dates_lists[job_id].append(date)
+        
+sample_job_dates_dupes = {k:list(set(v)) for k, v in unique_dates_lists.items()}
+
+# Just one date per job id
+sample_job_dates = {}
+weird_jobs = {}
+for job_id, date_list in unique_dates_lists.items():
+    dates = [date for date in list(set(date_list)) if date]
+    if len(dates)==0:
+        sample_job_dates[job_id] = None
+    elif len(dates)==1:
+        # Majority of cases
+        sample_job_dates[job_id] = dates[0]
+    else:
+        weird_jobs[job_id] = dates
+        sample_job_dates[job_id] = dates[0]
+
+# %%
+job_titles = load_s3_data(
+    s3,
+    bucket_name,
+    "outputs/tk_data_analysis_new_method/metadata_job/14.01.22/sample_filtered.json"
+)
+
+# %%
+job_titles_one = {}
+for job_id, job_ad_jobs in job_titles.items():
+    job_title = [k[0] for j in job_ad_jobs for k in j if k[0]]
+    org_industry = [k[1] for j in job_ad_jobs for k in j if k[1]]
+    if len(job_title) !=0:
+        if len(org_industry) !=0:
+            job_titles_one[job_id] = [job_title[0], org_industry[0]]
+        else:
+            job_titles_one[job_id] = [job_title[0], None]
+
+# %%
+job_titles_one['90929d21a5b44dd6adc72e0ace1b5371']
+
+# %%
+sample_job_dates['90929d21a5b44dd6adc72e0ace1b5371']
+
+# %%
+len(job_titles_one)
+
+# %%
+precovid_job_counts = defaultdict(int)
+postcovid_job_counts = defaultdict(int)
+for job_id, job_title in job_titles_one.items():
+    job_date = sample_job_dates.get(job_id)
+    if job_date:
+        if float(job_date[0:7].replace("-", ".")) <= 2020.02:
+            precovid_job_counts[job_title[0]] += 1
+        else:
+            postcovid_job_counts[job_title[0]] += 1
+
+# %%
+len(precovid_job_counts) + len(postcovid_job_counts)
+
+# %%
+post_counts_sort = [(k,v) for k,v in postcovid_job_counts.items()]
+post_counts_sort.sort(key=lambda x:x[1], reverse=True)
+pre_counts_sort = [(k,v) for k,v in precovid_job_counts.items()]
+pre_counts_sort.sort(key=lambda x:x[1], reverse=True)
+
+# %%
+post_counts_sort[0:10]
+
+# %%
+pre_counts_sort[0:10]
 
 # %%

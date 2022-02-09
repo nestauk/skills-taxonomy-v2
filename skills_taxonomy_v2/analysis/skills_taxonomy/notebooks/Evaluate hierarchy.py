@@ -113,21 +113,77 @@ sentence_data = load_s3_data(
 )
 
 # %%
-skills_data = load_s3_data(
+sentence_data_df = pd.DataFrame(sentence_data, columns=['job id', 'sentence id',  'Cluster number predicted'])
+del sentence_data
+sentence_data_df.head(2)
+
+# %%
+sentence_data_df = sentence_data_df[sentence_data_df["Cluster number predicted"] >= 0]
+
+# %%
+mean_num_skills = sentence_data_df.groupby('job id')['Cluster number predicted'].nunique().mean()
+print(f"The mean number of skills in each job advert is {mean_num_skills}")
+
+
+# %% [markdown]
+# ### Add duplicate sentence information
+
+# %%
+dupe_words_id = load_s3_data(
     s3,
     bucket_name,
-    f"outputs/skills_extraction/extracted_skills/{skills_date}_skills_data.json",
+    f"outputs/skills_extraction/word_embeddings/data/2022.01.14_unique_words_id_list.json",
 )
+
+# %%
+# The job ids in the skill sentences which have duplicates
+dupe_job_ids = set(sentence_data_df['job id'].tolist()).intersection(set(dupe_words_id.keys()))
+# What are the word ids for these?
+skill_job_ids_with_dupes_list = [(job_id, sent_id, word_id) for job_id, s_w_list in dupe_words_id.items() for (word_id, sent_id) in s_w_list if job_id in dupe_job_ids]
+skill_job_ids_with_dupes_df = pd.DataFrame(skill_job_ids_with_dupes_list, columns = ['job id', 'sentence id', 'words id'])
+del skill_job_ids_with_dupes_list
+# Get the words id for the existing deduplicated sentence data
+sentence_data_ehcd = sentence_data_df.merge(skill_job_ids_with_dupes_df, how='left', on=['job id', 'sentence id'])
+del skill_job_ids_with_dupes_df
+skill_sent_word_ids = set(sentence_data_ehcd['words id'].unique())
+len(skill_sent_word_ids)
+
+
+# %%
+# Get all the job id+sent id for the duplicates with these word ids
+dupe_sentence_data = []
+for job_id, s_w_list in tqdm(dupe_words_id.items()):
+    for (word_id, sent_id) in s_w_list:
+        if word_id in skill_sent_word_ids:
+            cluster_num = sentence_data_ehcd[sentence_data_ehcd['words id']==word_id].iloc[0]['Cluster number predicted']
+            dupe_sentence_data.append([job_id, sent_id, cluster_num])
+dupe_sentence_data_df = pd.DataFrame(dupe_sentence_data, columns = ['job id', 'sentence id', 'Cluster number predicted'])           
+del dupe_sentence_data
+del sentence_data_ehcd
+
+
+# %%
+# Add new duplicates to sentence data
+sentence_data_df = pd.concat([sentence_data_df, dupe_sentence_data_df])
+sentence_data_df.drop_duplicates(inplace=True)
+sentence_data_df.reset_index(inplace=True)
+
+# %%
+len(sentence_data_df)
+
+# %%
+del dupe_sentence_data_df
+
+# %%
+sentence_data_df['job id'].nunique()
 
 # %% [markdown]
 # ### Join the sentence data with hierarchy information
 
 # %%
-sentence_data_df = pd.DataFrame(sentence_data, columns=['job id', 'sentence id',  'Cluster number predicted'])
 sentence_data_df.head(2)
 
 # %%
-sentence_data_df = sentence_data_df[sentence_data_df["Cluster number predicted"] >= 0]
 
 sentence_data_df["Hierarchy level A"] = (
     sentence_data_df["Cluster number predicted"]
@@ -157,6 +213,30 @@ sentence_data_df["Hierarchy ID"] = (
 
 # %%
 sentence_data_df.head(2)
+
+# %%
+mean_num_skills = sentence_data_df.groupby('job id')['Cluster number predicted'].nunique().mean()
+mean_leva = sentence_data_df.groupby('job id')['Hierarchy level A'].nunique().mean()
+mean_levb = sentence_data_df.groupby('job id')['Hierarchy level B'].nunique().mean()
+mean_levc = sentence_data_df.groupby('job id')['Hierarchy level C'].nunique().mean()
+
+print(f"The mean number of skills in each job advert is {mean_num_skills}")
+print(f"The mean number of level A skill groups in each job advert is {mean_leva}")
+print(f"The mean number of level B skill groups in each job advert is {mean_levb}")
+print(f"The mean number of level C skill groups in each job advert is {mean_levc}")
+
+
+# %%
+sentence_data_df.groupby('job id')['Cluster number predicted'].nunique().plot.hist(bins=100)
+
+# %%
+sentence_data_df.groupby('job id')['Hierarchy level A'].nunique().plot.hist(bins=11)
+
+# %%
+sentence_data_df.groupby('job id')['Hierarchy level B'].nunique().plot.hist(bins=10)
+
+# %%
+sentence_data_df.groupby('job id')['Hierarchy level C'].nunique().plot.hist(bins=50)
 
 # %% [markdown]
 # ## Evaluate
@@ -390,7 +470,11 @@ job_id_levels["sentence id"].plot.hist(bins=100)
 20000/746504
 
 # %%
-job_titles = load_s3_data(s3, bucket_name, "outputs/tk_data_analysis_new_method/metadata_job/14.01.22/sample_filtered.json")
+job_titles = load_s3_data(
+    s3,
+    bucket_name,
+    "outputs/tk_data_analysis_new_method/metadata_job/14.01.22/sample_filtered.json"
+)
 
 # %%
 len(job_titles)
@@ -411,6 +495,9 @@ for job_id, job_ad_jobs in job_titles.items():
             job_titles_one[job_id] = [job_title[0], org_industry[0]]
         else:
             job_titles_one[job_id] = [job_title[0], None]
+
+# %%
+del job_titles
 
 # %%
 sentence_data_df["Job title"] = sentence_data_df["job id"].apply(
@@ -478,7 +565,10 @@ sentence_data_df["Job title"].nunique()
 sum(sentence_data_df["Job title"].value_counts() > 10)
 
 # %%
-min_num_job_ids = 10
+sum(sentence_data_df["Job title"].value_counts() > 100)
+
+# %%
+min_num_job_ids = 100
 
 # %% [markdown]
 # ### Level A skills
@@ -523,7 +613,7 @@ for level_a_name, leve_a_group in sentence_data_df.groupby(["Hierarchy level A"]
 
 # %%
 pd.DataFrame(lev_a_top_jobs).to_csv(
-    f"outputs/skills_taxonomy/evaluation/{hier_date}/top_10_jobs_levela_20.csv"
+    f"outputs/skills_taxonomy/evaluation/{hier_date}/top_10_jobs_levela_20_over100.csv"
 )
 
 # %% [markdown]
@@ -540,6 +630,7 @@ for lev_a_id, lev_a in hier_structure.items():
         lev_b_name_dict[lev_b_id] = lev_b["Name"]
         for lev_c_id, lev_c in lev_b["Level C"].items():
             lev_c_name_dict[lev_c_id] = lev_c["Name"]
+del hier_structure
 
 # %%
 lev_b_top_jobs = []
@@ -689,5 +780,207 @@ for job_title in top_jobs:
 pd.DataFrame(per_top_job_levels).to_csv(
     f"outputs/skills_taxonomy/evaluation/{hier_date}/jobs_top_skill_groups.csv"
 )
+
+# %%
+sentence_data_df[sentence_data_df['Job title']=='Member Pioneer']['job id'].nunique()
+
+
+# %% [markdown]
+# ## Breakdown pie charts of a few jobs
+
+# %%
+def get_job_title_info(job_title):
+    job_df = sentence_data_df[sentence_data_df["Job title"] == job_title]
+    levas = round(
+        job_df["Hierarchy level A name"].value_counts(sort=True) * 100 / len(job_df)
+    )
+    levbs = round(
+        job_df["Hierarchy level B name"].value_counts(sort=True) * 100 / len(job_df)
+    )
+    levcs = round(
+        job_df["Hierarchy level C name"].value_counts(sort=True) * 100 / len(job_df)
+    )
+    skill_s = round(
+        job_df["Skill name"].value_counts(sort=True) * 100 / len(job_df)
+    )
+    
+    print(levas)
+    print(levbs[0:5])
+    print(levcs[0:5])
+    print(skill_s[0:5])
+
+
+# %%
+get_job_title_info('Cleaner')
+
+# %%
+get_job_title_info('Accountant')
+
+# %%
+get_job_title_info('Data Scientist')
+
+# %%
+get_job_title_info('Data Analyst')
+
+# %%
+(sentence_data_df["Hierarchy level A name"].value_counts(sort=True)* 100 / len(sentence_data_df))[0:10]
+
+# %%
+(sentence_data_df["Hierarchy level B name"].value_counts(sort=True)* 100 / len(sentence_data_df))[0:10]
+
+# %%
+(sentence_data_df["Hierarchy level C name"].value_counts(sort=True)* 100 / len(sentence_data_df))[0:10]
+
+# %% [markdown]
+# ## Common job types in 5 million data and in sample used to extract skills from
+# Is it a similar distribution?
+# We don't have the data in a handy form from all TK data.
+
+# %%
+count_job_titles_all = Counter([j[0] for j in job_titles_one.values()])
+
+# %%
+skills_job_ids = set(sentence_data_df['job id'].unique().tolist())
+count_job_titles_skills = Counter([j[0] for k,j in job_titles_one.items() if k in skills_job_ids])
+
+
+# %%
+len(skills_job_ids)
+
+# %%
+skill_job_titles = count_job_titles_skills.keys()
+len(skill_job_titles)
+
+# %%
+print(len(count_job_titles_all))
+print(len(count_job_titles_skills))
+
+# %%
+num_job_adverts_all = len(job_titles_one)
+num_job_adverts_skills = len(skills_job_ids)
+
+allsample_vs_skills_jobtitles = pd.DataFrame({
+    'Job title': skill_job_titles,
+    'Proportion in all sample': [count_job_titles_all[s]/num_job_adverts_all for s in skill_job_titles],
+    'Proportion in skills sample': [count_job_titles_skills[s]/num_job_adverts_skills for s in skill_job_titles],
+    'Number in all sample': [count_job_titles_all[s] for s in skill_job_titles],
+    'Number in skills sample': [count_job_titles_skills[s] for s in skill_job_titles]
+})
+
+# %%
+allsample_vs_skills_jobtitles.head(2)
+
+# %%
+high_props = allsample_vs_skills_jobtitles[allsample_vs_skills_jobtitles['Proportion in skills sample']>0.0001]
+print(len(high_props))
+plot_samp = high_props.sample(min(len(high_props),50), random_state=42)
+
+plot_samp.plot.bar(
+    x='Job title',
+    y=['Proportion in all sample','Proportion in skills sample'],
+    color=["red","blue"], figsize=(15,3)
+)
+
+# %%
+sort_all = allsample_vs_skills_jobtitles.sort_values(by='Proportion in all sample', ascending=False)
+
+# %%
+sort_all[0:50].plot.bar(
+    x='Job title',
+    y=['Proportion in all sample','Proportion in skills sample'],
+    color=["red","blue"], figsize=(15,3)
+)
+
+# %%
+# At what point do jobs account for 10% of the entire sample?
+for i in range(0,200):
+    num_jobs = sort_all[0:i]['Number in all sample'].sum()
+    if num_jobs > 0.1*num_job_adverts_all:
+        print(i)
+        break
+top_all_jobs = set(sort_all[0:i]['Job title'].tolist())
+print(len(top_all_jobs))
+
+# %%
+sort_skills = allsample_vs_skills_jobtitles.sort_values(by='Proportion in skills sample', ascending=False)
+# At what point do jobs account for 10% of the skills sample?
+for i in range(0,200):
+    num_jobs = sort_skills[0:i]['Number in skills sample'].sum()
+    if num_jobs > 0.1*num_job_adverts_skills:
+        print(i)
+        break
+top_skills_jobs = set(sort_skills[0:i]['Job title'].tolist())
+print(len(top_skills_jobs))
+
+# %%
+print(len(top_all_jobs.intersection(top_skills_jobs)))
+print(len(top_skills_jobs.difference(top_all_jobs)))
+print(len(top_all_jobs.difference(top_skills_jobs)))
+
+
+# %%
+def print_int_len(i):
+    print(len(set(sort_all[0:i]['Job title'].tolist()).intersection(sort_skills[0:i]['Job title'].tolist()))/i)
+print_int_len(5)
+print_int_len(10)
+print_int_len(15)
+print_int_len(20)
+print_int_len(50)
+print_int_len(100)
+print_int_len(200)
+
+# %%
+i=20
+print(set(sort_all[0:i]['Job title'].tolist()).intersection(sort_skills[0:i]['Job title'].tolist()))
+print(set(sort_all[0:i]['Job title'].tolist()).difference(sort_skills[0:i]['Job title'].tolist()))
+print(set(sort_skills[0:i]['Job title'].tolist()).difference(sort_all[0:i]['Job title'].tolist()))
+
+# %%
+top_intersection = {}
+for i in range(1,1000):
+    top_intersection[i] = len(set(sort_all[0:i]['Job title'].tolist()).intersection(sort_skills[0:i]['Job title'].tolist()))
+
+# %%
+plt.plot(top_intersection.keys(),[v/i for i,v in top_intersection.items()])
+
+# %% [markdown]
+# ## By job area
+
+# %%
+count_job_area_all = Counter([j[1] for j in job_titles_one.values()])
+
+# %%
+count_job_area_skills = Counter([j[1] for k,j in job_titles_one.items() if k in skills_job_ids])
+
+
+# %%
+skill_job_area = count_job_area_skills.keys()
+len(skill_job_area)
+
+# %%
+allsample_vs_skills_jobareas = pd.DataFrame({
+    'Organization industry': skill_job_area,
+    f'Proportion in all sample': [count_job_area_all[s]/num_job_adverts_all for s in skill_job_area],
+    f'Proportion in skills sample': [count_job_area_skills[s]/num_job_adverts_skills for s in skill_job_area]
+})
+
+# %%
+plt.figure()
+allsample_vs_skills_jobareas.plot.bar(
+    x='Organization industry',
+    y=['Proportion in all sample','Proportion in skills sample'],
+    color=["red","blue"],
+    figsize=(10, 3),
+    label = [
+        f'Proportion in random sample (n={num_job_adverts_all})',
+        f'Proportion in skills sample (n={num_job_adverts_skills})'],
+    title='Job advert organisation industries from random sample of job adverts\n and those adverts from the sample which were used to extract skills from'
+);
+plt.savefig(
+    f"outputs/skills_taxonomy/evaluation/{hier_date}/job_org_industry_skills.pdf", bbox_inches="tight"
+)
+
+# %%
+num_job_adverts_skills/num_job_adverts_all
 
 # %%

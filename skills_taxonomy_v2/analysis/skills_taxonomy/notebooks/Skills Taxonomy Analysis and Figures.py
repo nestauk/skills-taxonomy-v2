@@ -140,6 +140,12 @@ skill_hierarchy_df.groupby(["Hierarchy level A"])["Number of sentences that crea
 # %%
 skill_hierarchy_df.groupby(["Hierarchy level A","Hierarchy level B", "Hierarchy level C"])["Number of sentences that created skill"].sum()
 
+# %%
+print(f"The average number of skills in each level A group is {skill_hierarchy_df.groupby('Hierarchy level A')['Skill number'].nunique().mean()}")
+print(f"The average number of skills in each level B group is {skill_hierarchy_df.groupby('Hierarchy level B')['Skill number'].nunique().mean()}")
+print(f"The average number of skills in each level C group is {skill_hierarchy_df.groupby('Hierarchy level C')['Skill number'].nunique().mean()}")
+
+
 # %% [markdown]
 # ## Unique skill names
 
