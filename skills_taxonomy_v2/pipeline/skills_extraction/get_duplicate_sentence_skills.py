@@ -64,7 +64,7 @@ for i, embedding_dir in tqdm(enumerate(sentence_embeddings_dirs)):
 				else:
 					unique_word_ids.add(words_id)
 		words_id_list.append(job_words_id_dict)
-	if i%300==0:
+	if i!=0 and i%500==0:
 		save_to_s3(
 				s3, BUCKET_NAME, words_id_list,
 				f"outputs/skills_extraction/word_embeddings/data/{file_date}_words_id_list_{output_i}.json",)
@@ -95,15 +95,14 @@ files = get_s3_data_paths(
 unique_words_id_data = defaultdict(list)
 for file in files:
 	dup_data = load_s3_data(s3, BUCKET_NAME, file)
-	for job_id, word_sent_id_list in dup_data.items():
-		for word_id, sent_id in word_sent_id_list:
-			if word_id in dup_word_ids:
-				unique_words_id_data[job_id].append([word_id, sent_id])
+	for emb_file_data in tqdm(dup_data):
+		for job_id, word_sent_id_list in emb_file_data.items():
+			for word_id, sent_id in word_sent_id_list:
+				if word_id in dup_word_ids:
+					unique_words_id_data[job_id].append([word_id, sent_id])
 save_to_s3(
 	s3,
 	BUCKET_NAME,
 	unique_words_id_data,
 	f"outputs/skills_extraction/word_embeddings/data/{file_date}_unique_words_id_list.json",
 	)
-
-
