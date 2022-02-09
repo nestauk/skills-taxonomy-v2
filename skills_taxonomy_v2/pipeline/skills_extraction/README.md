@@ -1,23 +1,38 @@
 # Skills Extraction
 
-The aim of this pipeline is to extract skills from job adverts. There are 4 steps:
+The aim of this pipeline is to extract skills from job adverts. There are 7 scripts to run this pipeline:
 
-1. Get embeddings from skill sentences (`get_sentence_embeddings.py`).
-2. Reduce and cluster the embeddings - these are the skills (`extract_skills.py`).
-3. Find names for each skill (`skills_naming.py`).
-4. (Needs maintainence) Get an ESCO-TK skills index mapper (`esco_skills_mappings.py`).
+1. Get embeddings from skill sentences ([`metaflow/flow.py`](metaflow/flow.py)).
+2. Get a sample of the embeddings ([`get_embeddings_data_sample.py`](get_embeddings_data_sample.py)).
+3. Reduce the embeddings ([`reduce_embeddings.py`](reduce_embeddings.py)).
+4. Cluster the reduced embeddings to find the skills ([`cluster_embeddings.py`](cluster_embeddings.py)).
+5. Get average embeddings for each skill cluster ([`skills_naming_embeddings.py`](skills_naming_embeddings.py)).
+6. Find names for each skill ([`skills_naming.py`](skills_naming.py)).
+7. Get duplicate sentences dictionary for analysis pieces ([`get_duplicate_sentence_skills.py`](get_duplicate_sentence_skills.py)).
 
-The parameters for all these steps can be found in the config path `skills_taxonomy_v2/config/skills_extraction/2021.08.31.yaml`.
+Some util functions are stored in:
+- cleaning_sentences.py
+- extract_skills_utils.py
 
-<img src="../../../outputs/reports/figures/extract_skill_methodology_overview.jpg" width="700">
+And some legacy (and unused) code from previous iterations are in:
+- extract_skills.py
+- esco_skills_mappings.py
+- get_sentence_embeddings.py
+- get_sentence_embeddings_utils.py
+
+The parameters for all these steps can be found in the config path directory `skills_taxonomy_v2/config/skills_extraction/`.
+
+<img src="../../../outputs/reports/figures/Jan 2022/extract_skill_methodology_overview.jpg" width="700">
+
+# Logs of results from different config files
 
 ## January 2022
 
-This was run from the config file `skills_extraction/2022.01.14.yaml`.
+These are the results from the [`2022.01.14.yaml`](skills_taxonomy_v2/config/skills_extraction/2022.01.14.yaml) config file.
 
 ### 1. Finding sentence embeddings
 
-We found the embeddings using the same method as from Novemeber 2021 below, but to quicken things up this was done in Metaflow with Batch, running:
+We found the embeddings using the same method as from November 2021 below, but to quicken things up this was done in Metaflow with Batch, running:
 ```
 python skills_taxonomy_v2/pipeline/skills_extraction/metaflow/flow.py --environment=conda --datastore=s3 run
 ```
@@ -108,6 +123,8 @@ we save out several intermediatary files containing dictionaries of {'job id': [
 Note: 'words_id' is different to 'sent_id' since it is the unique identifier for the sentences with masked words removed rather than the unique identifier for the original sentence (as sent_id is).
 
 ## November 2021
+
+These are the results from the [`2021.11.05.yaml`](skills_taxonomy_v2/config/skills_extraction/2021.11.05.yaml) config file.
 
 ### 1. Finding sentence embeddings
 
@@ -204,7 +221,9 @@ python skills_taxonomy_v2/pipeline/skills_extraction/skills_naming.py --config_p
 
 This will output `outputs/skills_extraction/extracted_skills/2021.11.05_skills_data_named.json`.
 
-## `2021.08.31.yaml` summary
+## August 2021
+
+These are the results from the [`2021.08.31.yaml`](skills_taxonomy_v2/config/skills_extraction/2021.08.31.yaml) config file.
 
 - Step 0: Predict skill sentences. 87 random files of 10,000 job adverts. Found around 4,000,000 skill sentences.
 - Step 1: Get embeddings for each skill sentence. Get embeddings for sentences in the first 10,000 job adverts from each of the 87 files, remove sentences with only masking.
