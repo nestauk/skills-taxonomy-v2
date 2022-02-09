@@ -28,7 +28,7 @@ The parameters for all these steps can be found in the config path directory `sk
 
 ## January 2022
 
-These are the results from the [`2022.01.14.yaml`](skills_taxonomy_v2/config/skills_extraction/2022.01.14.yaml) config file.
+These are the results from the [`2022.01.14.yaml`](https://github.com/nestauk/skills-taxonomy-v2/blob/7059e46116daf93051347557c7bb69e7e3de64ab/skills_taxonomy_v2/config/skills_extraction/2022.01.14.yaml) config file.
 
 ### 1. Finding sentence embeddings
 
@@ -124,7 +124,7 @@ Note: 'words_id' is different to 'sent_id' since it is the unique identifier for
 
 ## November 2021
 
-These are the results from the [`2021.11.05.yaml`](skills_taxonomy_v2/config/skills_extraction/2021.11.05.yaml) config file.
+These are the results from the [`2021.11.05.yaml`](https://github.com/nestauk/skills-taxonomy-v2/blob/7059e46116daf93051347557c7bb69e7e3de64ab/skills_taxonomy_v2/config/skills_extraction/2021.11.05.yaml) config file.
 
 ### 1. Finding sentence embeddings
 
@@ -223,7 +223,7 @@ This will output `outputs/skills_extraction/extracted_skills/2021.11.05_skills_d
 
 ## August 2021
 
-These are the results from the [`2021.08.31.yaml`](skills_taxonomy_v2/config/skills_extraction/2021.08.31.yaml) config file.
+These are the results from the [`2021.08.31.yaml`](https://github.com/nestauk/skills-taxonomy-v2/blob/7059e46116daf93051347557c7bb69e7e3de64ab/skills_taxonomy_v2/config/skills_extraction/2021.08.31.yaml) config file.
 
 - Step 0: Predict skill sentences. 87 random files of 10,000 job adverts. Found around 4,000,000 skill sentences.
 - Step 1: Get embeddings for each skill sentence. Get embeddings for sentences in the first 10,000 job adverts from each of the 87 files, remove sentences with only masking.
