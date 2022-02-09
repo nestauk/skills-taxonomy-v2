@@ -97,72 +97,120 @@ s3 = boto3.resource("s3")
 # ## Load data
 
 # %%
-hier_structure_file = "outputs/skills_taxonomy/2021.09.06_hierarchy_structure.json"
+hier_date = '2022.01.21'
+skills_date = '2022.01.14'
+
+# %%
+hier_structure_file = f"outputs/skills_taxonomy/{hier_date}_hierarchy_structure.json"
 hier_structure = load_s3_data(s3, bucket_name, hier_structure_file)
 
 # %%
-skill_hierarchy_file = "outputs/skills_taxonomy/2021.09.06_skills_hierarchy.json"
+skill_hierarchy_file = f"outputs/skills_taxonomy/{hier_date}_skills_hierarchy_named.json"
 skill_hierarchy = load_s3_data(s3, bucket_name, skill_hierarchy_file)
 
 # %%
 sentence_data = load_s3_data(
     s3,
     bucket_name,
-    "outputs/skills_extraction/extracted_skills/2021.08.31_sentences_data.json",
+    f"outputs/skills_extraction/extracted_skills/{skills_date}_sentences_skills_data_lightweight.json",
 )
 
 # %%
 skills_data = load_s3_data(
     s3,
     bucket_name,
-    "outputs/skills_extraction/extracted_skills/2021.08.31_skills_data.json",
+    f"outputs/skills_extraction/extracted_skills/{skills_date}_skills_data.json",
 )
 
 # %%
-with open("skills_taxonomy_v2/utils/2021.09.06_level_a_rename_dict.json", "r") as f:
-    level_a_rename_dict = json.load(f)
-
-# %% [markdown]
-# ### Join the hierarchy data to the sentences
+sentence_data_orig = sentence_data.copy()
 
 # %%
-sentence_data = pd.DataFrame(sentence_data)
-sentence_data = sentence_data[sentence_data["Cluster number"] != -1]
+sentence_data = pd.DataFrame(sentence_data, columns=['job id', 'sentence id',  'Cluster number predicted'])
+sentence_data = sentence_data[sentence_data["Cluster number predicted"] >=0]
+
+# %% [markdown]
+# ### Add the deduplicated sentences
+
+# %%
+dupe_words_id = load_s3_data(
+    s3,
+    bucket_name,
+    f"outputs/skills_extraction/word_embeddings/data/2022.01.14_unique_words_id_list.json",
+)
+
+# %%
+# The job ids in the skill sentences which have duplicates
+dupe_job_ids = set(sentence_data['job id'].tolist()).intersection(set(dupe_words_id.keys()))
+# What are the word ids for these?
+skill_job_ids_with_dupes_list = [(job_id, sent_id, word_id) for job_id, s_w_list in dupe_words_id.items() for (word_id, sent_id) in s_w_list if job_id in dupe_job_ids]
+skill_job_ids_with_dupes_df = pd.DataFrame(skill_job_ids_with_dupes_list, columns = ['job id', 'sentence id', 'words id'])
+# Get the words id for the existing deduplicated sentence data
+sentence_data_ehcd = sentence_data.merge(skill_job_ids_with_dupes_df, how='left', on=['job id', 'sentence id'])
+skill_sent_word_ids = set(sentence_data_ehcd['words id'].unique())
+len(skill_sent_word_ids)
+
+
+# %%
+# Get all the job id+sent id for the duplicates with these word ids
+dupe_sentence_data = []
+for job_id, s_w_list in tqdm(dupe_words_id.items()):
+    for (word_id, sent_id) in s_w_list:
+        if word_id in skill_sent_word_ids:
+            cluster_num = sentence_data_ehcd[sentence_data_ehcd['words id']==word_id].iloc[0]['Cluster number predicted']
+            dupe_sentence_data.append([job_id, sent_id, cluster_num])
+dupe_sentence_data_df = pd.DataFrame(dupe_sentence_data, columns = ['job id', 'sentence id', 'Cluster number predicted'])           
+
+
+# %%
+# Add new duplicates to sentence data
+sentence_data_all = pd.concat([sentence_data, dupe_sentence_data_df])
+sentence_data_all.drop_duplicates(inplace=True)
+sentence_data_all.reset_index(inplace=True)
+
+# %%
+print(len(sentence_data))
+print(len(dupe_sentence_data_df))
+print(len(sentence_data_all))
+
+# %%
+sentence_data = sentence_data_all.copy()
+
+# %% [markdown]
+# ### Add hierarchy info
 
 # %%
 sentence_data["Hierarchy level A"] = (
-    sentence_data["Cluster number"]
+    sentence_data["Cluster number predicted"]
     .astype(str)
     .apply(lambda x: skill_hierarchy[x]["Hierarchy level A"])
 )
 sentence_data["Hierarchy level A name"] = (
-    sentence_data["Hierarchy level A"]
+    sentence_data["Cluster number predicted"]
     .astype(str)
-    .apply(lambda x: level_a_rename_dict[x])
+    .apply(lambda x: skill_hierarchy[x]["Hierarchy level A name"])
 )
 sentence_data["Hierarchy level B"] = (
-    sentence_data["Cluster number"]
+    sentence_data["Cluster number predicted"]
     .astype(str)
     .apply(lambda x: skill_hierarchy[x]["Hierarchy level B"])
 )
 sentence_data["Hierarchy level C"] = (
-    sentence_data["Cluster number"]
+    sentence_data["Cluster number predicted"]
     .astype(str)
     .apply(lambda x: skill_hierarchy[x]["Hierarchy level C"])
 )
-sentence_data["Hierarchy level D"] = (
-    sentence_data["Cluster number"]
-    .astype(str)
-    .apply(lambda x: skill_hierarchy[x]["Hierarchy level D"])
-)
 sentence_data["Hierarchy ID"] = (
-    sentence_data["Cluster number"]
+    sentence_data["Cluster number predicted"]
     .astype(str)
     .apply(lambda x: skill_hierarchy[x]["Hierarchy ID"])
 )
 
 # %%
 sentence_data.head(2)
+
+# %%
+len(sentence_data)
 
 # %% [markdown]
 # ## Easy way to get names of level skill groups
@@ -171,15 +219,12 @@ sentence_data.head(2)
 lev_a_name_dict = {}
 lev_b_name_dict = {}
 lev_c_name_dict = {}
-lev_d_name_dict = {}
 for lev_a_id, lev_a in hier_structure.items():
     lev_a_name_dict[lev_a_id] = lev_a["Name"]
     for lev_b_id, lev_b in lev_a["Level B"].items():
         lev_b_name_dict[lev_b_id] = lev_b["Name"]
         for lev_c_id, lev_c in lev_b["Level C"].items():
             lev_c_name_dict[lev_c_id] = lev_c["Name"]
-            for lev_d_id, lev_d in lev_c["Level D"].items():
-                lev_d_name_dict[lev_d_id] = lev_d["Name"]
 
 
 # %% [markdown]
@@ -214,27 +259,32 @@ def get_cooccurence_network(sentence_data, level_skill_group):
 
 
 # %% [markdown]
-# ## Level D analysis
-# %%
-level_skill_group = "Hierarchy level D"  # Can be Cluster number
-net_lev_d = get_cooccurence_network(sentence_data, level_skill_group)
-
-# %%
-edges = net_lev_d.edges(data=True)
-all_weights = [w["weight"] for s, e, w in edges]
-plt.hist(all_weights, bins=100)
-
-# %%
-print(
-    f"{round(len([v for v in all_weights if v==1])*100/len(all_weights),2)}% of the edges have a weighting of 1"
-)
-max_edge_weight = 10
-print(
-    f"{round(len([v for v in all_weights if v>max_edge_weight])*100/len(all_weights),2)}% of the edges have a weighting of more than {max_edge_weight}"
-)
-
-# %% [markdown]
 # ## Level C analysis
+# October 2021:
+# - 58029 job adverts had only one skill
+# - 279780 skill pairs in job adverts
+# - 28623 unique skill pairs in job adverts
+# - 9.2% of the edges have a weighting of 1
+# - 30.32% of the edges have a weighting of more than 10
+#
+# January 2022:
+#
+# - 646897 job adverts had only one skill
+# - 7993790 skill pairs in job adverts
+# - 30422 unique skill pairs in job adverts
+# - 1.6% of the edges have a weighting of 1
+# - 92.57% of the edges have a weighting of more than 10
+# - 51.3% of the edges have a weighting of more than 200
+#
+# January 2022 (add duplicate sentences):
+#
+# - 654087 job adverts had only one skill
+# - 8009860 skill pairs in job adverts
+# - 30422 unique skill pairs in job adverts
+# - 1.6% of the edges have a weighting of 1
+# - 92.6% of the edges have a weighting of more than 10
+# - 51.38% of the edges have a weighting of more than 200
+#
 
 # %%
 level_skill_group = "Hierarchy level C"  # Can be Cluster number
@@ -243,7 +293,7 @@ net_lev_c = get_cooccurence_network(sentence_data, level_skill_group)
 # %%
 edges = net_lev_c.edges(data=True)
 all_weights = [w["weight"] for s, e, w in edges]
-plt.hist(all_weights, bins=100, color="gray")
+plt.hist(all_weights, bins=100, color="gray");
 
 # %%
 print(
@@ -253,9 +303,26 @@ max_edge_weight = 10
 print(
     f"{round(len([v for v in all_weights if v>max_edge_weight])*100/len(all_weights),2)}% of the edges have a weighting of more than {max_edge_weight}"
 )
+max_edge_weight = 200
+print(
+    f"{round(len([v for v in all_weights if v>max_edge_weight])*100/len(all_weights),2)}% of the edges have a weighting of more than {max_edge_weight}"
+)
 
 # %% [markdown]
 # ### Level B
+# October 2021:
+# - 59821 job adverts had only one skill
+# - 225599 skill pairs in job adverts
+# - 2013 unique skill pairs in job adverts
+# - 3.28% of the edges have a weighting of 1
+# - 83.06% of the edges have a weighting of more than 10
+#
+# January 2022:
+# - 662488 job adverts had only one skill
+# - 5991782 skill pairs in job adverts
+# - 3849 unique skill pairs in job adverts
+# - 2.08% of the edges have a weighting of 1
+# - 88.8% of the edges have a weighting of more than 10
 
 # %%
 level_skill_group = "Hierarchy level B"  # Can be Cluster number
@@ -264,7 +331,7 @@ net_lev_b = get_cooccurence_network(sentence_data, level_skill_group)
 # %%
 edges = net_lev_b.edges(data=True)
 all_weights = [w["weight"] for s, e, w in edges]
-plt.hist(all_weights, bins=100)
+plt.hist(all_weights, bins=100);
 
 # %%
 print(
@@ -320,7 +387,7 @@ show(plot, notebook_handle=True)
 # ### Only plot edges where weight>1
 
 # %%
-keepedges = ((s, e) for s, e, w in net_lev_c.edges(data=True) if w["weight"] > 40)
+keepedges = ((s, e) for s, e, w in net_lev_c.edges(data=True) if w["weight"] < 100)
 net_lev_c_filt = net_lev_c.edge_subgraph(keepedges)
 
 # %%
@@ -330,7 +397,7 @@ max_weight = max(
 min_weight = min(
     [net_lev_c_filt.get_edge_data(a, b)["weight"] for a, b in net_lev_c_filt.edges()]
 )
-linewidth_max = 0.5
+linewidth_max = 0.1
 linewidth_min = 0.01
 
 grad = (linewidth_max - linewidth_min) / (max_weight - min_weight)
@@ -453,9 +520,7 @@ def get_transversal_skills(net, level_skill_group):
             skill_group_names.append(lev_b_name_dict[str(skill_group_num)])
         elif level_skill_group == "Hierarchy level C":
             skill_group_names.append(lev_c_name_dict[str(skill_group_num)])
-        elif level_skill_group == "Hierarchy level D":
-            skill_group_names.append(lev_d_name_dict[str(skill_group_num)])
-        elif level_skill_group == "Cluster number":
+        elif level_skill_group == "Cluster number predicted":
             skill_group_names.append(skills_data[str(skill_group_num)]["Skills name"])
 
     skill_group_scores[f"{level_skill_group} name"] = skill_group_names
@@ -478,9 +543,7 @@ def print_trans_skills(skill_group_scores, level_skill_group, cent_min, clust_ma
             skill_group_name = lev_b_name_dict[str(skill_group_num)]
         elif level_skill_group == "Hierarchy level C":
             skill_group_name = lev_c_name_dict[str(skill_group_num)]
-        elif level_skill_group == "Hierarchy level D":
-            skill_group_name = lev_d_name_dict[str(skill_group_num)]
-        elif level_skill_group == "Cluster number":
+        elif level_skill_group == "Cluster number predicted":
             skill_group_name = skills_data[str(skill_group_num)]["Skills name"]
         transversal_skills_names[skill_group_num] = skill_group_name
 
@@ -503,51 +566,12 @@ def print_untrans_skills(skill_group_scores, level_skill_group, cent_max, clust_
             skill_group_name = lev_b_name_dict[str(skill_group_num)]
         elif level_skill_group == "Hierarchy level C":
             skill_group_name = lev_c_name_dict[str(skill_group_num)]
-        elif level_skill_group == "Hierarchy level D":
-            skill_group_name = lev_d_name_dict[str(skill_group_num)]
-        elif level_skill_group == "Cluster number":
+        elif level_skill_group == "Cluster number predicted":
             skill_group_name = skills_data[str(skill_group_num)]["Skills name"]
         untransversal_skills_names[skill_group_num] = skill_group_name
 
     return untransversal_skills_names
 
-
-# %% [markdown]
-# ## Level D
-# %%
-level_d_skill_group_scores = get_transversal_skills(net_lev_d, "Hierarchy level D")
-
-# %%
-# highly transversal skill = high centrality and a low local clustering coefficient
-ax = level_d_skill_group_scores.plot.scatter(
-    "centrality",
-    "clustering_coeff",
-    figsize=(5, 5),
-    color="black",
-    alpha=0.6,
-    title=f"Centrality score and local clustering coefficient\nfor Hierarchy level D skill groups",
-    xlabel="Eigenvector centrality",
-    ylabel="Local clustering coefficient",
-)
-ax.axvline(0.14, color="orange", linestyle="--")
-ax.axhline(0.7, color="orange", linestyle="--")
-
-
-# %%
-cent_min = 0.14
-clust_max = 0.7
-level_d_skill_group_scores[
-    (level_d_skill_group_scores["centrality"] > cent_min)
-    & (level_d_skill_group_scores["clustering_coeff"] < clust_max)
-]
-
-# %%
-cent_max = 0.06
-clust_min = 0.8
-level_d_skill_group_scores[
-    (level_d_skill_group_scores["centrality"] < cent_max)
-    & (level_d_skill_group_scores["clustering_coeff"] > clust_min)
-]
 
 # %% [markdown]
 # ## Level C
@@ -567,25 +591,60 @@ ax = level_c_skill_group_scores.plot.scatter(
     xlabel="Eigenvector centrality",
     ylabel="Local clustering coefficient",
 )
-ax.axvline(0.065, color="orange", linestyle="--")
-ax.axhline(0.93, color="orange", linestyle="--")
+ax.axvline(0.063, color="orange", linestyle="--")
+ax.axhline(0.978, color="orange", linestyle="--")
 
 
 # %%
-cent_min = 0.065
-clust_max = 0.93
+cent_min = 0.063
+clust_max = 0.978
 level_c_skill_group_scores[
     (level_c_skill_group_scores["centrality"] > cent_min)
     & (level_c_skill_group_scores["clustering_coeff"] < clust_max)
 ]
 
+# %% [markdown]
+# #### Get examples for the connections to a transversal skill
+
 # %%
-cent_max = 0.05
-clust_min = 0.95
-level_c_skill_group_scores[
-    (level_c_skill_group_scores["centrality"] < cent_max)
-    & (level_c_skill_group_scores["clustering_coeff"] > clust_min)
-]
+lev_c_name ="team-part-teams"
+lev_c_name_num = {v:k for k,v in lev_c_name_dict.items()}[lev_c_name]
+lev_c_name_num
+
+# %%
+all_skill_combinations = []
+num_one_skills = 0
+for _, job_skills in tqdm(sentence_data.groupby("job id")):
+    unique_skills = job_skills['Hierarchy level C'].unique().tolist()
+    if len(unique_skills) != 1:
+        all_skill_combinations += list(combinations(sorted(unique_skills), 2))
+    else:
+        num_one_skills += 1
+
+print(f"{num_one_skills} job adverts had only one skill")
+print(f"{len(all_skill_combinations)} skill pairs in job adverts")
+
+edge_list = pd.DataFrame(all_skill_combinations, columns=["source", "target"])
+edge_list["weight"] = 1
+edge_list_weighted = (
+    edge_list.groupby(["source", "target"])["weight"].sum().reset_index(drop=False)
+)
+
+# %%
+# Get random pairs of close neighbours and see how connected these are
+print(f"The highly transversal node {lev_c_name} has the quite unconnected neighbours..")
+
+high_connected = edge_list_weighted[(edge_list_weighted['source']==int(lev_c_name_num)) & (edge_list_weighted["weight"]>100)]['target'].tolist()
+for source, target in [random.sample(high_connected, 2) for i in range(100)]:
+    neighbours_weights = edge_list_weighted[(edge_list_weighted['source']==source) & (edge_list_weighted["target"]==target)]["weight"]
+    if len(neighbours_weights)!=0:
+        neighbours_weights = neighbours_weights.iloc[0]
+        if neighbours_weights < 100:
+            print(f"{lev_c_name_dict[str(source)]} to {lev_c_name_dict[str(target)]} has weight {neighbours_weights}")
+
+
+# %%
+random.sample(high_connected,2)
 
 # %% [markdown]
 # ## Level B
@@ -605,24 +664,16 @@ ax = level_b_skill_group_scores.plot.scatter(
     xlabel="Eigenvector centrality",
     ylabel="Local clustering coefficient",
 )
-ax.axvline(0.12, color="orange", linestyle="--")
-ax.axhline(0.96, color="orange", linestyle="--")
+ax.axvline(0.1, color="orange", linestyle="--")
+ax.axhline(0.963, color="orange", linestyle="--")
 
 
 # %%
-cent_min = 0.12
-clust_max = 0.96
+cent_min = 0.10
+clust_max = 0.963
 level_b_skill_group_scores[
     (level_b_skill_group_scores["centrality"] > cent_min)
     & (level_b_skill_group_scores["clustering_coeff"] < clust_max)
-]
-
-# %%
-cent_max = 0.1
-clust_min = 0.98
-level_b_skill_group_scores[
-    (level_b_skill_group_scores["centrality"] < cent_max)
-    & (level_b_skill_group_scores["clustering_coeff"] > clust_min)
 ]
 
 # %% [markdown]
@@ -641,10 +692,9 @@ level_b_skill_group_scores.plot.scatter(
     ylabel="Local clustering coefficient",
     ax=axes[0],
 )
-axes[0].axvline(0.12, color="orange", linestyle="--")
-axes[0].axhline(0.96, color="orange", linestyle="--")
 
-
+axes[0].axvline(0.1, color="orange", linestyle="--")
+axes[0].axhline(0.963, color="orange", linestyle="--")
 level_c_skill_group_scores.plot.scatter(
     "centrality",
     "clustering_coeff",
@@ -655,14 +705,13 @@ level_c_skill_group_scores.plot.scatter(
     ylabel="Local clustering coefficient",
     ax=axes[1],
 )
-axes[1].axvline(0.065, color="orange", linestyle="--")
-axes[1].axhline(0.93, color="orange", linestyle="--")
 
-
+axes[1].axvline(0.063, color="orange", linestyle="--")
+axes[1].axhline(0.978, color="orange", linestyle="--")
 plt.tight_layout()
 
 plt.savefig(
-    "outputs/skills_taxonomy/transversal/transversal_skills_scatter.pdf",
+    f"outputs/skills_taxonomy/transversal/{hier_date}/transversal_skills_scatter.pdf",
     bbox_inches="tight",
 )
 
@@ -680,31 +729,23 @@ level_c_skill_group_scores.plot.scatter(
     ylabel="Local clustering coefficient",
     ax=axes,
 )
-axes.axvline(0.065, color="orange", linestyle="--")
-axes.axhline(0.93, color="orange", linestyle="--")
+axes.axvline(0.063, color="orange", linestyle="--")
+axes.axhline(0.978, color="orange", linestyle="--")
 
 plt.tight_layout()
 
 plt.savefig(
-    "outputs/skills_taxonomy/transversal/transversal_skills_scatter_levc.pdf",
+    f"outputs/skills_taxonomy/transversal/{hier_date}/transversal_skills_scatter_levc.pdf",
     bbox_inches="tight",
 )
 
 
 # %%
-cent_min = 0.065
-clust_max = 0.93
+cent_min = 0.063
+clust_max = 0.978
 trans_skills_levc = level_c_skill_group_scores[
     (level_c_skill_group_scores["centrality"] > cent_min)
     & (level_c_skill_group_scores["clustering_coeff"] < clust_max)
-]
-
-# %%
-cent_max = 0.04
-clust_min = 0.96
-level_c_skill_group_scores[
-    (level_c_skill_group_scores["centrality"] < cent_max)
-    & (level_c_skill_group_scores["clustering_coeff"] > clust_min)
 ]
 
 # %%
@@ -714,12 +755,18 @@ for lev_a_id, lev_a in hier_structure.items():
     for lev_b_id, lev_b in lev_a["Level B"].items():
         for lev_c_id, lev_c in lev_b["Level C"].items():
             if int(lev_c_id) in trans_skills:
+                transkills_info = []
+                for skill_name, skill_info in lev_c['Skills'].items():
+                    transkills_info.append(
+                        (skill_hierarchy[skill_name]['Skill name'], skill_info['Number of sentences that created skill']))
+                transkills_info.sort(key=lambda x:x[1], reverse=True)
                 trans_skills_hier[int(lev_c_id)] = {
                     "Level A": lev_a_id,
                     "Level B": lev_b_id,
                     "Level C": lev_c_id,
-                    "Level A name": level_a_rename_dict[lev_a_id],
+                    "Level A name": lev_a['Name'],
                     "Level B name": lev_b_name_dict[lev_b_id],
+                    "Skills": [s[0] for s in transkills_info[0:10]]
                 }
 
 # %%
@@ -737,7 +784,7 @@ trans_skills_levc["Percentage of job adverts with this skill"] = trans_skills_le
         2,
     )
 )
-trans_skills_levc.to_csv("outputs/skills_taxonomy/transversal/lev_c_trans_skills.csv")
+trans_skills_levc.to_csv(f"outputs/skills_taxonomy/transversal/{hier_date}/lev_c_trans_skills.csv")
 trans_skills_levc
 
 # %%

@@ -21,7 +21,9 @@
 # cd ../../../..
 
 # %%
-output_folder = "outputs/skills_taxonomy/figures/2021.12.21/"
+skills_date_stamp = '2022.01.14'
+hier_date_stamp = '2022.01.21'
+output_folder = f"outputs/skills_taxonomy/figures/{hier_date_stamp}/"
 
 # %%
 from skills_taxonomy_v2.getters.s3_data import load_s3_data
@@ -93,11 +95,11 @@ s3 = boto3.resource("s3")
 # ## Load the hierarchy and original sentence information
 
 # %%
-hier_structure_file = "outputs/skills_taxonomy/2021.11.30_hierarchy_structure.json"
+hier_structure_file = f"outputs/skills_taxonomy/{hier_date_stamp}_hierarchy_structure.json"
 hier_structure = load_s3_data(s3, bucket_name, hier_structure_file)
 
 # %%
-skill_hierarchy_file = "outputs/skills_taxonomy/2021.11.30_skills_hierarchy_named.json"
+skill_hierarchy_file = f"outputs/skills_taxonomy/{hier_date_stamp}_skills_hierarchy_named.json"
 skill_hierarchy = load_s3_data(s3, bucket_name, skill_hierarchy_file)
 
 # %%
@@ -106,6 +108,19 @@ skill_hierarchy_df["Skill number"] = skill_hierarchy_df.index
 skill_hierarchy_df.head(2)
 
 
+# %%
+skill_hierarchy_df['Hierarchy level A name'] = skill_hierarchy_df['Hierarchy level A name'].apply(lambda x: x.replace("Cognitative", "Cognitive"))
+
+# %%
+# Find the number of unique skill names before the enhanced naming was applied
+orig_skill_names = []
+for _, level_a_info in hier_structure.items():
+    for _, level_b_info in level_a_info["Level B"].items():
+        for _, level_c_info in level_b_info["Level C"].items():
+            for _, skill_info in level_c_info["Skills"].items():
+                orig_skill_names.append(skill_info['Skill name'])
+print(f"Before the skill naming based of location in the hierarchy, there were {len(set(orig_skill_names))} unique names for the {len(orig_skill_names)} skills")
+
 # %% [markdown]
 # ## Size of levels and how many sentences in each level?
 
@@ -113,6 +128,7 @@ skill_hierarchy_df.head(2)
 print(skill_hierarchy_df["Hierarchy level A"].nunique())
 print(skill_hierarchy_df["Hierarchy level B"].nunique())
 print(skill_hierarchy_df["Hierarchy level C"].nunique())
+print(skill_hierarchy_df[skill_hierarchy_df["Skill number"].astype(int)>=0]["Skill number"].nunique())
 print(len(skill_hierarchy_df))
 
 # %%
@@ -124,6 +140,18 @@ skill_hierarchy_df.groupby(["Hierarchy level A"])["Number of sentences that crea
 # %%
 skill_hierarchy_df.groupby(["Hierarchy level A","Hierarchy level B", "Hierarchy level C"])["Number of sentences that created skill"].sum()
 
+# %%
+print(f"The average number of skills in each level A group is {skill_hierarchy_df.groupby('Hierarchy level A')['Skill number'].nunique().mean()}")
+print(f"The average number of skills in each level B group is {skill_hierarchy_df.groupby('Hierarchy level B')['Skill number'].nunique().mean()}")
+print(f"The average number of skills in each level C group is {skill_hierarchy_df.groupby('Hierarchy level C')['Skill number'].nunique().mean()}")
+
+
+# %% [markdown]
+# ## Unique skill names
+
+# %%
+skill_hierarchy_df['Skill name'].nunique()
+
 # %% [markdown]
 # ## Taxonomy examples
 
@@ -131,25 +159,25 @@ skill_hierarchy_df.groupby(["Hierarchy level A","Hierarchy level B", "Hierarchy 
 [k for k, v in skill_hierarchy.items() if "python" in v["Skill name"]][0:10]
 
 # %%
-skill_hierarchy["5717"]
+skill_hierarchy["189"]
 
 # %%
 [
     (kk, vv["Skill name"])
-    for kk, vv in hier_structure["8"]["Level B"]["27"]["Level C"]["212"][
+    for kk, vv in hier_structure["7"]["Level B"]["38"]["Level C"]["182"][
         "Skills"
     ].items()
 ]
 
 # %%
-hier_structure["8"]["Level B"]["27"]["Level C"]["212"]["Skills"]["5717"]
+hier_structure["7"]["Level B"]["38"]["Level C"]["182"]["Skills"]["189"]
 
 # %% [markdown]
 # ## Get examples
 
 # %%
-level_a = "8"
-level_b = "35"
+level_a = "7"
+level_b = "38"
 for level_c, level_c_info in hier_structure[level_a]["Level B"][level_b]["Level C"].items():
     if level_c not in ['102']:
         print("---")
@@ -158,7 +186,7 @@ for level_c, level_c_info in hier_structure[level_a]["Level B"][level_b]["Level 
 
 # %% [markdown]
 # ## Level A colour shuffler
-# random seed 2 is good
+# random seed 1,9,12,15 is good
 
 # %%
 import random
@@ -171,9 +199,10 @@ def level_a_colour_shuffler(level_a_list):
     """
     
     leva_groups = list(set(level_a_list))
-    random.seed(2)
+    random.seed(15)
     random.shuffle(leva_groups)
     lev_a_col_shuffle_dict = {i:v for i,v in enumerate(leva_groups)}
+    lev_a_col_shuffle_dict[10]="black"
     return  [lev_a_col_shuffle_dict[c] for c in level_a_list]
 
 
@@ -234,16 +263,11 @@ skill_hierarchy_df.head(2)
 # ### Plot skills and label a few of them
 
 # %%
-cool_skills = ["248", "3065","3170","880","2775","1933",
-               "2066",
-              "4211","5031","2760","3875","4164",
-              "560","38","1","2286","2358","6325",
-              "2152","2687","2500",
-              "401","6766","2875","907","4284","1196",
-              "3700","6580","2550","385","3187","5522",
-              "1215","5983","2443","3371","2728",
-              "3754", "6431","2294","6547","302","4302","3810","478",
-              "2075","4324","1274","1876","145","2412", "6777"]
+cool_skills = ["4421","4435","4854","4070","2245",
+              "4045", "1517","5768","6220","4540","4748","2719","4988",
+              "5707","4128","130","4767","493","3420","2499","4238",
+              "2284","1444","3234","5810","6558","902","501","3345","1275","326","4670",
+              "3871","2998","2347"]
 
 skill_hierarchy_df_texts = skill_hierarchy_df[skill_hierarchy_df['Skill number'].isin(cool_skills)]
 skill_hierarchy_df_texts["Skill name"] = skill_hierarchy_df_texts["Skill name"].apply(lambda x: x.split("-")[0])
@@ -339,7 +363,7 @@ def plot_skills_col_level(col_by,legend=False, col_skill_highlight='0'):
     )
     hover = HoverTool(
         tooltips=[
-            ("Name", "@texts"),("Level A", "@level_a_name"),("Level B", "@level_b_name"),("Level C", "@level_c_name"),])
+            ("Name", "@texts"),("Level A", "@level_a_name"+"("+"@level_a"+")"),("Level B", "@level_b_name"+"("+"@level_b"+")"),("Level C", "@level_c_name"+"("+"@level_c"+")"),])
 
     color_mapper = LinearColorMapper(
             palette="Turbo256", low=0, high=len(list(set(colors_by_labels))),
@@ -395,13 +419,13 @@ def plot_skills_col_level(col_by,legend=False, col_skill_highlight='0'):
 
 
 # %%
-plot_skills_col_level(col_by="A", legend=False)
-plot_skills_col_level(col_by="B")
-plot_skills_col_level(col_by="C")
+plot_skills_col_level(col_by="A", col_skill_highlight=False)
+plot_skills_col_level(col_by="B", col_skill_highlight=False)
+plot_skills_col_level(col_by="C", col_skill_highlight=False)
 
 
 # %%
-plot_skills_col_level(col_by="A",col_skill_highlight=2)
+plot_skills_col_level(col_by="A",col_skill_highlight=5)
 
 # %% [markdown]
 # ## Plot average embeddings for each level coloured by next level
@@ -645,8 +669,6 @@ plot_average_levels(
 skill_hierarchy_df.head(2)
 
 # %%
-
-# %%
 plt.figure(figsize=(12, 3))
 
 ax1 = plt.subplot(131)
@@ -680,7 +702,82 @@ plt.savefig(
 )
 
 # %%
-len(skill_hierarchy_df[skill_hierarchy_df["Hierarchy level A name"]=="Cognitative skills and languages"])
-    
+len(skill_hierarchy_df[skill_hierarchy_df["Hierarchy level A name"]=="Cognitive skills and languages"])
+
+
+# %%
+small_bits = []
+big_bits = []
+for level_a_num, level_a_info in hier_structure.items():
+    for level_b_num, level_b_info in level_a_info["Level B"].items():
+        for level_c_num, level_c_info in level_b_info["Level C"].items():
+            if level_c_info['Number of skills']<2:
+                small_bits.append([level_a_num, level_b_num, level_c_num])
+            if level_c_info['Number of skills']>50:
+                big_bits.append([level_a_num, level_b_num, level_c_num])
+print(len(small_bits))
+len(big_bits)
+
+# %%
+for a,b,c in small_bits:
+    print('---')
+    print(hier_structure[a]['Name'])
+    print(hier_structure[a]['Level B'][b]['Name'])
+    print(hier_structure[a]['Level B'][b]['Level C'][c]['Name'])
+    print(hier_structure[a]['Level B'][b]['Level C'][c]['Number of skills'])
+    for skills in hier_structure[a]['Level B'][b]['Level C'][c]['Skills'].values():
+        print(skills['Skill name'])
+
+# %%
+print(hier_structure['9']['Level B']['95'])
+
+# %%
+for a,b,c in big_bits:
+    print('---')
+    print(hier_structure[a]['Name'])
+    print(hier_structure[a]['Level B'][b]['Name'])
+    print(hier_structure[a]['Level B'][b]['Level C'][c]['Name'])
+    print(hier_structure[a]['Level B'][b]['Level C'][c]['Number of skills'])
+    for v in list(hier_structure[a]['Level B'][b]['Level C'][c]['Skills'].values())[0:5]:
+        print(v['Skill name'])
+
+# %%
+sql_skills = []
+for level_a_num, level_a_info in hier_structure.items():
+    for level_b_num, level_b_info in level_a_info["Level B"].items():
+        for level_c_num, level_c_info in level_b_info["Level C"].items():
+            for v in list(level_c_info['Skills'].values()):
+                if 'must strong dementia care palliative' in v['Skill name']:
+                    sql_skills.append((level_a_num, level_b_num, level_c_num))
+sql_skills = list(set(sql_skills))
+sql_skills
+
+# %%
+for a,b,c in sql_skills:
+    print('---')
+    print(hier_structure[a]['Name'])
+    print(hier_structure[a]['Level B'][b]['Name'])
+    print(hier_structure[a]['Level B'][b]['Level C'][c]['Name'])
+    print(hier_structure[a]['Level B'][b]['Level C'][c]['Number of skills'])
+    for v in list(hier_structure[a]['Level B'][b]['Level C'][c]['Skills'].values())[0:50]:
+        print(v['Skill name'])
+
+# %%
+hier_structure[a]['Level B'][b]['Level C'][c]['Skills']
+
+# %%
+ml_skills = []
+for level_a_num, level_a_info in hier_structure.items():
+    for level_b_num, level_b_info in level_a_info["Level B"].items():
+        for level_c_num, level_c_info in level_b_info["Level C"].items():
+            for skill_i, v in level_c_info['Skills'].items():
+                if 'machine learning' in ' '.join(v['Example sentences with skill in']):
+                    ml_skills.append(skill_i)
+ml_skills = list(set(ml_skills))
+
+
+# %%
+for ml_skill in ml_skills:
+    print(f"{skill_hierarchy[ml_skill]['Hierarchy level A name']} * {skill_hierarchy[ml_skill]['Hierarchy level B name']} * {skill_hierarchy[ml_skill]['Hierarchy level C name']}")
 
 # %%

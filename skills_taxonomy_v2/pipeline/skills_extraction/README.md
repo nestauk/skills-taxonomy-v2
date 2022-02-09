@@ -75,6 +75,12 @@ Outputs:
 
 Some plots of the skills in 2D space are done in `Extracted skills - 2022.01.14.ipynb`.
 
+In `Skills Extraction Analysis and Figures.ipynb` we find:
+
+- The mean number of sentences for each skills is 543.4556469708302
+- The median number of sentences for each skills is 366.0
+- There are 6153 skills with more than 200 sentences
+
 ### 4. Skills naming
 
 Need to first get the average embedding for each skill with:
@@ -88,6 +94,18 @@ python skills_taxonomy_v2/pipeline/skills_extraction/skills_naming.py --config_p
 
 This will output `outputs/skills_extraction/extracted_skills/2022.01.14_skills_data_named.json`.
 
+### 5. Duplicate sentences
+
+In reduce_embeddings.py we filter out duplicated sentences. However, for analysis to do with the job adverts we need all the duplicates included. e.g. if the same sentence is used in two job adverts only one of them is brought forward, and thus the analysis will miss out including the second job advert in the counts.
+
+Running:
+```
+python skills_taxonomy_v2/pipeline/skills_extraction/get_duplicate_sentence_skills.py
+
+```
+we save out several intermediatary files containing dictionaries of {'job id': [[words_id, sent_id], [words_id, sent_id]]} in `outputs/skills_extraction/word_embeddings/data/{file_date}_words_id_list_0.json`. This script also combines them all into one smaller and more useful dictionary which only includes the duplicated sentences in `outputs/skills_extraction/word_embeddings/data/2022.01.14_unique_words_id_list.json`.
+
+Note: 'words_id' is different to 'sent_id' since it is the unique identifier for the sentences with masked words removed rather than the unique identifier for the original sentence (as sent_id is).
 
 ## November 2021
 

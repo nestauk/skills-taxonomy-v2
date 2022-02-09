@@ -261,12 +261,17 @@ if __name__ == "__main__":
         level_a_names = get_level_names(
             sentence_embs, "Level A", top_n=params["level_names_tfidif_n"]
         )
-    level_b_names = get_level_names(
-        sentence_embs, "Level B", top_n=params["level_names_tfidif_n"]
-    )
-    level_c_names = get_level_names(
-        sentence_embs, "Level C", top_n=params["level_names_tfidif_n"]
-    )
+    level_b_names = {}
+    for level_a_num, level_data in sentence_embs.groupby("Level A"):
+        level_b_names.update(get_level_names(
+            level_data, "Level B", top_n=params["level_names_tfidif_n"], max_df=1.0
+        ))
+
+    level_c_names = {}
+    for level_b_num, level_b_data in sentence_embs.groupby("Level B"):
+        level_c_names.update(get_level_names(
+            level_b_data, "Level C", top_n=params["level_names_tfidif_n"], max_df=1.0
+        ))
 
     logger.info(
         "Creating and saving dictionary of hierarchical information per skill ..."

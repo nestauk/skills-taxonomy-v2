@@ -41,7 +41,7 @@ def parse_arguments(parser):
     parser.add_argument(
         "--config_path",
         help="Path to config file",
-        default="skills_taxonomy_v2/config/skills_taxonomy_application/2021.09.14.yaml",
+        default="skills_taxonomy_v2/config/skills_taxonomy_application/2022.01.21.yaml",
     )
 
     return parser.parse_args()
@@ -75,7 +75,7 @@ def get_nuts_shapefile(shape_url, shapefile_path, nuts_file):
     return nuts_geo
 
 
-def get_job_adverts_with_skills(sentence_outputs_path, bucket_name):
+def get_job_adverts_with_skills(sentence_outputs_path, bucket_name, jobad_sample_regions_dir=None):
     """gets job adverts with skills.
 
     Args:
@@ -86,23 +86,49 @@ def get_job_adverts_with_skills(sentence_outputs_path, bucket_name):
         A dictionary where the key is a job id we have skills for 
         and its value is a list of location information incl. 
         lat/long, country name and county name associated to the 
-        job id. 
+        job id.
+        e.g.
+            job_id_loc_dict = {
+            'a331fec824394137a11fdb82529f998e': ['Wolverhampton', '52.58547,-2.12296', 'England', 'Wolverhampton'],
+            '2e81b7854a134c5e81257cbaa47fcdd1': ['Donaghadee', '54.64126,-5.53591', 'Northern Ireland', 'Down District']
+            }
     """
     sentence_data = load_s3_data(s3, bucket_name, sentence_outputs_path)
-    sentence_data = pd.DataFrame(sentence_data)
-    sentence_data = sentence_data[sentence_data["Cluster number"] != -1]
+    if "lightweight" in sentence_outputs_path:
+        sentence_data = pd.DataFrame(
+            sentence_data,
+            columns=['job id', 'sentence id',  'Cluster number predicted']
+            )
+        sentence_data = sentence_data[sentence_data["Cluster number predicted"] >= 0]
+    else:
+        sentence_data = pd.DataFrame(sentence_data)
+        sentence_data = sentence_data[sentence_data["Cluster number"] != -1]
     # The job adverts that we have skills for
     job_ids = set(sentence_data["job id"].tolist())
     # Load the job advert location data - only for the job adverts we have skills for
-    # Each one is really big (77secs to load)! There are 13 files
-    job_id_loc_dict = {}
-    for i, file_name in enumerate(tqdm(range(0, 13))):
-        file_loc_dict = load_s3_data(
-            s3,
-            bucket_name,
-            f"outputs/tk_data_analysis/metadata_location/{file_name}.json",
-        )
-        job_id_loc_dict.update({k: v for k, v in file_loc_dict.items() if k in job_ids})
+
+    if jobad_sample_regions_dir:
+        jobad_sample_regions = load_s3_data(s3, bucket_name, jobad_sample_regions_dir)
+        # This data has multiple locations per job id, mostly repeats
+        # As long as the entry isn't all null, then just use the first one
+        job_id_loc_dict = {}
+        for job_id, locs_list in jobad_sample_regions.items():
+            if job_id in job_ids:
+                locs = [l for loc in locs_list for l in loc if any(l)]
+                if len(locs) != 0:
+                    job_id_loc_dict[job_id] = [list(i) for i in set(tuple(i) for i in locs)][0]
+                else:
+                    job_id_loc_dict[job_id] = [None, None, None, None]
+    else:
+        # Each one is really big (77secs to load)! There are 13 files
+        job_id_loc_dict = {}
+        for i, file_name in enumerate(tqdm(range(0, 13))):
+            file_loc_dict = load_s3_data(
+                s3,
+                bucket_name,
+                f"outputs/tk_data_analysis/metadata_location/{file_name}.json",
+            )
+            job_id_loc_dict.update({k: v for k, v in file_loc_dict.items() if k in job_ids})
 
     return job_id_loc_dict
 
@@ -157,10 +183,15 @@ if __name__ == "__main__":
     sentence_outputs_path = params["sentence_outputs_path"]
     epsg = params["epsg"]
     sentences_outputs_nuts_path = params["sentences_outputs_nuts_path"]
+    jobad_sample_regions_dir = params.get("jobad_sample_regions_dir")
 
+    logger.info("Running get_nuts_shapefile ...")
     nuts_geo = get_nuts_shapefile(shape_url, shapefile_path, nuts_file)
-    job_id_loc_dict = get_job_adverts_with_skills(sentence_outputs_path, BUCKET_NAME)
+    logger.info("Running get_job_adverts_with_skills ...")
+    job_id_loc_dict = get_job_adverts_with_skills(sentence_outputs_path, BUCKET_NAME, jobad_sample_regions_dir)
+    logger.info(f"Running map_job_adverts_with_skills_to_nuts with {len(job_id_loc_dict)} job ids...")
     job_adverts_nuts = map_job_adverts_with_skills_to_nuts(
         job_id_loc_dict, nuts_geo, epsg
     )
+    logger.info(f"Saving for {len(job_adverts_nuts)} job ids")
     save_to_s3(s3, BUCKET_NAME, job_adverts_nuts, sentences_outputs_nuts_path)
