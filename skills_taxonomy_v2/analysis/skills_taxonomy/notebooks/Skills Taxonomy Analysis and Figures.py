@@ -780,4 +780,136 @@ ml_skills = list(set(ml_skills))
 for ml_skill in ml_skills:
     print(f"{skill_hierarchy[ml_skill]['Hierarchy level A name']} * {skill_hierarchy[ml_skill]['Hierarchy level B name']} * {skill_hierarchy[ml_skill]['Hierarchy level C name']}")
 
+# %% [markdown]
+# ## Analysis on sentence level
+# - So far it's been on the skill level
+
 # %%
+from skills_taxonomy_v2.getters.s3_data import  get_s3_data_paths
+from tqdm import tqdm
+
+# %%
+skills_ex_date = "2022.01.14"
+
+# %%
+# The sentences ID + cluster num
+clustered_sentences_path=f"outputs/skills_extraction/extracted_skills/{skills_ex_date}_sentences_skills_data_lightweight.json"
+sentence_embs = load_s3_data(s3, bucket_name, clustered_sentences_path)
+sentence_embs = pd.DataFrame(sentence_embs, columns=['job id', 'sentence id',  'Cluster number predicted'])
+
+# Just use a sample for ease of plotting
+sentence_embs_sample = sentence_embs.sample(n=100000, random_state=1)
+
+# %%
+sample_sent_ids = set(sentence_embs_sample['sentence id'].unique())
+
+# %%
+# Get the reduced embeddings + sentence texts and the sentence IDs
+
+reduced_embeddings_dir =f"outputs/skills_extraction/reduced_embeddings/{skills_ex_date}"
+reduced_embeddings_paths = get_s3_data_paths(
+    s3,
+    bucket_name,
+    reduced_embeddings_dir,
+    file_types=["*sentences_data_*.json"]
+    )
+
+sample_sentences_data = pd.DataFrame()
+for reduced_embeddings_path in tqdm(reduced_embeddings_paths):
+    sentences_data_i = load_s3_data(
+        s3, bucket_name,
+        reduced_embeddings_path
+    )
+    sentences_data_i_df = pd.DataFrame(sentences_data_i)
+    sample_sentences_data = pd.concat([sample_sentences_data, sentences_data_i_df[sentences_data_i_df['sentence id'].isin(sample_sent_ids)]])
+sample_sentences_data.reset_index(drop=True, inplace=True)
+
+# %%
+# Merge the reduced embeddings + texts with the sentence ID+cluster number
+sample_sentence_clusters = pd.merge(
+        sample_sentences_data,
+        sentence_embs_sample,
+        how='left', on=['job id', 'sentence id'])
+sample_sentence_clusters["description"] = sample_sentence_clusters["description"].apply(lambda x: " ".join(x) if isinstance(x, list) else x)
+sample_sentence_clusters.head(3)
+
+# %%
+sample_sentence_clusters["reduced_points x"] = sample_sentence_clusters["embedding"].apply(lambda x: x[0])
+sample_sentence_clusters["reduced_points y"] = sample_sentence_clusters["embedding"].apply(lambda x: x[1])
+sample_sentence_clusters["Cluster number"] = sample_sentence_clusters["Cluster number predicted"]
+sample_sentence_clusters.head(3)
+
+# %%
+sentence_clusters_notnone = sample_sentence_clusters[sample_sentence_clusters["Cluster number"] >= 0]
+
+# %%
+sentence_clusters_notnone['Level A'] = sentence_clusters_notnone['Cluster number'].apply(lambda x: skill_hierarchy[str(x)]['Hierarchy level A'])
+
+sentence_clusters_notnone['Level B'] = sentence_clusters_notnone['Cluster number'].apply(lambda x: skill_hierarchy[str(x)]['Hierarchy level B'])
+sentence_clusters_notnone['Level C'] = sentence_clusters_notnone['Cluster number'].apply(lambda x: skill_hierarchy[str(x)]['Hierarchy level C'])
+sentence_clusters_notnone['Hierarchy ID'] = sentence_clusters_notnone['Cluster number'].apply(lambda x: skill_hierarchy[str(x)]['Hierarchy ID'])
+
+sentence_clusters_notnone.head(2)
+
+
+# %%
+def plot_sample_sentences_coloured(colour_by_col):
+    if colour_by_col=="Cluster number":
+        output_name="skill"
+    elif colour_by_col=="Level A":
+        output_name="A"
+    elif colour_by_col=="Level B":
+        output_name="B"
+    elif colour_by_col=="Level C":
+        output_name="C"
+        
+    output_file(
+        filename=output_folder+f"sentences_col_hier_{output_name}.html",)
+
+    colors_by_labels = sentence_clusters_notnone[colour_by_col].astype(str).tolist()
+    reduced_x = sentence_clusters_notnone["reduced_points x"].tolist()
+    reduced_y = sentence_clusters_notnone["reduced_points y"].tolist()
+    color_palette = viridis
+    
+    if colour_by_col=="Level A":
+        colors_by_labels = sentence_clusters_notnone[colour_by_col].tolist()
+        colors_by_labels = level_a_colour_shuffler(colors_by_labels)
+
+    ds_dict = dict(
+        x=reduced_x,
+        y=reduced_y,
+        texts=sentence_clusters_notnone["original sentence"].tolist(),
+        label=colors_by_labels,
+        level_info=sentence_clusters_notnone["Hierarchy ID"].tolist(),
+    )
+    hover = HoverTool(
+        tooltips=[
+            ("Sentence", "@texts"),
+            (f"Level information", "@level_info"),
+        ]
+    )
+    source = ColumnDataSource(ds_dict)
+    unique_colors = list(set(colors_by_labels))
+    color_mapper = LinearColorMapper(palette="Turbo256", low=0, high=len(unique_colors) + 1)
+
+    p = figure(
+        plot_width=500,
+        plot_height=500,
+        tools=[hover, ResetTool(), WheelZoomTool(), BoxZoomTool(), SaveTool()],
+        title=f"Sample of skill sentences coloured by {output_name} number",
+        toolbar_location="below",
+    )
+    p.circle(x="x", y="y", radius=0.04, alpha=0.2, source=source,
+             color={"field": "label", "transform": color_mapper})
+    p.xaxis.visible = False
+    p.xgrid.visible = False
+    p.yaxis.visible = False
+    p.ygrid.visible = False
+
+    save(p)
+
+
+# %%
+plot_sample_sentences_coloured("Level A")
+plot_sample_sentences_coloured("Level B")
+plot_sample_sentences_coloured("Level C")
