@@ -215,14 +215,6 @@ if __name__ == '__main__':
     flow_config = config["flows"][FLOW_ID]
     params = flow_config["params"]
 
-    dbscan_eps = ["dbscan_eps"]
-    dbscan_min_samples  = ["dbscan_min_samples"]
-    max_length = ["max_length"]
-    train_cluster_n = ["train_cluster_n"]
-    train_cluster_rand_seed = ["train_cluster_rand_seed"]
-    small_cluster_size_threshold = ["small_cluster_size_threshold"]
-    max_centroid_dist_before_merge = ["max_centroid_dist_before_merge"]
-
     s3 = boto3.resource("s3")
 
     reduced_embeddings_paths = get_s3_data_paths(
