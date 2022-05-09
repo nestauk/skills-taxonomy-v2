@@ -22,7 +22,7 @@ The taxonomy file is given [here](./outputs/taxonomy_data/2022.01.21_hierarchy_s
 
 More details of the steps included in this project, and running instructions, can be found in their respective READMEs:
 
-1. [tk_data_analysis](skills_taxonomy_v2/pipeline/tk_data_analysis/README.md) - Get a sample of the TextKernel job adverts.
+1. [tk_data_analysis](skills_taxonomy_v2/pipeline/tk_data_analysis/README.md) - Get a sample of the TextKernel job adverts (scripts only; the data is no longer available).
 2. [sentence_classifier](skills_taxonomy_v2/pipeline/sentence_classifier/README.md) - Training a classifier to predict skill sentences.
 3. [skills_extraction](skills_taxonomy_v2/pipeline/skills_extraction/README.md) - Extracting skills from skill sentences.
 4. [skills_taxonomy](skills_taxonomy_v2/pipeline/skills_taxonomy/README.md) - Building the skills taxonomy from extracted skills.
