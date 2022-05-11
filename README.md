@@ -1,6 +1,6 @@
 # A New Approach to Building a Skills Taxonomy
 
-The full technical report and blog article for this project will be released soon (link to follow).
+The full technical report and blog article for this project can be found [here](https://www.escoe.ac.uk/publications/a-new-approach-to-building-a-skills-taxonomy/) and [here](https://www.escoe.ac.uk/building-a-skills-taxonomy-for-the-uk/).
 
 ## Introduction
 
