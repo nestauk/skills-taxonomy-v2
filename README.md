@@ -27,6 +27,10 @@ More details of the steps included in this project, and running instructions, ca
 3. [skills_extraction](skills_taxonomy_v2/pipeline/skills_extraction/README.md) - Extracting skills from skill sentences.
 4. [skills_taxonomy](skills_taxonomy_v2/pipeline/skills_taxonomy/README.md) - Building the skills taxonomy from extracted skills.
 
+### Extract skills example
+
+A simple example of extracting skills from a toy dataset of job adverts is given in [the examples folder](skills_taxonomy_v2/examples/extract_skills.py).
+
 ### Analysis
 
 This repository also contains various pieces of analysis of the taxonomy. These are discussed in the main analysis [README file](skills_taxonomy_v2/analysis/README.md).
