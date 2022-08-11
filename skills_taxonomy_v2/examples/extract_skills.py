@@ -60,22 +60,13 @@ reduction_min_dist = 0.0
 clustering_eps = 1
 clustering_min_samples = 1
 
-if __name__ == '__main__':
-
-	logger.info("Loading pre-trained models and data ...")
-
-	# Load pre-trained models needed for this pipeline
+def load_prerequisites(sent_classifier_model_dir):
 
 	nlp = spacy.load("en_core_web_sm")
 	bert_vectorizer = BertVectorizer(
 			bert_model_name="sentence-transformers/all-MiniLM-L6-v2",
 		)
 	bert_vectorizer.fit()
-
-	# Load your job advert texts; a list of dicts with the keys "full_text" and "job_id"
-
-	with open(job_adverts_file) as f:
-		job_adverts = json.load(f)
 
 	# Load the sentence classifier (either locally or on S3)
 
@@ -88,9 +79,9 @@ if __name__ == '__main__':
 		logger.info("Sentence Classifier not found locally, so trying to find on S3")
 		sent_classifier.load_model(sent_classifier_model_dir.split('/')[-1])
 
-	# Run the pipeline to extract skills
+	return nlp, bert_vectorizer, sent_classifier
 
-	logger.info("Split the sentences ...")
+def split_skills(job_adverts):
 
 	all_job_ids = []
 	all_sentences = []
@@ -99,7 +90,9 @@ if __name__ == '__main__':
 		all_job_ids += [job_id]*len(sentences)
 		all_sentences += sentences
 
-	logger.info("Predict skill sentences ...")
+	return all_job_ids, all_sentences
+
+def predict_skill_sents(sent_classifier, all_job_ids, all_sentences):
 
 	sentences_vec = sent_classifier.transform(all_sentences)
 	sentences_pred = sent_classifier.predict(sentences_vec)
@@ -109,11 +102,9 @@ if __name__ == '__main__':
 		if pred == 1:
 			skill_sentences_dict[job_id].append(sent)
 
-	logger.info("Embed skill sentences ...")
+	return skill_sentences_dict
 
-	sentence_embeddings, original_sentences = get_embeddings(skill_sentences_dict, nlp, bert_vectorizer)
-
-	logger.info("Reduce embeddings ...")
+def reduce_embeddings(sentence_embeddings, original_sentences, reduction_n_neighbors, reduction_min_dist):
 
 	reducer_class = umap.UMAP(
 		n_neighbors=reduction_n_neighbors,
@@ -154,24 +145,58 @@ if __name__ == '__main__':
 	sentences_data_df["reduced_points y"] = sentences_data_df["embedding"].apply(lambda x: x[1])
 	sentences_data_df["original sentence length"] = sentences_data_df["original sentence"].apply(lambda x:len(x))
 
-	logger.info("Cluster the reduced embeddings ...")
+	return sentences_data_df
+
+def get_skill_name(skill_data):
+	"""
+	Find the most common words in the skill description words as a way to name skills
+	"""
+	common_description_words = Counter([v for d in skill_data['description'] for v in d]).most_common(3)
+	return '-'.join([c[0] for c in common_description_words])
+
+def cluster_embeddings(sentences_data_df, clustering_eps, clustering_min_samples):
 
 	cluster_embeddings = ClusterEmbeddings(
 		dbscan_eps=clustering_eps,
 		dbscan_min_samples=clustering_min_samples,
-		train_cluster_n=len(sentences_data['embedding']),
+		train_cluster_n=len(sentences_data_df),
 		)
 	_ = cluster_embeddings.get_clusters(sentences_data_df)
 	sentences_clustered = cluster_embeddings.sentences_data_short_sample
+
+	return sentences_clustered
+
+if __name__ == '__main__':
+
+	logger.info("Loading pre-trained models and data ...")
+
+	# Load pre-trained models needed for this pipeline
+	
+	nlp, bert_vectorizer, sent_classifier = load_prerequisites(sent_classifier_model_dir)
+	
+	# Load your job advert texts; a list of dicts with the keys "full_text" and "job_id"
+
+	with open(job_adverts_file) as f:
+		job_adverts = json.load(f)
+
+	# Run the pipeline to extract skills
+
+	logger.info("Split the sentences ...")
+	all_job_ids, all_sentences = split_skills(job_adverts)
+
+	logger.info("Predict skill sentences ...")
+	skill_sentences_dict = predict_skill_sents(sent_classifier, all_job_ids, all_sentences)
+
+	logger.info("Embed skill sentences ...")
+	sentence_embeddings, original_sentences = get_embeddings(skill_sentences_dict, nlp, bert_vectorizer)
+
+	logger.info("Reduce embeddings ...")
+	sentences_data_df = reduce_embeddings(sentence_embeddings, original_sentences, reduction_n_neighbors, reduction_min_dist)
+
+	logger.info("Cluster the reduced embeddings ...")
+	sentences_clustered = cluster_embeddings(sentences_data_df, clustering_eps, clustering_min_samples)
 	
 	logger.info("Summarise skill information ...")
-
-	def get_skill_name(skill_data):
-		"""
-		Find the most common words in the skill description words as a way to name skills
-		"""
-		common_description_words = Counter([v for d in skill_data['description'] for v in d]).most_common(3)
-		return '-'.join([c[0] for c in common_description_words])
 
 	skill_name_dict = sentences_clustered.groupby('cluster_number').apply(lambda x: get_skill_name(x)).to_dict()
 	job_skills_dict = sentences_clustered.groupby('job id')['cluster_number'].unique().to_dict()
