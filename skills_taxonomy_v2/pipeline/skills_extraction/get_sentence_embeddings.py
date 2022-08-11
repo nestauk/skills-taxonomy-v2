@@ -59,6 +59,51 @@ logger = logging.getLogger(__name__)
 with open(custom_stopwords_dir) as file:
     custom_stopwords = file.read().splitlines()
 
+def get_embeddings(data, nlp, bert_vectorizer, token_len_threshold=20, stopwords=stopwords.words(), custom_stopwords=custom_stopwords):
+    logger.info(f"Processing {len(data)} sentences...")
+    start_time = time.time()
+
+    # For each sentence mask out stop words, proper nouns etc.
+    masked_sentences = []
+    sentence_job_ids = []
+    sentence_hashes = []
+    original_sentences = {}
+
+    for job_id, sentences in tqdm(data.items()):
+        for sentence in sentences:
+            masked_sentence = process_sentence_mask(
+                sentence,
+                nlp,
+                bert_vectorizer,
+                token_len_threshold,
+                stopwords=stopwords,
+                custom_stopwords=custom_stopwords,
+            )
+            if masked_sentence.replace("[MASK]", "").replace(" ", ""):
+                # Don't include sentence if it only consists of masked words
+                masked_sentences.append(masked_sentence)
+                sentence_job_ids.append(job_id)
+                # Keep a record of the original sentence via a hashed id
+                original_sentence_id = hash(sentence)
+                sentence_hashes.append(original_sentence_id)
+                original_sentences[original_sentence_id] = sentence
+    logger.info(f"Processing sentences took {time.time() - start_time} seconds")
+
+    logger.info(f"Getting embeddings for {len(masked_sentences)} sentences...")
+    start_time = time.time()
+    # Find sentence embeddings in bulk for all masked sentences
+    masked_sentence_embeddings = bert_vectorizer.transform(masked_sentences)
+    output_tuple_list = [
+        (job_id, sent_id, sent, emb.tolist())
+        for job_id, sent_id, sent, emb in zip(
+            sentence_job_ids,
+            sentence_hashes,
+            masked_sentences,
+            masked_sentence_embeddings,
+        )
+    ]
+    logger.info(f"Getting embeddings took {time.time() - start_time} seconds")
+    return output_tuple_list, original_sentences
 
 def parse_arguments(parser):
     parser.add_argument(
@@ -135,49 +180,8 @@ if __name__ == "__main__":
         )
         data = load_s3_data(s3, BUCKET_NAME, data_path)
 
-        logger.info(f"Processing {len(data)} sentences...")
-        start_time = time.time()
-        # For each sentence mask out stop words, proper nouns etc.
-        masked_sentences = []
-        sentence_job_ids = []
-        sentence_hashes = []
-        original_sentences = {}
+        output_tuple_list, original_sentences = get_embeddings(data, nlp, bert_vectorizer, token_len_threshold=token_len_threshold, stopwords=stopwords.words(), custom_stopwords=custom_stopwords)
 
-        for job_id, sentences in tqdm(data.items()):
-            for sentence in sentences:
-                masked_sentence = process_sentence_mask(
-                    sentence,
-                    nlp,
-                    bert_vectorizer,
-                    token_len_threshold,
-                    stopwords=stopwords.words(),
-                    custom_stopwords=custom_stopwords,
-                )
-                if masked_sentence.replace("[MASK]", "").replace(" ", ""):
-                    # Don't include sentence if it only consists of masked words
-                    masked_sentences.append(masked_sentence)
-                    sentence_job_ids.append(job_id)
-                    # Keep a record of the original sentence via a hashed id
-                    original_sentence_id = hash(sentence)
-                    sentence_hashes.append(original_sentence_id)
-                    original_sentences[original_sentence_id] = sentence
-        logger.info(f"Processing sentences took {time.time() - start_time} seconds")
-
-        logger.info(f"Getting embeddings for {len(masked_sentences)} sentences...")
-        start_time = time.time()
-        # Find sentence embeddings in bulk for all masked sentences
-        masked_sentence_embeddings = bert_vectorizer.transform(masked_sentences)
-        output_tuple_list = [
-            (job_id, sent_id, sent, emb.tolist())
-            for job_id, sent_id, sent, emb in zip(
-                sentence_job_ids,
-                sentence_hashes,
-                masked_sentences,
-                masked_sentence_embeddings,
-            )
-        ]
-        logger.info(f"Getting embeddings took {time.time() - start_time} seconds")
-        
         # Save the output in a folder with a similar naming structure to the input
         data_dir = os.path.relpath(data_path, skill_sentences_dir)
         output_file_dir = os.path.join(

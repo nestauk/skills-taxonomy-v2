@@ -52,14 +52,15 @@ def load_process_sentence_data(s3, reduced_embeddings_paths):
 class ClusterEmbeddings():
     def __init__(
         self,
-        dbscan_eps,
-        dbscan_min_samples,
-        max_length,
-        train_cluster_n,
-        train_cluster_rand_seed,
-        small_cluster_size_threshold,
-        max_centroid_dist_before_merge
+        dbscan_eps=0.01,
+        dbscan_min_samples=4,
+        max_length=100,
+        train_cluster_n=300000,
+        train_cluster_rand_seed=42,
+        small_cluster_size_threshold=10,
+        max_centroid_dist_before_merge=0.05
     ):
+
         self.dbscan_eps = dbscan_eps
         self.dbscan_min_samples  = dbscan_min_samples
         self.max_length = max_length
@@ -112,7 +113,8 @@ class ClusterEmbeddings():
         logger.info(f"Merging small clusters where suitable ...")
         cluster_centroids = self.sentences_data_short_sample.groupby('cluster_number')["embedding"].apply(
             lambda x: np.mean(x.tolist(), axis=0).tolist()).to_dict()
-        _ = cluster_centroids.pop(-1)
+        if -1 in cluster_centroids:
+            _ = cluster_centroids.pop(-1)
         
         all_cluster_size_dict = {k:v for k,v in Counter(clustering_number).items() if k!=-1}
         small_cluster_size_dict = {k:v for k,v in all_cluster_size_dict.items() if v < self.small_cluster_size_threshold}
@@ -160,7 +162,8 @@ class ClusterEmbeddings():
         # Re-calculate cluster centroids
         merged_cluster_centroids = self.sentences_data_short_sample.groupby('Merged clusters')["embedding"].apply(
             lambda x: np.mean(x.tolist(), axis=0).tolist()).to_dict()
-        _ = merged_cluster_centroids.pop(-1)
+        if -1 in merged_cluster_centroids:
+            _ = merged_cluster_centroids.pop(-1)
         # Careful of order of list when it came from a dict (can get messed up)
         merged_cluster_embeddings = list(merged_cluster_centroids.values())
         merged_cluster_nums = list(merged_cluster_centroids.keys())
