@@ -1,0 +1,18 @@
+flows:
+  build_taxonomy_flow:
+    params:
+      reduced_embeddings_dir: "outputs/skills_extraction/reduced_embeddings/"
+      clustered_sentences_path: "outputs/skills_extraction/extracted_skills/2021.11.05_sentences_skills_data.json"
+      skills_data_path: "outputs/skills_extraction/extracted_skills/2021.11.05_skills_data.json"
+      skills_names_data_path: "outputs/skills_extraction/extracted_skills/2021.11.05_skills_data_named.json"
+      cluster_column_name: "Cluster number predicted"
+      embedding_column_name: "embedding"
+      skills_data_texts_name: "Sentences"
+      level_c_n: 250
+      level_b_n: 60
+      k_means_max_iter: 5000
+      check_low_siloutte_b: False
+      create_level_d: False
+      level_names_tfidif_n: 3
+      level_a_manual_clusters_path: "skills_taxonomy_v2/utils/2021.12.20_level_a_mapper_dict.json"
+      output_dir: "outputs/skills_taxonomy/"

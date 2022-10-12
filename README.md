@@ -1,26 +1,47 @@
-# skills-taxonomy-v2
+# A New Approach to Building a Skills Taxonomy
+
+The full technical report and blog article for this project can be found [here](https://www.escoe.ac.uk/publications/a-new-approach-to-building-a-skills-taxonomy/) and [here](https://www.escoe.ac.uk/building-a-skills-taxonomy-for-the-uk/).
 
 ## Introduction
 
-The UK labour market has been especially tumultuous in light of COVID-19 and Brexit. Employers [now face both long-running and circumstantial skills challenges](https://www.edge.co.uk/documents/167/04.05.21_Skills_shortages_bulletin_summary.pdf) due to such disruptive events. As we observe the impact of current events on the skills landscape, an informed labour market is more important than ever. Therefore, in partnership with the [Economic Statistics Centre of Excellence (ESCoE)](https://www.escoe.ac.uk/), we are releasing an updated skills taxonomy that is more open, more up-to-date and methodologically refined.
+There is no official and fully open skills taxonomy in the UK. There is a really important need for such a taxonomy that would enable consistent conceptualisation of workforce skills, together with consistent terminology and language around skills used by educators, careers advisers, policy makers and employers. The lack of a consistent language has multiple consequences such as creating confusion over the skills required for particular roles or the training needs of employees. At the same time, the effects of COVID-19 and Brexit have triggered rapid changes in skill demands as well as new skill shortages. This shifting landscape has only increased the need for an open and up-to-date skills taxonomy for the UK which could help to provide better quality and up to date information, in turn to better inform policy.
 
-This repo contains the source code for this project. To read the extended article and the full technical report, click here and here respectively.
+Therefore, in partnership with the [Economic Statistics Centre of Excellence (ESCoE)](https://www.escoe.ac.uk/), we are releasing an updated skills taxonomy that is more open, more up-to-date and methodologically refined.
 
-The high level methodology can be visualised below:
+This repo contains the source code for this project.
 
-<img width="610" alt="Screenshot 2021-09-27 at 15 16 09" src="https://user-images.githubusercontent.com/46863334/134926332-be67c6f2-9a88-4998-97e3-9a00027bb662.png">
+An overview of the methodology, coloured by the three main steps to the pipeline, can be visualised below:
 
-## Setup
+![](./outputs/reports/figures/Jan%202022/methodology_overview_pipeline.jpg)
 
-- Meet the data science cookiecutter [requirements](http://nestauk.github.io/ds-cookiecutter), in brief:
-  - Install: `git-crypt`
-  - Have a Nesta AWS account configured with `awscli`
-- Run `make install` to configure the development environment:
-  - Setup the conda environment
-  - Configure pre-commit
-  - Configure metaflow to use AWS
+### The taxonomy file
 
-## Running locally
+The taxonomy file is given [here](./outputs/taxonomy_data/2022.01.21_hierarchy_structure_named.json). To view this JSON file in a friendly format, you should download it and open it using Firefox. Alternatively, you could also use an online tool such as [JSON formatter](https://jsonformatter.org/json-viewer).
+
+### Pipeline steps
+
+More details of the steps included in this project, and running instructions, can be found in their respective READMEs:
+
+1. [tk_data_analysis](skills_taxonomy_v2/pipeline/tk_data_analysis/README.md) - Get a sample of the TextKernel job adverts (scripts only; the data is no longer available).
+2. [sentence_classifier](skills_taxonomy_v2/pipeline/sentence_classifier/README.md) - Training a classifier to predict skill sentences.
+3. [skills_extraction](skills_taxonomy_v2/pipeline/skills_extraction/README.md) - Extracting skills from skill sentences.
+4. [skills_taxonomy](skills_taxonomy_v2/pipeline/skills_taxonomy/README.md) - Building the skills taxonomy from extracted skills.
+
+### Analysis
+
+This repository also contains various pieces of analysis of the taxonomy. These are discussed in the main analysis [README file](skills_taxonomy_v2/analysis/README.md).
+
+<img src="./outputs/reports/figures/Jan 2022/hierarchy_numbers.jpg" width="700">
+
+#### Examples of the hierarchy
+<img src="./outputs/reports/figures/Jan 2022/taxonomy_example.jpg" width="700">
+
+
+## Running the code
+
+This repository has been made public in the interest of openness, and hopefully that some of the scripts and functions it contains may be useful for others. However, the TextKernel dataset of job adverts is not available for use anymore (either by Nesta staff or the general public). Because of this, the pipeline can no longer be run from start to finish.
+
+### Conda environment
 
 When you are running scripts from this repo for the first time you need to create the environment by running `make conda-create` to create the conda environment. Then everytime after this you can activate it using `conda activate skills-taxonomy-v2`. If you update the requirements then run `make conda-update`.
 
@@ -28,69 +49,19 @@ As a one off, if needed, you will also have to run:
 
 ```
 conda install pytorch torchvision torchaudio -c pytorch
-```
-
-to use pytorch, and
-
-```
 conda install -c conda-forge spacy==3.0.0
 python -m spacy download en_core_web_sm
-```
-
-for spaCy.
-
-Then
-
-```
 conda install cdlib=0.2.3
 ```
-
-(this doesn't work when added to the environment.yaml).
-
-to install xgboost:
-
+and
 ```
 conda install -c anaconda py-xgboost
 ```
-
-or
-
+or, if you aren't using anaconda:
 ```
 conda install -c conda-forge py-xgboost
 ```
 
-if you aren't using anaconda.
-
-### Running on EC2
-
-Check out [this](https://kstathou.medium.com/how-to-set-up-a-gpu-instance-for-machine-learning-on-aws-b4fb8ba51a7c) if you need to set up a new instance. To connect to the one for this project there is one called `i-0a193c947acc1e53c`, you need to download the relevant `nesta_core.pem` file from `s3://nesta-production-config/nesta_core.pem`.
-
-Connect to it with:
-
-```
-chmod 400 nesta_core.pem
-ssh -i "nesta_core.pem" ubuntu@ec2-35-176-103-64.eu-west-2.compute.amazonaws.com
-```
-
-(you may need to link to correct `nesta_core.pem` location).
-
-EC2 will have the cuda GPU neccessary to get the spacy transformers word embeddings. To get this to work on an EC2 instance:
-
-```
-pip install torch==1.7.1+cu101 torchvision==0.8.2+cu101 torchaudio==0.7.2 -f https://download.pytorch.org/whl/torch_stable.html
-pip install -U spacy[cuda102,transformers]
-pip install transformers[sentencepiece]
-python -m spacy download en_core_web_trf
-```
-
-Note this won't work on a macbook since they don't have a NVIDIA CUDA GPU.
-
-Stop:
-
-```
-aws ec2 stop-instances --instance-ids i-0a193c947acc1e53c
-
-```
 
 ## Contributor guidelines
 

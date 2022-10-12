@@ -225,11 +225,19 @@ with the most recent config file will take in job adverts, split them into sente
 {'job_id_1': [('sentence1'), ('sentence2')], 'job_id_2': [('sentence1'), ('sentence2'}
 ```
 
-To predict on all job adverts in the TextKernel data on S3, on the EC2 instance I ran
+### `2021.10.27.yaml` config file:
+
+When using the `2021.10.27.yaml` config file skill sentences are predicted on a pre-determined sample of 5 million job adverts (found via running `get_tk_sample.py`). This was run using:
 
 ```
-python skills_taxonomy_v2/pipeline/sentence_classifier/predict_sentence_class.py --config_path 'skills_taxonomy_v2/config/predict_skill_sentences/2021.08.16.yaml'
+python skills_taxonomy_v2/pipeline/sentence_classifier/predict_sentence_class.py --config_path 'skills_taxonomy_v2/config/predict_skill_sentences/2021.10.27.yaml'
 ```
+
+Skill sentences for each job advert and file are stored in `outputs/sentence_classifier/data/skill_sentences/2021.10.27/`.
+
+Out of the 647 files of job adverts, 516 had skill sentences in. This is because the 'jobs_expired' files were included in the sample and these don't contain the job advert text. This leaves us with a sample of 4,312,285 job adverts.
+
+Skill sentences were identified in 3,572,140 unique job adverts (i.e. some job adverts had no skill sentences at all/ some were under 30 characters).
 
 ### From `2021.07.09.yaml`:
 
@@ -242,4 +250,13 @@ This will run predictions on a random sample of 100 of the 686 data files. Only 
 The skill sentences predicted are stored in "outputs/sentence_classifier/data/skill_sentences/2021.08.16/textkernel-files/", only 87 files were found, suggesting that 13 from the sample of 100 didn't have any skill sentences in for one reason or another.
 
 In each of the 87 files around 45,000 skill sentences were identified, thus we expect to have processed around 4,000,000 skill sentences. 
+
+### From `2021.08.16.yaml` with fixes to the sample taken:
+
+We noticed an issue where parts of the sample of job adverts came from expired files. These files had no full text field. Hence, we replaced the job adverts samples from expired files with job adverts sample from files from the same folder location (which is linked to date).
+
+After appending the skill sentences predictions using this new sample of 5 million job adverts (in `predict_sentence_class_inc_replacements.py`) we found there are 4,118,467 job ids (all unique) in our sample with skill sentences. And in total there are 19,755,486 skill sentences found.
+
+
+
 

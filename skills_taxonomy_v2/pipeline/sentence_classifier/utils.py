@@ -17,20 +17,20 @@ import numpy as np
 import os
 import boto3
 from s3fs.core import S3FileSystem
-from functools import lru_cache
+from functools import lru_cache, partial
 
 import nltk
 
-nltk.download("averaged_perceptron_tagger")
-nltk.download("punkt")
+nltk.download("averaged_perceptron_tagger", quiet=True)
+nltk.download("punkt", quiet=True)
 
 
 # ---------------------------------------------------------------------------------
 
-skills_config = get_yaml_config(
-    Path(str(PROJECT_DIR) + "/skills_taxonomy_v2/config/base.yaml")
-)
-training_data_path = str(PROJECT_DIR) + skills_config["TRAINING_DATA_PATH"]
+# skills_config = get_yaml_config(
+#     Path(str(PROJECT_DIR) + "/skills_taxonomy_v2/config/base.yaml")
+# )
+# training_data_path = str(PROJECT_DIR) + skills_config["TRAINING_DATA_PATH"] # I don't think this is needed and it causes problems in Metaflow
 S3_PATH = "inputs/labelled_data/"
 
 
@@ -47,7 +47,7 @@ def text_cleaning(text):
     return text.lower()
 
 
-def split_sentence(data, nlp, min_length=30):
+def split_sentence(data, min_length=30):
     """
     Split and clean one sentence.
     Output is two lists, a list of each sentence and a list of the job_ids they are from.
@@ -60,15 +60,22 @@ def split_sentence(data, nlp, min_length=30):
         sentences = []
         job_id = data.get("job_id")
         # Split up sentences
-        doc = nlp(text)
-        for sent in doc.sents:
-            sentence = text_cleaning(sent.text)
+        sents = nltk.sent_tokenize(text)
+        for sent in sents:
+            sentence = text_cleaning(sent)
             if len(sentence) > min_length:
                 sentences.append(sentence)
         return job_id, sentences
     else:
         return None, None
 
+def split_sentence_over_chunk(chunk, min_length):
+    partial_split_sentence = partial(split_sentence, min_length=min_length)
+    return list(map(partial_split_sentence, chunk))
+
+def make_chunks(lst, n):
+    for i in range(0, len(lst), n):
+        yield lst[i:i + n]
 
 @lru_cache(maxsize=None)
 def load_training_data_from_s3(prefix="final_training_data"):

@@ -12,10 +12,11 @@ from tqdm import tqdm
 import json
 import gzip
 import os
+from collections import defaultdict
 
 from skills_taxonomy_v2 import BUCKET_NAME
 
-from skills_taxonomy_v2.getters.s3_data import get_s3_data_paths, save_to_s3
+from skills_taxonomy_v2.getters.s3_data import get_s3_data_paths, save_to_s3, load_s3_data
 
 
 s3 = boto3.resource("s3")
@@ -23,7 +24,7 @@ s3 = boto3.resource("s3")
 if __name__ == "__main__":
 
     tk_data_path = "inputs/data/textkernel-files/"
-    output_dir = "outputs/tk_data_analysis/"
+    output_dir = "outputs/tk_data_analysis_new_method/"
 
     all_tk_data_paths = get_s3_data_paths(
         s3, BUCKET_NAME, tk_data_path, file_types=["*.jsonl*"]
@@ -31,78 +32,145 @@ if __name__ == "__main__":
 
     file_num = 0
     count_tk_files = 0
-    job_id_file_dict = {}
-    job_id_date_dict = {}
-    job_id_meta_dict = {}
-    job_id_job_dict = {}
-    job_id_location_dict = {}
+    job_id_file_list = defaultdict(list)
+    job_id_date_list = defaultdict(list)
+    job_id_meta_list = defaultdict(list)
+    job_id_job_list = defaultdict(list)
+    job_id_location_list = defaultdict(list)
+    all_tk_date_count = defaultdict(int)
+    all_tk_region_count = defaultdict(int)
+    all_tk_subregion_count = defaultdict(int)
+
     for file_name in tqdm(all_tk_data_paths):
-        obj = s3.Object(BUCKET_NAME, file_name)
-        with gzip.GzipFile(fileobj=obj.get()["Body"]) as file:
-            for line in file:
-                d = json.loads(line)
-                # Save out as little info as possible to make file smaller
-                job_id_file_dict[d["job_id"]] = file_name.split(tk_data_path)[1]
-                job_id_date_dict[d["job_id"]] = [
-                    d.get("date"),
-                    d.get("expiration_date"),
-                ]
-                job_id_meta_dict[d["job_id"]] = [
-                    d.get("source_website"),
-                    d.get("language"),
-                ]
-                organization_industry = d.get("organization_industry")
-                job_id_job_dict[d["job_id"]] = [
-                    d.get("job_title"),
-                    organization_industry.get("label")
-                    if organization_industry
-                    else None,
-                ]
-                region = d.get("region")
-                subregion = d.get("subregion")
-                job_id_location_dict[d["job_id"]] = [
-                    d.get("location_name"),
-                    d.get("location_coordinates"),
-                    region.get("label") if region else None,
-                    subregion.get("label") if subregion else None,
-                ]
+        data = load_s3_data(s3, BUCKET_NAME, file_name)
+        for d in data:
+            # Save out as little info as possible to make file smaller
+            job_id_file_list[d["job_id"]].append(file_name.split(tk_data_path)[1])
+            job_id_date_list[d["job_id"]].append(d.get("date"))
+            if d.get("date"):
+                all_tk_date_count[d.get("date")] += 1
+            else:
+                all_tk_date_count["Not given"] += 1
+
+            job_id_meta_list[d["job_id"]].append([
+                d.get("source_website"),
+                d.get("language"),
+            ])
+            organization_industry = d.get("organization_industry")
+            job_id_job_list[d["job_id"]].append([
+                d.get("job_title"),
+                organization_industry.get("label")
+                if organization_industry
+                else None,
+            ])
+            region = d.get("region")
+            subregion = d.get("subregion")
+            job_id_location_list[d["job_id"]].append([
+                d.get("location_name"),
+                d.get("location_coordinates"),
+                region.get("label") if region else None,
+                subregion.get("label") if subregion else None,
+            ])
+            if region:
+                all_tk_region_count[region.get("label")] += 1
+            else:
+                all_tk_region_count["Not given"] += 1
+            if subregion:
+                all_tk_subregion_count[subregion.get("label")] += 1
+            else:
+                all_tk_subregion_count["Not given"] += 1
+
         count_tk_files += 1
         if count_tk_files == 50:
             print("Saving data ...")
             save_to_s3(
                 s3,
                 BUCKET_NAME,
-                job_id_file_dict,
+                job_id_file_list,
                 os.path.join(output_dir, f"metadata_file/{file_num}.json"),
             )
             save_to_s3(
                 s3,
                 BUCKET_NAME,
-                job_id_date_dict,
+                job_id_date_list,
                 os.path.join(output_dir, f"metadata_date/{file_num}.json"),
             )
             save_to_s3(
                 s3,
                 BUCKET_NAME,
-                job_id_meta_dict,
+                job_id_meta_list,
                 os.path.join(output_dir, f"metadata_meta/{file_num}.json"),
             )
             save_to_s3(
                 s3,
                 BUCKET_NAME,
-                job_id_job_dict,
+                job_id_job_list,
                 os.path.join(output_dir, f"metadata_job/{file_num}.json"),
             )
             save_to_s3(
                 s3,
                 BUCKET_NAME,
-                job_id_location_dict,
+                job_id_location_list,
                 os.path.join(output_dir, f"metadata_location/{file_num}.json"),
             )
             file_num += 1
             count_tk_files = 0
-            job_id_file_dict = {}
-            job_id_date_dict = {}
-            job_id_meta_dict = {}
-            job_id_job_dict = {}
-            job_id_location_dict = {}
+            job_id_file_list = defaultdict(list)
+            job_id_date_list = defaultdict(list)
+            job_id_meta_list = defaultdict(list)
+            job_id_job_list = defaultdict(list)
+            job_id_location_list = defaultdict(list)
+
+    print("Saving remainder data ...")
+    save_to_s3(
+        s3,
+        BUCKET_NAME,
+        job_id_file_list,
+        os.path.join(output_dir, f"metadata_file/{file_num}.json"),
+    )
+    save_to_s3(
+        s3,
+        BUCKET_NAME,
+        job_id_date_list,
+        os.path.join(output_dir, f"metadata_date/{file_num}.json"),
+    )
+    save_to_s3(
+        s3,
+        BUCKET_NAME,
+        job_id_meta_list,
+        os.path.join(output_dir, f"metadata_meta/{file_num}.json"),
+    )
+    save_to_s3(
+        s3,
+        BUCKET_NAME,
+        job_id_job_list,
+        os.path.join(output_dir, f"metadata_job/{file_num}.json"),
+    )
+    save_to_s3(
+        s3,
+        BUCKET_NAME,
+        job_id_location_list,
+        os.path.join(output_dir, f"metadata_location/{file_num}.json"),
+    )
+
+    print("Saving counts data ...")
+    
+    save_to_s3(
+        s3,
+        BUCKET_NAME,
+        all_tk_date_count,
+        os.path.join(output_dir, f"metadata_date/all_tk_date_count.json"),
+    )
+    save_to_s3(
+        s3,
+        BUCKET_NAME,
+        all_tk_region_count,
+        os.path.join(output_dir, f"metadata_location/all_tk_region_count.json"),
+    )
+    save_to_s3(
+        s3,
+        BUCKET_NAME,
+        all_tk_subregion_count,
+        os.path.join(output_dir, f"metadata_location/all_tk_subregion_count.json"),
+    )
+
